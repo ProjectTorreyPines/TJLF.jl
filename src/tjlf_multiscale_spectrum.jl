@@ -2,8 +2,7 @@
 
 include("tjlf_modules.jl")
 
-# nmix was in parameters, but not used at all?
-# vzf_mix,kymax_mix,jmax_mix are output parameters?
+# vzf_mix,kymax_mix,jmax_mix are output
 function get_zonal_mixing(ky_mix,gamma_mix;kwargs...)
 #
 #    finds the maximum of gamma/ky spectrum vzf_out and kymax_out
@@ -58,7 +57,7 @@ function get_zonal_mixing(ky_mix,gamma_mix;kwargs...)
         end
     end
 
-    ###### What do you do if jmax_mix = NOTHING
+    ###### What do you do if jmax_mix = NOTHING (0 in this case)
     # if testmax is not updated a single time
     testmax==0.0 ? jmax_mix=j1 :
 
@@ -79,6 +78,8 @@ function get_zonal_mixing(ky_mix,gamma_mix;kwargs...)
 
     # determine kymax1 and gammamax1 bounded by the tree points f0,f1,f2
     # use a quadratic fit: f = a + b x + c x^2    to f = gamma/ky centered at jmax1
+    # scale it to be quadratic where x goes from 0 to 1
+    ##### Are we not worried that jmax_mix is at the edge?
     if(jmax_mix>1 && jmax_mix < j1)
         jmax1 = jmax_mix
         f0 = gamma_mix[jmax1-1]/ky_mix[jmax1-1]
