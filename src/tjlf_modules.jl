@@ -38,7 +38,7 @@ end
 
 
 
-module tjlf_global
+module globalVar
 using ..tjlf_max_dimensions
 #
 #  global controls for the tglf driver routine
@@ -270,7 +270,7 @@ vpar_shear_model_in::Int = 1
 # REAL :: Bp0_out = 1.0
 # REAL :: RBt_ave_out=1.0
 # REAL :: Grad_r_ave_out=1.0
-# REAL :: grad_r0_out=1.0
+grad_r0_out::Real=1.0
 # REAL :: B_geo0_out = 1.0
 # REAL :: Bt0_out = 1.0
 # REAL :: SAT_geo0_out=1.0
