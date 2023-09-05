@@ -12,6 +12,8 @@
 #     finds the maximum of gamma/ky spectrum at low-k values by going through the ky_mix
 #     array, then after finding the max, interpolate the value to improve accuracy
 #   
+
+##### define the parameter data types?
 function get_zonal_mixing(ky_mix,gamma_mix;kwargs...)
 
 
