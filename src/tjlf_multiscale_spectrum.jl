@@ -1,25 +1,28 @@
-
-
-include("tjlf_modules.jl")
-
-# vzf_mix,kymax_mix,jmax_mix are output
+#
+#     parameters: 
+#     ky_mix - array of ky (mode number)
+#     gamma_mix - array of gamma (net growth rate)
+#     kwargs... - dictionary of global variables (rho_ion, alpha_zf_in, grad_r0_out)
+#     
+#     outputs:
+#     vzf_mix - zonal flow mixing rate
+#     kymax_mix - ky value at the calculated vzf_mix
+#     jmax_mix - index of ky_mix array where vzf_mix is calculated
+#
+#     finds the maximum of gamma/ky spectrum at low-k values by going through the ky_mix
+#     array, then after finding the max, interpolate the value to improve accuracy
+#   
 function get_zonal_mixing(ky_mix,gamma_mix;kwargs...)
-#
-#    finds the maximum of gamma/ky spectrum vzf_out and kymax_out
-#
+
 
     # uses variables from tjlf_dimensions, tglf_global, tglf_species
+    # create dictionary
     kwargs=Dict(kwargs)
 
-    # initialize output of function
-    xmin = 0.0
 
 #
 # find the local maximum of gamma_mix/ky_mix with the largest gamma_mix/ky_mix^2
 #
-    ### initialized later 
-    # gammamax1= gamma_mix[1]
-    # kymax1 = ky_mix[1]
     ### kycut is defined with global variables in the python version, but rho_ion is a globalVar
     kycut=0.8/kwargs["rho_ion"]
     kymin = 0.0  
