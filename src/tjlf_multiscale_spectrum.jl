@@ -34,7 +34,7 @@ function get_zonal_mixing(ky_mix,gamma_mix;kwargs...)
       
 
     
-    kwargs["alpha_zf_in"] < 0.0 ? kymin = 0.173 * √(2.0) / kwargs["rho_ion"] :
+    if(kwargs["alpha_zf_in"] < 0.0) kymin = 0.173 * √(2.0) / kwargs["rho_ion"] end
     # saturation rules
     if sat_rule_in==2 || sat_rule_in==3
         kycut = kwargs["grad_r0_out"] * kycut
@@ -64,7 +64,7 @@ function get_zonal_mixing(ky_mix,gamma_mix;kwargs...)
 
     ###### What do you do if jmax_mix = NOTHING (0 in this case)
     # if testmax is not updated a single time
-    testmax==0.0 ? jmax_mix=j1 :
+    if(testmax==0.0) jmax_mix=j1 end
 
     # no unstable modes in range set kymax index to end of range
     # this is cut of at j1 since a maximum may not exist in the low-k range
