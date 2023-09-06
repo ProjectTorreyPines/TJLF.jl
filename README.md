@@ -1,2 +1,2 @@
-# TJLF.jl
+# TJLF
 Tglf in Julia Learned from Fortran (TJLF)
