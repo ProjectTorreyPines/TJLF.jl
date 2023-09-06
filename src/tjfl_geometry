@@ -1,0 +1,549 @@
+function get_sat_params(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.00000001;kwargs...)
+    mercier_luc()
+
+    return (
+        kx0_e,
+        SAT_geo1_out,
+        SAT_geo2_out,
+        R_unit,
+        Bt0_out,
+        B_geo0_out,
+        grad_r0_out,
+        theta_out,
+        Bt_out,
+        grad_r_out,
+        B_unit_out,
+    )
+end
+
+function xgrid_functions_geo()
+    
+end
+
+function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
+    #-------------------------------------------
+    # the following must be defined from a previous call to one of the
+    # geometry routines miller_geo, fourier_geo,ELITE_geo and stored in tglf_sgrid:
+    # ms # the number of points in the s-grid (flux surface contour)
+    # ds # the arc length differential on a flux surface
+    # R(ms) # the major radius on the s-grid
+    # Z(ms) # the vertical coordinate on the s-grid
+    # Bp(ms) # the poloidal magnetic field on the s-grid normalized to B_unit
+    # q_s = local flux surface safety factor
+    # q_prime_s = dq/dpsi
+    # p_prime_s = dp/dpsi
+    #-----------------------
+    #
+    # compute the first and second derivatives of R,Z on the s-grid
+    # and the local radius of curvature.
+    # Note that for the Mercier-Luc coordinate dR/ds = cos(u), dZ/ds = -sin(u)
+    # so (dR/ds)**2+(dZ/ds)**2 = 1, error_check compute the error in this relation
+    # to make sure that the input flux surface coordinates R(s), Z(s) are ok.
+    #
+
+    ### there are also variables in sgrid named this, not sure if this has to be separated for the different geometries
+    q_s = kwargs["q_loc"]
+    Rmaj_input = kwargs["rmaj_loc"]
+    rmin_s = kwargs["rmin_loc"]
+    rmaj_s = kwargs["rmaj_loc"]
+    b_geo = zeros(Real, ms+1)
+
+    ### technically don't have to initialize here, but maybe better?
+    Bt = zeros(Real, ms+1)
+    B = zeros(Real, ms+1)
+    pk_geo = zeros(Real, ms+1)
+    qrat_geo = zeros(Real, ms+1)
+
+    s_p = zeros(Real,ms+1)
+    r_curv = zeros(Real,ms+1)
+    sin_u = zeros(Real,ms+1)
+
+    R, Bp, q_prime_s, p_prime_s = miller_geo()
+    psi_x = R.*Bp
+
+    delta_s = 12.0*ds
+    ds2 = 12.0*ds^2
+    # note that the point 1 and ms+1 are the same so m+1->1 and m-1->ms-1 at m=0
+    error_check=0.0
+    for m in 1:ms + 1
+        m1 = (ms + m - 3%(ms+1)) + 1
+        m2 = (ms + m - 2%(ms+1)) + 1
+        m3 = (m%(ms+1)) + 1
+        m4 = (m + 1%(ms+1)) + 1
+        R_s = (R[m1] - 8.0*R[m2] + 8.0*R[m3] - R[m4])/delta_s
+        Z_s = (Z[m1] - 8.0*Z[m2] + 8.0*Z[m3] - Z[m4])/delta_s
+        s_p[m] = √(R_s^2 + Z_s^2)
+        R_ss = (-R[m1] + 16.0*R[m2] - 30.0*R[m] + 16.0*R[m3] - R[m4])/ds2
+        Z_ss = (-Z[m1] + 16.0*Z[m2] - 30.0*Z[m] + 16.0*Z[m3] - Z[m4])/ds2
+        r_curv[m] = (s_p[m]^3)/(R_s*Z_ss - Z_s*R_ss)
+        sin_u[m] = -Z_s/s_p[m]
+    end
+
+
+    #---------------------------------------------------------------
+    # Compute f=R*Bt such that the eikonal S which solves
+    # B*Grad(S)=0 has the correct quasi-periodicity S(s+Ls)=S(s)-2*pi*q_s
+    #
+    # Ls
+    # / ds
+    # 1/f = | ---------------
+    # / R**2 Bp 2pi q
+    # 0
+    #
+    # f -> R for a circular flux-surface
+    #
+    # Define psi_x
+    #
+    # First compute 2 pi q/f:
+    #
+    f = 0.0
+    for m in 2:ms+1
+        f = f
+            +0.5*ds*(s_p[m-1]/(R[m-1]*psi_x[m-1]) + s_p[m]/(R[m]*psi_x[m]))
+    end
+    f = 2π*q_s/f
+
+    ### return value
+    Bt0_out = f/Rmaj_input
+
+    ###### not in the python
+    # Bref_out = 1.0
+    # betae_s = betae_in
+    # debye_s = debye_in
+    # if(units_in .eq. 'GENE')then
+    # # convert inputs from GENE reference magnetic field to Bunit
+    #     Bref_out = f/Rmaj_input # Bref/Bunit
+    #     # write(*,*)"Bref/Bunit = ",Bref_out
+    #     betae_s = betae_in*Bref_out**2
+    #     p_prime_s = p_prime_loc*Bref_out**2
+    #     debye_s = debye_in/Bref_out
+    # endif
+
+
+
+    #-----------------------------------------------------------
+    #-----------------------------------------------------------
+    # Compute toroidal and total fields:
+    Bt .= f ./R
+    B .= .√(Bt.^2 .+ Bp.^2)
+
+
+
+    #### not done in the python
+    #-----------------------------------------------------------
+    #-----------------------------------------------------------
+    # # Compute Miller's D0 , Dp and Dff'p needed for kx.
+    # d_0(0) = 0.0
+    # d_p(0) = 0.0
+    # d_ffp(0) = 0.0
+    # #
+    # dq1 = ds*s_p(0)*f/(R(0)*psi_x(0)**2)
+    # d0_s1 = -dq1*(2.0/r_curv(0)+2.0*sin_u(0)/R(0))
+    # dp_s1 = dq1*4.0*pi*R(0)/Bp(0)
+    # dffp_s1 = dq1*(R(0)/Bp(0))*(B(0)/f)**2
+    # #
+    # do m=1,ms
+    #     dq2 = ds*s_p(m)*f/(R(m)*psi_x(m)**2)
+    #     d0_s2 = -dq2*(2.0/r_curv(m)+2.0*sin_u(m)/R(m))
+    #     dp_s2 = dq2*4.0*pi*R(m)/Bp(m)
+    #     dffp_s2 = dq2*(R(m)/Bp(m))*(B(m)/f)**2
+    #     #
+    #     d_0(m) = d_0(m-1)+0.5*(d0_s1+d0_s2)
+    #     d_p(m) = d_p(m-1)+0.5*(dp_s1+dp_s2)
+    #     d_ffp(m) = d_ffp(m-1)+0.5*(dffp_s1+dffp_s2)
+    #     #
+    #     d0_s1 = d0_s2
+    #     dp_s1 = dp_s2
+    #     dffp_s1 = dffp_s2
+    #     #
+    # enddo
+
+
+    #-----------------------------------------------------------
+    #-----------------------------------------------------------
+    # Begin computing geometric quantities required for solution
+    # of gyrokinetic equation:
+    #
+    # - b_geo replaces bmaj(j)=b_theta(j)/b_unit
+    #
+    # - pk_geo is close to pk=2*rmin/(rmaj*q), the coefficient
+    # of d/dtheta
+    #
+    # - qrat_geo -> 1 in a circle
+    #
+    # Note that for the physical quantity
+    #
+    # k_theta = nq/r
+    #
+    # we use
+    #
+    # kyrhos_s = n*q_s/rmin_s*rhos_unit_s
+    #
+    # which is exactly the same as for the circle.
+    #
+    # Also, "omega_star" remains unchanged from circle with
+    # logarithmic density gradients along minor axis.
+    #
+    # - "ky*rhos" in Bessel function is kyrhos_s*qrat_geo(j)/b_geo(j)
+    #
+    # - "kx*rhos" is kxoky_geo(j)*ky*rhos
+    #
+    
+    b_geo .= B
+    pk_geo .= 2.0.*Bp./B
+    qrat_geo .= (rmin_s./R).*(B./Bp)/q_s
+
+
+    #### not done in the python
+    #-----------------------------------------------------------
+    #---------------------------------------------------------------
+    # # Determine ff_prime from:
+    # #
+    # # 2 pi q_prime = d_0(ms)
+    # # +d_p(ms)*p_prime
+    # # +d_ffp(ms)*ff_prime
+    # #
+    # ff_prime = (2π*q_prime_s-d_0(ms)-d_p(ms)*p_prime_s) &
+    #     /d_ffp(ms)
+
+    #### not done in the python
+    #---------------------------------------------------------------
+    #--------------------------------------------------------------
+    # # Compute [[kx/ky]] (herein, kxoky_geo) from Waltz-Miller [2] paper.
+    # # 2
+    # # (R B_p) S1
+    # # kxoky_geo = ---------- ------
+    # # B R B_p
+    # #
+    # # S1
+    # # ------ = -(d_0(theta)+d_p(theta)*p_prime+d_ffp(theta)*ff_prime)
+    # # R B_p
+    # #
+    # do m=0,ms
+
+    #     S_prime(m) = -(d_0(m)+d_p(m)*p_prime_s+d_ffp(m)*ff_prime)
+    #     kx_factor(m) = (psi_x(m)**2)/B(m)
+    #     kxoky_geo(m) = S_prime(m)*kx_factor(m)
+    #     # write(*,*)"check s_prime",S_prime(m)
+
+    # enddo
+
+
+    #---------------------------------------------------------------
+    #---------------------------------------------------------------
+    # Compute drift coefficients:
+    # p_prime_zero forces grad-B-curvature to zero to compensates
+    # for b_par =0
+    #
+    p_prime_zero_s = 1.0
+    if(use_mhd_rule_in) p_prime_zero_s = 0.0 end
+
+    epsl_geo = (2.0/rmaj_s).*qrat_geo./b_geo
+    costheta_geo = 
+            -rmaj_s.* (Bp./B.^2) .*
+            (Bp./r_curv .- (f^2 ./(Bp.*R.^3) ).*sin_u) 
+    ### not used
+    costheta_p_geo = (4.0*π*p_prime_s*p_prime_zero_s*rmaj_s) .* (Bp.*R./B.^2)
+    
+
+    #### not done in the python
+    #---------------------------------------------------------------
+    #-------------------------------------------------------------
+    # Functions which require theta-derivatives:
+    #
+    # do m=0,ms
+
+    #     # Waltz/Miller [[sin]]
+    #     m1=MOD(ms+m-2,ms)
+    #     m2=MOD(ms+m-1,ms)
+    #     m3=MOD(m+1,ms)
+    #     m4=MOD(m+2,ms)
+    #     sintheta_geo(m) = -rmaj_s*(f/(R(m)*B(m)**2))* &
+    #         (B(m1)-8.0*B(m2)+8.0*B(m3)-B(m4))/(delta_s*s_p(m))
+    #     # write(*,*)m,m1,m2,m3,m4,"sintheta_geo=",sintheta_geo(m)
+
+    # enddo
+    # #
+    # # compute vprime and vpp
+    # #
+    # vprime = 0.0
+    # vpp = 0.0
+    # dvpp1 = (s_p(0)*R(0)/psi_x(0)**3) &
+    #     *(4.0*pi*p_prime_s*R(0)**2 + ff_prime - 2.0*psi_x(0)/r_curv(0))
+    # do m=1,ms
+    #     dvpp2 = (s_p(m)*R(m)/psi_x(m)**3) &
+    #         *(4.0*pi*p_prime_s*R(m)**2 + ff_prime - 2.0*psi_x(m)/r_curv(m))
+    #     vprime = vprime + 0.5*ds*(s_p(m-1)/Bp(m-1) + s_p(m)/Bp(m))
+    #     vpp = vpp + 0.5*ds*(dvpp1 + dvpp2)
+    #     dvpp1 = dvpp2
+    # enddo
+    # vprime = pi_2*vprime
+    # vpp = pi_2*vpp
+    # # write(*,*)"vprime = ",vprime,"vpp = ",vpp
+    # #
+    # ave_M1 = 0.0
+    # ave_M2 = 0.0
+    # ave_M3 = 0.0
+    # ave_M4 = 0.0
+    # do m=1,ms
+    #     ave_M1 = ave_M1 + 0.5*ds*(s_p(m-1)/Bp(m-1)**3 + s_p(m)/Bp(m)**3)
+    #     ave_M2 = ave_M2 + 0.5*ds*(s_p(m-1)*R(m-1)/psi_x(m-1)**3 + s_p(m)*R(m)/psi_x(m)**3)
+    #     ave_M3 = ave_M3 + 0.5*ds*(s_p(m-1)*(B(m-1)/psi_x(m-1))**2/Bp(m-1) + s_p(m)*(B(m)/psi_x(m))**2/Bp(m))
+    #     ave_M4 = ave_M4 + 0.5*ds*(s_p(m-1)*B(m-1)**2/Bp(m-1) + s_p(m)*B(m)**2/Bp(m))
+    # enddo
+    # # write(*,*)"M1=",ave_M1,"M2=",ave_M2,"M3=",ave_M3,"M4=",ave_M4
+    # p_prime_M = 4.0*pi*p_prime_s
+    # q_prime_M = pi_2*q_prime_s
+    # DM_out = 0.25 + (p_prime_M/MAX(q_prime_M**2,1e-12))*((vpp/pi_2 - p_prime_M*ave_M1)*ave_M3 &
+    #     + (f**2*p_prime_M*ave_M2 - q_prime_M*f)*ave_M2)
+    # H = (f*p_prime_M*q_prime_M/MAX(q_prime_M**2,1e-12))*ave_M3*(ave_M2/ave_M3 - vprime/(pi_2*ave_M4))
+    # # write(*,*)"H = ",H
+    # DR_out = DM_out - (0.5 - H)**2
+    
+end
+
+
+function miller_geo(mts=5,ms=128;kwargs...)
+
+
+    ###### ms is a global variable in tjlf_max_dimensions
+    # mts is defined inside the function
+
+    # uses variables from tglf_global, tglf_sgrid
+    # create dictionary
+    kwargs=Dict(kwargs)
+
+    rmin_loc = kwargs["rmin_loc"]
+    rmaj_loc = kwargs["rmaj_loc"]
+    zmaj_loc = kwargs["zmaj_loc"]
+    delta_loc = kwargs["delta_loc"]
+    kappa_loc = kwargs["kappa_loc"]
+    zeta_loc = kwargs["zeta_loc"]
+    q_loc = kwargs["q_loc"]
+    p_prime_loc = kwargs["p_prime_loc"]
+    q_prime_loc = kwargs["q_prime_loc"]
+
+    drmajdx_loc = kwargs["drmajdx_loc"]
+    s_delta_loc = kwargs["s_delta_loc"]
+    s_kappa_loc = kwargs["s_kappa_loc"]
+
+    # # change global variable values??
+    # kwargs["rmin_input"] = rmin_loc
+    # kwargs["Rmaj_input"] = rmaj_loc
+    # # set elevation to zero
+    # kwargs["zmaj_loc"] = 0.0
+    # kwargs["dzmajdx_loc"] = 0.0
+
+    # all in sgrid
+    R = zeros(Real,ms+1)
+    Z = zeros(Real,ms+1)
+    Bp = zeros(Real,ms+1)
+
+
+    x_delta = ASIN(delta_loc)
+
+    # 
+    #  set the flux surface constants needed for mercier-luc
+    # 
+    ##### this should be in a different dictionary?? its not in global
+    kwargs["Rmaj_s"] = rmaj_loc
+    kwargs["Zmaj_s"] = zmaj_loc
+    kwargs["q_s"] = q_loc
+
+    kwargs["rmin_s"] = rmin_loc
+    kwargs["p_prime_s"] = p_prime_loc
+    kwargs["q_prime_s"] = q_prime_loc
+
+
+    if(rmin_loc<0.00001) rmin_loc=0.00001 end
+    
+    
+    #
+    # compute the arclength around the flux surface
+    #
+    theta = 0.0
+    # functions are in radians
+    arg_r = theta + x_delta*sin(theta)
+    darg_r = 1.0 + x_delta*cos(theta)
+    arg_z = theta + zeta_loc*sin(2.0*theta)
+    darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
+    r_t = -rmin_loc*sin(arg_r)*darg_r
+    z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
+    l_t = √(r_t^2 + z_t^2)
+    # scale dtheta by l_t to keep mts points in each ds interval of size pi_2/ms
+    dtheta = 2π/(real(mts*ms)*l_t)
+    
+    l_t1 = l_t
+    scale_max = l_t
+    arclength = 0.0
+    while(theta<2π)
+        theta = theta + dtheta
+        if(theta>2π)
+            theta = theta-dtheta
+            dtheta = 2π-theta
+            theta = 2π
+        end
+        arg_r = theta + x_delta*sin(theta)
+        # d(arg_r)/dtheta
+        darg_r = 1.0 + x_delta*cos(theta)
+        # dR/dtheta
+        r_t = -rmin_loc*sin(arg_r)*darg_r
+        
+        arg_z = theta + zeta_loc*sin(2.0*theta)
+        # d(arg_z)/dtheta
+        darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
+        # dZ/dtheta
+        z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
+        # dl/dtheta
+        l_t = √(r_t^2 + z_t^2)
+        # arclength along flux surface in poloidal direction
+        arclength = arclength + 0.50*(l_t + l_t1)*dtheta
+        # save maximum expansion scale for later
+        l_t>scale_max ? scale_max = l_t :
+
+        l_t1 = l_t
+    end
+    ### sgrid variable
+    kwargs["Ls"] = arclength
+    
+    # Find the theta points which map to an equally spaced s-grid of ms points along the arclength
+    # going clockwise from the outboard midplane around the flux surface
+    # by searching for the theta where dR**2 + dZ**2 >= ds**2 for a centered difference df=f(m+1)-f(m-1).
+    # This keeps the finite difference error of dR/ds, dZ/ds on the s-grid small
+    
+    ### idk why you need real lol
+    ds = arclength/real(ms)
+    ###### t_s defined in sgrid to be an array indexed from 0 to ms
+    t_s = zeros(Real,ms+1)
+    t_s[ms+1]=-2π
+    # make a first guess based on theta=0.0
+    theta=0.0
+    arg_r = theta + x_delta*sin(theta)
+    darg_r = 1.0 + x_delta*cos(theta)
+    arg_z = theta + zeta_loc*sin(2.0*theta)
+    darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
+    r_t = -rmin_loc*sin(arg_r)*darg_r
+    z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
+    l_t = √(r_t^2 + z_t^2)
+    dtheta = -ds/l_t
+    theta = dtheta
+    l_t1 = l_t
+    ### weird because array is offset weird
+    for m in 2:(ms+1)/2
+        arg_r = theta + x_delta*sin(theta)
+        darg_r = 1.0 + x_delta*cos(theta)
+        arg_z = theta + zeta_loc*sin(2.0*theta)
+        darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
+        r_t = -rmin_loc*sin(arg_r)*darg_r
+        z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
+        l_t = √(r_t^2 + z_t^2)
+        dtheta = -ds/(0.5*(l_t+l_t1))
+        t_s[m]=t_s[m-1]+dtheta
+        theta = t_s[m] +dtheta
+        l_t1 = l_t
+    end
+    # distribute endpoint error over interior points
+    dtheta = (t_s[(ms+1)/2]+pi)/real((ms+1)/2)
+    
+    ###### use the fancy Julia formatting??
+    for m in 2:(ms+1)/2
+        t_s[m] = t_s[m]-real(m-1)*dtheta
+        t_s[ms-m+1]=-2π - t_s[m]
+    end
+    # write(*,*)"t_s(ms/2)+pi=",t_s(ms/2)+pi
+    #
+    # open(2,file='t_s.dat',status='replace')
+    # do m=1,ms+1
+    # write(2,*)m,t_s(m)
+    # enddo
+    # close(2)
+    #
+    #---------------------------------------------------------------
+    #
+    #
+    #---------------------------------------------------------------
+    # all equilibrium functions satisfy
+    #
+    # f(0) = f(l_theta)
+    #
+    # Loop to compute most geometrical quantities needed for Mercie-Luc expansion
+    # R, Z, R*Bp on flux surface s-grid
+    #
+    # NOTES:
+    # If grad_r_theta diverges because denominator goes
+    # through zero, magnetic field lines are intersecting
+    # and the magnetic surfaces are not nested.
+    #
+    for m in 1:ms+1
+
+        theta = t_s[m]
+        arg_r = theta + x_delta*sin(theta)
+        darg_r = 1.0 + x_delta*cos(theta)
+        arg_z = theta + zeta_loc*sin(2.0*theta)
+        darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
+
+        # R(theta)
+        # Z(theta)
+
+        # in sgrid
+        R[m] = rmaj_loc + rmin_loc*cos(arg_r)
+        Z[m] = zmaj_loc + kappa_loc*rmin_loc*sin(arg_z)
+
+        # dR/dtheta
+        # dZ/dtheta
+
+        R_t = -rmin_loc*sin(arg_r)*darg_r
+        Z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
+
+        # dl/dtheta
+
+        l_t = √(R_t^2 + Z_t^2)
+        # dR/dr
+        # dZ/dr
+        R_r = drmajdx_loc + drmindx_loc*cos(arg_r) 
+                - sin(arg_r)*s_delta_loc*sin(theta)/√(1.0 - delta_loc^2)
+        Z_r = dzmajdx_loc + kappa_loc*sin(arg_z)*(drmindx_loc +s_kappa_loc)
+                + kappa_loc*cos(arg_z)*s_zeta_loc*sin(2.0*theta)
+        # Jacobian 
+        ###### (is it supposed to be lowercase?????)
+        det = R_r*z_t - R_t*Z_r
+        # grad_r
+        grad_r = abs(l_t/det)
+
+        if m==0
+            B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
+            if(drmindx_loc==1.0) B_unit=1.0 end # Waltz-Miller convention
+            # write(*,*)"B_unit = ",B_unit
+        end
+        # Bp = (r/q) B_unit*Abs(grad_r)/R
+
+        # changes q_s to q_loc
+        Bp[m] = (rmin_s/(q_loc*R[m]))*grad_r*B_unit
+        
+    end
+    # Note the definitions:
+    #
+    # q_prime -> dq/dpsi = dq/dr dr/dpsi
+    # p_prime -> dp/dpsi = dp/dr dr/dpsi
+    #
+    # R B_p
+    # and dpsi/dr = -------- = b_unit (r/q)
+    # |grad r|
+    #
+    # So, we can write:
+    # 2
+    # q_prime = (q/r) s/b_unit
+    # p_prime = (q/r) (1/b_unit) dp/dr
+    # = (q/r) (1/b_unit) p * dlnpdr
+    # rescale p_prime and q_prime to keep normalized eikonal invariant
+
+
+    ####### IDK if I should rewrite these variables
+    kwargs["p_prime_s"] = p_prime_loc*B_unit 
+    kwargs["q_prime_s"] = q_prime_loc/B_unit 
+    p_prime_s = p_prime_loc*B_unit
+    q_prime_s = q_prime_loc/B_unit
+    
+
+    return R, Bp, q_prime_s, p_prime_s
+end
