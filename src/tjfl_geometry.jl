@@ -337,7 +337,7 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     #-----------------------------------------------------------
     # Compute toroidal and total fields:
     Bt .= f ./R
-    B .= √.(Bt.^2 .+ Bp.^2)
+    B .= .√(Bt.^2 .+ Bp.^2)
 
 
 
