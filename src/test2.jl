@@ -20,13 +20,20 @@ b=[1,2,3,4,5,6]
 arr[1]+=1
 c =arr.*b
 c[1] = 4
-println(c)
-println(arr)
-println(.√(b.^2 .+ b))
+# println(c)
+# println(arr)
+# println(.√(b.^2 .+ b))
 
 d = zeros(6)
 d .= arr
 d[1]+=1
-println(arr)
+# println(arr)
+
+e = 2 ./b
+# println(e)
+
+f = [1,2,3,4]
+f = ifelse.(f.<=2,f, f.-1)
+println(f)
 
 a()
