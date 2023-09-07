@@ -1,5 +1,5 @@
 function get_sat_params(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.00000001;kwargs...)
-    mercier_luc()
+    xgrid_functions_geo(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.00000001;kwargs)
 
     return (
         kx0_e,
@@ -16,9 +16,211 @@ function get_sat_params(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.000000
     )
 end
 
-function xgrid_functions_geo()
+
+#### LINES 220-326, 439-478 in tglf_geometry.f90
+function xgrid_functions_geo(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.00000001;kwargs...)
+    #******************************************************************************#************************
+    #
+    # PURPOSE: compute the geometric coefficients on the x-grid
+    #
+    #
+    #******************************************************************************#************************
+    #
+
+    ### different depending on geometry
+    Rmaj_s = kwargs["rmaj_loc"]
+    rmin_s = kwargs["rmin_loc"]
+    q_s = kwargs["q_loc"]
+
+    alpha_quench_in = kwargs["ALPHA_QUENCH"]
+    sign_IT = kwargs["SIGN_IT"]
+    vexb_shear = kwargs["VEXB_SHEAR"]
+    mass_2 = kw["MASS_2"]
+    taus_2 = kw["TAUS_2"]
+    zs_2 = kw["ZS_2"]
+
+    vs_2 = np.sqrt(taus_2 / mass_2)
+    gamma_reference_kx0 = gammas[1, :]
+
+    s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out = mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
+    ds = arclength/real(ms)
     
+    y = zeros(real,ms+1)
+
+    #
+    # find length along magnetic field y
+    #
+    y[1]=0.0
+    for m in 1:ms+1
+        
+        y[m] = y[m-1]+s_p[m]*ds*4.0/(pk_geo[m]+pk_geo[m-1])
+    end
+    # set the global units
+    Ly=y[ms+1]
+    R_unit = Rmaj_s*b_geo[1]/(qrat_geo[1]*costheta_geo[1])
+    q_unit = Ly/(2π*R_unit)
+
+    #### not used in Python
+    # # midplane effective shear: reduces to s-alpha in shifted circle
+    # # note: S_prime(0)=0.0, S_prime(ms)=-2 pi q_prime, y(0)=0.0, y(ms)=Ly
+    # # midplane shear is average of left and right y-derivatives at midplane for general geometry
+    # midplane_shear = -(Ly/(2π))*((rmin_s/q_s)^2)*0.5
+    #         *(S_prime[2]/y[2]+(S_prime[ms+1]-S_prime[ms])/(y[ms+1]-y[ms]))
+    # midplane_shear += 0.11
+    # # # save f for output
+    # # RBt_ave_out = f/B_unit
+
+
+    # #
+    # # generalized quench rule kx0 shift
+    # #
+    # kx0 = kx0_loc/ky # note that kx0 is kx/ky
+    # kx0_e=0.0
+    # kx0_p=0.0
+    # #EPS2011 sign_kx0=1.0
+
+    
+
+    if(alpha_quench_in==0.0 && gamma_reference_kx0[1]!=0.0)
+        ### line from Python
+        vexb_shear_s = vexb_shear * sign_IT
+        vexb_shear_kx0 = alpha_e_in*vexb_shear_s
+
+        kyi = ky*vs_2*mass_2/abs(zs_2)
+        wE=0.0
+        ### not used 
+        # wd0 = ABS(ky/Rmaj_s)
+
+        ### ordering of the conditions is different between fortran and Python
+        if(units_in=="GYRO")
+            kx0_factor = abs(b_geo[1]/qrat_geo[1]^2)
+            kx0_factor = 1.0 + 0.40*(kx0_factor-1.0)^2
+            wE = kx0_factor*min(kyi/0.3,1.0)*vexb_shear_kx0/gamma_reference_kx0[1]
+        else
+            kx0_factor = 1.0
+            wE = 0.0
+        end
+        grad_r0_out = b_geo[1]/qrat_geo[1]
+        B_geo0_out = b_geo[1]
+        kx_geo0_out= 1.0/qrat_geo[1]
+
+        ### kx0_e defined differently, in Fortran, just the first value, in Python
+        ### it's an array
+        kx0_e = -(0.36*vexb_shear_kx0./gamma_reference_kx0
+                .+ (0.38*wE*tanh((0.69*wE)^6)))
+
+
+
+        a0 = 1.3
+        if(sat_rule_in==1)
+            a0 = 1.45
+            kx0_e = -(0.53*vexb_shear_kx0./gamma_reference_kx0
+                    .+ (0.25*wE*tanh((0.69*wE)^6)))
+        elseif(sat_rule_in==2 || sat_rule_in==3)
+            a0=1.6
+            if(abs(kymax_out*vzf_out*vexb_shear_kx0) > small)
+                kx0_e = -0.32*((ky./kymax_out).^0.3).*vexb_shear_kx0./(ky.*vzf_out)
+            else
+                kx0_e = zeros(Real,ky)
+            end
+        end
+
+        kx0_e = ifelse.(abs.(kx0_e).>a0, a0.*kx0_e./abs.(kx0_e), kx0_e)
+
+        #### not in the Python
+        # if(units_in=="GYRO")
+        #     kx0 = sign_Bt_in*kx0_e # cancel the sign_Bt_in factor in kxx below
+        # else
+        #     if(sat_rule_in.eq.1)kx0 = sign_Bt_in*kx0_e/(2.1)end  # goes with xnu_model=2
+        #     if(sat_rule_in.eq.2 .OR. sat_rule_in.eq.3)kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out**2 end     # goes with xnu_model=3, the factor 0.7/grad_r0_out**2 is needed for stress_tor
+        #     # note kx0 = alpha_e*gamma_ExB_HB/gamma Hahm - Burrell form of gamma_ExB
+        #     # The 2.1 effectively increases ay0 & ax0 and reduces toroidal stress to agree with CGYRO
+        # end
+    end
+
+#####################################################################################################################
+
+    norm_ave = 0.0
+    SAT_geo1_out = 0.0
+    SAT_geo2_out = 0.0
+    for i in 2:ms+1
+        dlp = s_p[i]*ds*(0.5/Bp[i]+0.5/Bp[i-1])
+        norm_ave += dlp
+        # B2x1 = b_geo[i-1]^2
+        # B2x2 = b_geo[i]^2
+        # B2_ave_out = B2_ave_out + dlp*(B2x1+B2x2)/2.0
+        # R2x1 = R(i-1)**2
+        # R2x2 = R(i)**2
+        # R2_ave_out = R2_ave_out + dlp*(R2x1+R2x2)/2.0
+        # B_ave_out = B_ave_out + dlp*(b_geo(i-1)+b_geo(i))/2.0
+        # Bt_ave_out = Bt_ave_out + dlp*(f/b_geo(i-1)+f/b_geo(i))/(2.0*Rmaj_s)
+        # Grad_r_ave_out = Grad_r_ave_out + dlp*0.5*((R(i-1)*Bp(i-1))**2+(R(i)*Bp(i))**2)*(q_s/rmin_s)**2
+        # kykx_geo_ave = kykx_geo_ave + dlp*0.5*(B_geo(i-1)**2/qrat_geo(i-1)**4+B_geo(i)**2/qrat_geo(i)**4)
+        SAT_geo1_out += dlp*((b_geo[1]/b_geo[i-1])^4 +(b_geo[1]/b_geo[i])^4)/2.0
+        SAT_geo2_out += dlp*((qrat_geo[1]/qrat_geo[i-1])^4 +(qrat_geo[1]/qrat_geo[i])^4)/2.0
+    end
+    # R2_ave_out = R2_ave_out/norm_ave
+    # B2_ave_out = B2_ave_out/norm_ave
+    # B2_ave_out = B2_ave_out/B_unit**2
+    # B_ave_out = B_ave_out/norm_ave
+    # Bt_ave_out = Bt_ave_out/norm_ave
+    # Grad_r_ave_out = Grad_r_ave_out/norm_ave
+    # kykx_geo_ave = kykx_geo_ave/norm_ave
+    SAT_geo1_out = SAT_geo1_out/norm_ave
+    SAT_geo2_out = SAT_geo2_out/norm_ave
+    #
+    # poloidal magnetic field on outboard midplane
+    #
+    # Bp0_out = Bp[1]/B_unit
+    if(units_in=="GYRO")
+        SAT_geo0_out = 1.0
+        SAT_geo1_out = 1.0
+        SAT_geo2_out = 1.0
+    # else
+    # # Nov 2019     SAT_geo0_out = 0.946/qrat_geo(0) # normed to GASTD with CGYRO
+    #     SAT_geo0_out = 0.946/qrat_geo(0)          # normed to GASTD with CGYRO
+    #     if(sat_rule_in.eq.2 .OR. sat_rule_in.eq.3)SAT_geo0_out = 1.0 end
+    # #    write(*,*)"SAT_geo0_out = ",SAT_geo0_out
+    #     grad_r0_out = B_geo(0)/qrat_geo(0)
+    #     B_geo0_out = b_geo(0)
+    end
+    ### line 276-277
+    grad_r0_out = b_geo[1]/qrat_geo[1]
+    B_geo0_out = b_geo[1]
+    ### so this value is defined in mercier_luc
+    Bt0_out = Bt0_out
+    B_unit_out = B_unit_out
+    grad_r_out = grad_r0_out
+
+    # Additional outputs for SAT2 G1(theta), Gq(theta)
+    theta_out = t_s  # theta grid over which everything is calculated.
+    Bt_out = B  # total magnetic field matching theta_out grid.
+
+    return (
+        kx0_e,
+        SAT_geo1_out,
+        SAT_geo2_out,
+        R_unit,
+        Bt0_out,
+        B_geo0_out,
+        grad_r0_out,
+        theta_out,
+        Bt_out,
+        grad_r_out,
+        B_unit_out,
+    )
+
+
+
 end
+
+
+
+
+
+
+
+
 
 function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     #-------------------------------------------
@@ -58,7 +260,8 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     r_curv = zeros(Real,ms+1)
     sin_u = zeros(Real,ms+1)
 
-    R, Bp, q_prime_s, p_prime_s = miller_geo()
+    ds = arclength/real(ms)
+    R, Bp, q_prime_s, p_prime_s, B_unit_out, grad_r_out = miller_geo(mts=5.0, ms=128, small=0.00000001,kwargs...)
     psi_x = R.*Bp
 
     delta_s = 12.0*ds
@@ -299,6 +502,8 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     # H = (f*p_prime_M*q_prime_M/MAX(q_prime_M**2,1e-12))*ave_M3*(ave_M2/ave_M3 - vprime/(pi_2*ave_M4))
     # # write(*,*)"H = ",H
     # DR_out = DM_out - (0.5 - H)**2
+
+    return s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out
     
 end
 
@@ -313,56 +518,34 @@ function miller_geo(mts=5,ms=128;kwargs...)
     # create dictionary
     kwargs=Dict(kwargs)
 
-    rmin_loc = kwargs["rmin_loc"]
-    rmaj_loc = kwargs["rmaj_loc"]
-    zmaj_loc = kwargs["zmaj_loc"]
-    delta_loc = kwargs["delta_loc"]
-    kappa_loc = kwargs["kappa_loc"]
-    zeta_loc = kwargs["zeta_loc"]
-    q_loc = kwargs["q_loc"]
-    p_prime_loc = kwargs["p_prime_loc"]
-    q_prime_loc = kwargs["q_prime_loc"]
+    rmin_loc = kwargs["RMIN_LOC"]
+    rmaj_loc = kwargs["RMAJ_LOC"]
+    zmaj_loc = kwargs["ZMAJ_LOC"]
+    delta_loc = kwargs["DELTA_LOC"]
+    kappa_loc = kwargs["KAPPA_LOC"]
+    zeta_loc = kwargs["ZETA_LOC"]
+    q_loc = kwargs["Q_LOC"]
+    p_prime_s = kwargs["P_PRIME_LOC"]
+    q_prime_s = kwargs["Q_PRIME_LOC"]
 
-    drmajdx_loc = kwargs["drmajdx_loc"]
-    s_delta_loc = kwargs["s_delta_loc"]
-    s_kappa_loc = kwargs["s_kappa_loc"]
-
-    # # change global variable values??
-    # kwargs["rmin_input"] = rmin_loc
-    # kwargs["Rmaj_input"] = rmaj_loc
-    # # set elevation to zero
-    # kwargs["zmaj_loc"] = 0.0
-    # kwargs["dzmajdx_loc"] = 0.0
-
-    # all in sgrid
+    drmajdx_loc = kwargs["DRMAJDX_LOC"]
+    s_delta_loc = kwargs["S_DELTA_LOC"]
+    s_kappa_loc = kwargs["S_KAPPA_LOC"]
     R = zeros(Real,ms+1)
     Z = zeros(Real,ms+1)
     Bp = zeros(Real,ms+1)
 
 
-    x_delta = ASIN(delta_loc)
-
     # 
     #  set the flux surface constants needed for mercier-luc
     # 
-    ##### this should be in a different dictionary?? its not in global
-    kwargs["Rmaj_s"] = rmaj_loc
-    kwargs["Zmaj_s"] = zmaj_loc
-    kwargs["q_s"] = q_loc
-
-    kwargs["rmin_s"] = rmin_loc
-    kwargs["p_prime_s"] = p_prime_loc
-    kwargs["q_prime_s"] = q_prime_loc
-
-
+    
     if(rmin_loc<0.00001) rmin_loc=0.00001 end
-    
-    
     #
     # compute the arclength around the flux surface
     #
+    x_delta = asin(delta_loc)
     theta = 0.0
-    # functions are in radians
     arg_r = theta + x_delta*sin(theta)
     darg_r = 1.0 + x_delta*cos(theta)
     arg_z = theta + zeta_loc*sin(2.0*theta)
@@ -371,11 +554,11 @@ function miller_geo(mts=5,ms=128;kwargs...)
     z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
     l_t = √(r_t^2 + z_t^2)
     # scale dtheta by l_t to keep mts points in each ds interval of size pi_2/ms
-    dtheta = 2π/(real(mts*ms)*l_t)
-    
+    dtheta = 2π/(mts*ms*l_t)
     l_t1 = l_t
     scale_max = l_t
     arclength = 0.0
+    
     while(theta<2π)
         theta = theta + dtheta
         if(theta>2π)
@@ -383,41 +566,36 @@ function miller_geo(mts=5,ms=128;kwargs...)
             dtheta = 2π-theta
             theta = 2π
         end
+
         arg_r = theta + x_delta*sin(theta)
-        # d(arg_r)/dtheta
-        darg_r = 1.0 + x_delta*cos(theta)
-        # dR/dtheta
-        r_t = -rmin_loc*sin(arg_r)*darg_r
+        darg_r = 1.0 + x_delta*cos(theta) # d(arg_r)/dtheta
+        r_t = -rmin_loc*sin(arg_r)*darg_r # dR/dtheta
         
         arg_z = theta + zeta_loc*sin(2.0*theta)
-        # d(arg_z)/dtheta
-        darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
-        # dZ/dtheta
-        z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
-        # dl/dtheta
-        l_t = √(r_t^2 + z_t^2)
+        darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta) # d(arg_z)/dtheta
+        
+        z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z # dZ/dtheta
+        l_t = √(r_t^2 + z_t^2) # dl/dtheta
+        
         # arclength along flux surface in poloidal direction
         arclength = arclength + 0.50*(l_t + l_t1)*dtheta
         # save maximum expansion scale for later
-        l_t>scale_max ? scale_max = l_t :
+        if(l_t>scale_max)  scale_max = l_t end
 
         l_t1 = l_t
     end
-    ### sgrid variable
-    kwargs["Ls"] = arclength
     
     # Find the theta points which map to an equally spaced s-grid of ms points along the arclength
     # going clockwise from the outboard midplane around the flux surface
     # by searching for the theta where dR**2 + dZ**2 >= ds**2 for a centered difference df=f(m+1)-f(m-1).
     # This keeps the finite difference error of dR/ds, dZ/ds on the s-grid small
     
-    ### idk why you need real lol
-    ds = arclength/real(ms)
+    ds = arclength/ms
     ###### t_s defined in sgrid to be an array indexed from 0 to ms
     t_s = zeros(Real,ms+1)
     t_s[ms+1]=-2π
     # make a first guess based on theta=0.0
-    theta=0.0
+    theta = 0.0
     arg_r = theta + x_delta*sin(theta)
     darg_r = 1.0 + x_delta*cos(theta)
     arg_z = theta + zeta_loc*sin(2.0*theta)
@@ -429,7 +607,7 @@ function miller_geo(mts=5,ms=128;kwargs...)
     theta = dtheta
     l_t1 = l_t
     ### weird because array is offset weird
-    for m in 2:(ms+1)/2
+    for m in 2:ms/2+1
         arg_r = theta + x_delta*sin(theta)
         darg_r = 1.0 + x_delta*cos(theta)
         arg_z = theta + zeta_loc*sin(2.0*theta)
@@ -443,21 +621,14 @@ function miller_geo(mts=5,ms=128;kwargs...)
         l_t1 = l_t
     end
     # distribute endpoint error over interior points
-    dtheta = (t_s[(ms+1)/2]+pi)/real((ms+1)/2)
+    dtheta = (t_s[ms/2+1]+π)/real(ms/2+1)
     
-    ###### use the fancy Julia formatting??
-    for m in 2:(ms+1)/2
+    for m in 2:ms/2+1
         t_s[m] = t_s[m]-real(m-1)*dtheta
-        t_s[ms-m+1]=-2π - t_s[m]
+        #### check that it is +2
+        t_s[ms-m+2]=-2π - t_s[m]
     end
-    # write(*,*)"t_s(ms/2)+pi=",t_s(ms/2)+pi
-    #
-    # open(2,file='t_s.dat',status='replace')
-    # do m=1,ms+1
-    # write(2,*)m,t_s(m)
-    # enddo
-    # close(2)
-    #
+    
     #---------------------------------------------------------------
     #
     #
@@ -474,8 +645,10 @@ function miller_geo(mts=5,ms=128;kwargs...)
     # through zero, magnetic field lines are intersecting
     # and the magnetic surfaces are not nested.
     #
-    for m in 1:ms+1
+    B_unit_out = zeros(Real, ms + 1)
+    grad_r_out = zeros(Real, ms + 1)
 
+    for m in 1:ms+1
         theta = t_s[m]
         arg_r = theta + x_delta*sin(theta)
         darg_r = 1.0 + x_delta*cos(theta)
@@ -505,20 +678,20 @@ function miller_geo(mts=5,ms=128;kwargs...)
         Z_r = dzmajdx_loc + kappa_loc*sin(arg_z)*(drmindx_loc +s_kappa_loc)
                 + kappa_loc*cos(arg_z)*s_zeta_loc*sin(2.0*theta)
         # Jacobian 
-        ###### (is it supposed to be lowercase?????)
-        det = R_r*z_t - R_t*Z_r
-        # grad_r
-        grad_r = abs(l_t/det)
+        det = R_r*Z_t - R_t*Z_r
 
+        grad_r = abs(l_t/det)
         if m==0
             B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
             if(drmindx_loc==1.0) B_unit=1.0 end # Waltz-Miller convention
-            # write(*,*)"B_unit = ",B_unit
         end
-        # Bp = (r/q) B_unit*Abs(grad_r)/R
+        B_unit_out[m] = B_unit
+        grad_r_out[m] = grad_r
 
         # changes q_s to q_loc
         Bp[m] = (rmin_s/(q_loc*R[m]))*grad_r*B_unit
+        p_prime_s = p_prime_s * B_unit
+        q_prime_s = q_prime_s / B_unit
         
     end
     # Note the definitions:
@@ -535,15 +708,6 @@ function miller_geo(mts=5,ms=128;kwargs...)
     # q_prime = (q/r) s/b_unit
     # p_prime = (q/r) (1/b_unit) dp/dr
     # = (q/r) (1/b_unit) p * dlnpdr
-    # rescale p_prime and q_prime to keep normalized eikonal invariant
 
-
-    ####### IDK if I should rewrite these variables
-    kwargs["p_prime_s"] = p_prime_loc*B_unit 
-    kwargs["q_prime_s"] = q_prime_loc/B_unit 
-    p_prime_s = p_prime_loc*B_unit
-    q_prime_s = q_prime_loc/B_unit
-    
-
-    return R, Bp, q_prime_s, p_prime_s
+    return R, Bp, q_prime_s, p_prime_s, B_unit_out, grad_r_out
 end
