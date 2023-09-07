@@ -33,7 +33,7 @@ e = 2 ./b
 # println(e)
 
 f = [1,2,3,4]
-f = ifelse.(f.<=2,f, f.-1)
-println(f)
+# f .= ifelse.(f.<=2,f, f.-1)
+println(ifelse.(f.<=2,f, f.-1))
 
 a()
