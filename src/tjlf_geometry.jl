@@ -1,7 +1,13 @@
+module geometry
+export get_sat_params, xgrid_functions_geo, mercier_luc, miller_geo
+
+
 include("tjlf_multiscale_spectrum.jl")
 
-function get_sat_params(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.00000001;kwargs...)
-    
+function get_sat_params(sat_rule_in::Integer, ky::AbstractVector{T}, gammas::AbstractMatrix{T}, kwargs::AbstractDict) where T<:Real
+
+    kwargs = Dict(kwargs)
+
     kx0_e,
     SAT_geo1_out,
     SAT_geo2_out,
@@ -12,7 +18,7 @@ function get_sat_params(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.000000
     theta_out,
     Bt_out,
     grad_r_out,
-    B_unit_out = xgrid_functions_geo(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.00000001;kwargs)
+    B_unit_out = xgrid_functions_geo(sat_rule_in, ky, gammas, kwargs)
 
     return (
         kx0_e,
@@ -31,7 +37,8 @@ end
 
 
 #### LINES 220-326, 439-478 in tglf_geometry.f90
-function xgrid_functions_geo(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.00000001;kwargs...)
+function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas::AbstractMatrix{T}, kwargs::AbstractDict, 
+    mts::AbstractFloat=5.0, ms::Integer=128, small::AbstractFloat=0.00000001) where T<:Real
     #******************************************************************************#************************
     #
     # PURPOSE: compute the geometric coefficients on the x-grid
@@ -40,6 +47,8 @@ function xgrid_functions_geo(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.0
     #******************************************************************************#************************
     #
 
+    kwargs = Dict(kwargs)
+
     ### might be different depending on geometry
     rmaj_s = kwargs["RMAJ_LOC"]
     rmin_s = kwargs["RMIN_LOC"]
@@ -47,17 +56,18 @@ function xgrid_functions_geo(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.0
 
     ### needed for this function
     alpha_quench_in = kwargs["ALPHA_QUENCH"]
+    alpha_e_in = kwargs["ALPHA_E"]
     sign_IT = kwargs["SIGN_IT"]
     vexb_shear = kwargs["VEXB_SHEAR"]
-    mass_2 = kw["MASS_2"]
-    taus_2 = kw["TAUS_2"]
-    zs_2 = kw["ZS_2"]
+    mass_2 = kwargs["MASS_2"]
+    taus_2 = kwargs["TAUS_2"]
+    zs_2 = kwargs["ZS_2"]
+    units_in = kwargs["UNITS"]
 
     vs_2 = √(taus_2 / mass_2)
     gamma_reference_kx0 = gammas[1, :]
 
-    s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out = mercier_luc(mts=5.0, ms=128, small=0.00000001, kwargs...)
-    ds = arclength/ms
+    s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, B = mercier_luc(kwargs)
     
     y = zeros(Real,ms+1)
 
@@ -124,7 +134,7 @@ function xgrid_functions_geo(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.0
         ### kx0_e defined differently, in Fortran, just the first value, 
         ### in Python it's an array
         kx0_e = -(0.36*vexb_shear_kx0./gamma_reference_kx0
-                .+ (0.38*wE*tanh((0.69*wE)^6)))
+                .+ (0.38.*wE.*tanh.((0.69.*wE).^6)))
 
 
 
@@ -144,6 +154,8 @@ function xgrid_functions_geo(sat_rule_in, ky, gammas, mts=5.0, ms=128, small=0.0
         end
 
         kx0_e = ifelse.(abs.(kx0_e).>a0, a0.*kx0_e./abs.(kx0_e), kx0_e)
+        ### copied from the Python, why is this a thing
+        kx0_e = ifelse.(isnan.(kx0_e), 0, kx0_e)
 
         #### not in the Python
         # if(units_in=="GYRO")
@@ -239,7 +251,7 @@ end
 
 
 
-function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
+function mercier_luc(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=128, small::AbstractFloat=0.00000001)
     #-------------------------------------------
     # the following must be defined from a previous call to one of the
     # geometry routines miller_geo, fourier_geo,ELITE_geo and stored in tglf_sgrid:
@@ -259,6 +271,8 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     # so (dR/ds)**2+(dZ/ds)**2 = 1, error_check compute the error in this relation
     # to make sure that the input flux surface coordinates R(s), Z(s) are ok.
     #
+
+    kwargs = Dict(kwargs)
 
     ### there are also variables in sgrid named this, not sure if this has to be separated for the different geometries
     ### this might be geometry dependent, maybe save from output of miller_geo()?
@@ -280,21 +294,25 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     r_curv = zeros(Real,ms+1)
     sin_u = zeros(Real,ms+1)
 
-    ds = arclength/ms
-    R, Bp, q_prime_s, p_prime_s, B_unit_out, grad_r_out = miller_geo(mts=5.0, ms=128, small=0.00000001,kwargs...)
+    R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, grad_r_out, ds, t_s = miller_geo(kwargs)
     
     
     
     psi_x = R.*Bp
-
     delta_s = 12.0*ds
     ds2 = 12.0*ds^2
     # note that the point 1 and ms+1 are the same so m+1->1 and m-1->ms-1 at m=0
     for m in 1:ms + 1
-        m1 = ((ms + m - 3) % (ms+1)) + 1
-        m2 = ((ms + m - 2) % (ms+1)) + 1
+        m1 = ((ms + m - 2) % (ms+1)) + 1
+        m2 = ((ms + m - 1) % (ms+1)) + 1
         m3 = (m % (ms+1)) + 1
         m4 = ((m + 1) % (ms+1)) + 1
+        ### had to do this weird short-circuiting bc of weird indexing
+        m1 < ms || (m1 = ((ms + m - 3) % (ms+1)) + 1)
+        m2 < ms+1 || (m2 = ((ms + m - 2) % (ms+1)) + 1)
+        m3 > 1 || (m3 = ((m + 1) % (ms+1)) + 1)
+        m4 > 2 || (m4 = ((m + 2) % (ms+1)) + 1)
+
         R_s = (R[m1] - 8.0*R[m2] + 8.0*R[m3] - R[m4])/delta_s
         Z_s = (Z[m1] - 8.0*Z[m2] + 8.0*Z[m3] - Z[m4])/delta_s
         s_p[m] = √(R_s^2 + Z_s^2)
@@ -310,8 +328,7 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     # B*Grad(S)=0 has the correct quasi-periodicity S(s+Ls)=S(s)-2*pi*q_s
     f = 0.0
     for m in 2:ms+1
-        f = f
-            +0.5*ds*(s_p[m-1]/(R[m-1]*psi_x[m-1]) + s_p[m]/(R[m]*psi_x[m]))
+        f = f + 0.5*ds*(s_p[m-1]/(R[m-1]*psi_x[m-1]) + s_p[m]/(R[m]*psi_x[m]))
     end
     f = 2π*q_s/f
 
@@ -338,8 +355,6 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     # Compute toroidal and total fields:
     Bt .= f ./R
     B .= .√(Bt.^2 .+ Bp.^2)
-
-
 
     #### not done in the python
     #-----------------------------------------------------------
@@ -443,17 +458,17 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
 
     #---------------------------------------------------------------
     #---------------------------------------------------------------
-    # Compute drift coefficients:
-    # p_prime_zero forces grad-B-curvature to zero to compensates
-    # for b_par =0
-    #
-    p_prime_zero_s = 1.0
-    if(use_mhd_rule_in) p_prime_zero_s = 0.0 end
+    # # Compute drift coefficients:
+    # # p_prime_zero forces grad-B-curvature to zero to compensates
+    # # for b_par =0
+    # #
+    # p_prime_zero_s = 1.0
+    # if(use_mhd_rule_in) p_prime_zero_s = 0.0 end
 
-    ### not used
-    epsl_geo = (2.0/rmaj_s).*qrat_geo./b_geo
-    ### not used
-    costheta_p_geo = (4.0*π*p_prime_s*p_prime_zero_s*rmaj_s) .* (Bp.*R./B.^2)
+    # ### not used
+    # epsl_geo = (2.0/rmaj_s).*qrat_geo./b_geo
+    # ### not used
+    # costheta_p_geo = (4.0*π*p_prime_s*p_prime_zero_s*rmaj_s) .* (Bp.*R./B.^2)
     costheta_geo .= 
             -rmaj_s.* (Bp./(B.^2)) .*
             ((Bp./r_curv) .- (f^2 ./(Bp.*R.^3) ).*sin_u) 
@@ -513,12 +528,12 @@ function mercier_luc(mts=5.0, ms=128, small=0.00000001;kwargs...)
     # # write(*,*)"H = ",H
     # DR_out = DM_out - (0.5 - H)**2
 
-    return s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out
+    return s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, B
     
 end
 
 
-function miller_geo(mts=5,ms=128;kwargs...)
+function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=128)
 
 
     ###### ms is a global variable in tjlf_max_dimensions
@@ -526,7 +541,7 @@ function miller_geo(mts=5,ms=128;kwargs...)
 
     # uses variables from tglf_global, tglf_sgrid
     # create dictionary
-    kwargs=Dict(kwargs)
+    kwargs = Dict(kwargs)
 
     rmin_loc = kwargs["RMIN_LOC"]
     rmaj_loc = kwargs["RMAJ_LOC"]
@@ -539,6 +554,9 @@ function miller_geo(mts=5,ms=128;kwargs...)
     q_prime_s = kwargs["Q_PRIME_LOC"]
 
     drmajdx_loc = kwargs["DRMAJDX_LOC"]
+    drmindx_loc = kwargs["DRMINDX_LOC"]
+    dzmajdx_loc = 0.0
+    s_zeta_loc = kwargs["S_ZETA_LOC"]
     s_delta_loc = kwargs["S_DELTA_LOC"]
     s_kappa_loc = kwargs["S_KAPPA_LOC"]
     R = zeros(Real,ms+1)
@@ -618,7 +636,7 @@ function miller_geo(mts=5,ms=128;kwargs...)
     l_t1 = l_t
 
     ### weird because array is offset weird
-    for m in 2:ms/2+1
+    for m in 2:round(Integer, ms/2)+1
         arg_r = theta + x_delta*sin(theta)
         darg_r = 1.0 + x_delta*cos(theta)
         arg_z = theta + zeta_loc*sin(2.0*theta)
@@ -632,9 +650,9 @@ function miller_geo(mts=5,ms=128;kwargs...)
         l_t1 = l_t
     end
     # distribute endpoint error over interior points
-    dtheta = (t_s[ms/2+1]+π) / (ms/2+1)
+    dtheta = (t_s[round(Integer, ms/2+1)]+π) / (ms/2+1)
     
-    for m in 2:ms/2+1
+    for m in 2:round(Integer, ms/2)+1
         t_s[m] = t_s[m] - (m-1)*dtheta
         #### check that it is +2
         t_s[ms-m+2]=-2π - t_s[m]
@@ -685,9 +703,9 @@ function miller_geo(mts=5,ms=128;kwargs...)
         det = R_r*Z_t - R_t*Z_r
 
         grad_r = abs(l_t/det)
-        if m==0
-            B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
-            if(drmindx_loc==1.0) B_unit=1.0 end # Waltz-Miller convention
+        if m==1
+            global B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
+            if(drmindx_loc==1.0) global B_unit=1.0 end # Waltz-Miller convention
         end
         B_unit_out[m] = B_unit
         grad_r_out[m] = grad_r
@@ -699,5 +717,8 @@ function miller_geo(mts=5,ms=128;kwargs...)
         
     end
 
-    return R, Bp, q_prime_s, p_prime_s, B_unit_out, grad_r_out
+    return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, grad_r_out, ds, t_s
+end
+
+
 end
