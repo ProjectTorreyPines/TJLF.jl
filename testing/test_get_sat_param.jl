@@ -2,7 +2,7 @@ module test
 include("../src/tjlf_geometry.jl")
 using .geometry
 
-baseDirectory = "../outputs/"
+baseDirectory = "../outputs/test2"
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
 
@@ -71,7 +71,7 @@ fileDirectory = baseDirectory * "input.tglf"
 lines = readlines(fileDirectory)
 for line in lines[2:length(lines)]
     line = split(line, "\n")
-    line = strip.(split(line[1]," = "))
+    line = strip.(split(line[1],"="))
     try
         inputs[string(line[1])] = parse(Float64, line[2])
     catch ValueError
@@ -140,7 +140,8 @@ potential = hcat(potentialTmp...)
 
 fileDirectory = baseDirectory * "out.tglf.gbflux"
 lines = readlines(fileDirectory)
-fluxes = transpose(reshape(parse.(Float64,split(lines[1])), (2,4)))
+width::Integer = length(lines)/2
+fluxes = transpose(reshape(parse.(Float64,split(lines[1])), (2,width)))
 
 # sat_1 = sum_ky_spectrum(inputs['SAT_RULE'], ky_spect, gammas, ave_p0, R_unit, kx0_e, potential,
 #                         particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL, **inputs)
@@ -152,10 +153,10 @@ fluxes = transpose(reshape(parse.(Float64,split(lines[1])), (2,4)))
 
 inputs["DRMINDX_LOC"] = 1.0
 inputs["ALPHA_E"] = 1.0
-inputs["VEXB_SHEAR"] = 0.0
+inputs["VEXB_SHEAR"] = 0.080234
 inputs["SIGN_IT"] = 1.0
-
 kx0epy, satgeo1, satgeo2, runit, bt0, bgeo0, gradr0, _, _, _, _ = get_sat_params(1, ky_spect, Matrix(gammas'), inputs)
+
 @assert isapprox(kx0epy, kx0_e, rtol=1e-3)
 @assert isapprox(inputs["SAT_geo1_out"], satgeo1, rtol=1e-6)
 @assert isapprox(inputs["SAT_geo2_out"], satgeo2, rtol=1e-6)
