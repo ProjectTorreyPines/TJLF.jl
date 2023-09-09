@@ -316,11 +316,13 @@ function mercier_luc(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=1
         R_s = (R[m1] - 8.0*R[m2] + 8.0*R[m3] - R[m4])/delta_s
         Z_s = (Z[m1] - 8.0*Z[m2] + 8.0*Z[m3] - Z[m4])/delta_s
         s_p[m] = √(R_s^2 + Z_s^2)
+
         R_ss = (-R[m1] + 16.0*R[m2] - 30.0*R[m] + 16.0*R[m3] - R[m4])/ds2
         Z_ss = (-Z[m1] + 16.0*Z[m2] - 30.0*Z[m] + 16.0*Z[m3] - Z[m4])/ds2
         r_curv[m] = (s_p[m]^3)/(R_s*Z_ss - Z_s*R_ss)
         sin_u[m] = -Z_s/s_p[m]
     end
+    
 
 
     #---------------------------------------------------------------
@@ -650,8 +652,8 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
         l_t1 = l_t
     end
     # distribute endpoint error over interior points
-    dtheta = (t_s[round(Integer, ms/2+1)]+π) / (ms/2+1)
-    
+    dtheta = (t_s[round(Integer, ms/2+1)]+π) / (ms/2)
+
     for m in 2:round(Integer, ms/2)+1
         t_s[m] = t_s[m] - (m-1)*dtheta
         #### check that it is +2
@@ -676,7 +678,6 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
     #
     B_unit_out = zeros(Real, ms + 1)
     grad_r_out = zeros(Real, ms + 1)
-
     for m in 1:ms+1
         theta = t_s[m]
         arg_r = theta + x_delta*sin(theta)
@@ -693,13 +694,10 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
         l_t = √(R_t^2 + Z_t^2) # dl/dtheta
 
         # dR/dr
-        R_r = drmajdx_loc + drmindx_loc*cos(arg_r) 
-                - sin(arg_r)*s_delta_loc*sin(theta)/√(1.0 - delta_loc^2)
+        R_r = drmajdx_loc + drmindx_loc*cos(arg_r) - sin(arg_r)*s_delta_loc*sin(theta)/√(1.0 - delta_loc^2)
         # dZ/dr
-        Z_r = dzmajdx_loc + kappa_loc*sin(arg_z)*(drmindx_loc +s_kappa_loc)
-                + kappa_loc*cos(arg_z)*s_zeta_loc*sin(2.0*theta)
-        # Jacobian 
-
+        Z_r = dzmajdx_loc + kappa_loc*sin(arg_z)*(drmindx_loc +s_kappa_loc) + kappa_loc*cos(arg_z)*s_zeta_loc*sin(2.0*theta)
+        # Jacobian
         det = R_r*Z_t - R_t*Z_r
 
         grad_r = abs(l_t/det)
@@ -716,7 +714,7 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
         q_prime_s = q_prime_s / B_unit
         
     end
-
+    
     return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, grad_r_out, ds, t_s
 end
 
