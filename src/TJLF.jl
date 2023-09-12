@@ -1,3 +1,5 @@
+module TJLF
+
 # include("tglf_isnan.o")
 include("tjlf_modules.jl")
 # include("tglf_pkg.o")
@@ -24,3 +26,5 @@ include("tjlf_modules.jl")
 # include("tglf_init_mpi.o")
 # include("tglf_run_mpi.o")
 # include("tglf_TM_mpi.o")
+
+end
