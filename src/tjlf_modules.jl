@@ -37,6 +37,10 @@ end
 
 
 
+struct input
+
+end
+
 
 module globalVar
 using ..tjlf_max_dimensions
