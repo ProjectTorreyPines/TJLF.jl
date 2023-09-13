@@ -1,7 +1,6 @@
-module geometry
-export get_sat_params, xgrid_functions_geo, mercier_luc, miller_geo
+# export get_sat_params, xgrid_functions_geo, mercier_luc, miller_geo
 
-
+### get_zonal_mixing()
 include("tjlf_multiscale_spectrum.jl")
 
 function get_sat_params(sat_rule_in::Integer, ky::AbstractVector{T}, gammas::AbstractMatrix{T}, kwargs::AbstractDict) where T<:Real
@@ -169,7 +168,7 @@ function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas
         
     end
 
-#####################################################################################################################
+    #####################################################################################################################
 
     norm_ave = 0.0
     SAT_geo1_out = 0.0
@@ -536,12 +535,6 @@ end
 
 
 function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=128)
-
-
-    ###### ms is a global variable in tjlf_max_dimensions
-    # mts is defined inside the function
-
-    # uses variables from tglf_global, tglf_sgrid
     # create dictionary
     kwargs = Dict(kwargs)
 
@@ -565,10 +558,6 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
     Z = zeros(Real,ms+1)
     Bp = zeros(Real,ms+1)
 
-
-    # 
-    #  set the flux surface constants needed for mercier-luc
-    # 
     
     if(rmin_loc<0.00001) rmin_loc=0.00001 end
     #
@@ -621,7 +610,7 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
     # This keeps the finite difference error of dR/ds, dZ/ds on the s-grid small
     
     ds = arclength/ms
-    ###### t_s defined in sgrid to be an array indexed from 0 to ms
+    
     t_s = zeros(Real,ms+1)
     t_s[ms+1]=-2π
     # make a first guess based on theta=0.0
@@ -664,10 +653,6 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
     #
     #
     #---------------------------------------------------------------
-    # all equilibrium functions satisfy
-    #
-    # f(0) = f(l_theta)
-    #
     # Loop to compute most geometrical quantities needed for Mercie-Luc expansion
     # R, Z, R*Bp on flux surface s-grid
     #
@@ -716,7 +701,4 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
     end
     
     return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, grad_r_out, ds, t_s
-end
-
-
 end
