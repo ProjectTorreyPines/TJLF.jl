@@ -1,8 +1,10 @@
-module test
-include("../src/tjlf_geometry.jl")
-using .geometry
+using Test
+using Revise
 
-baseDirectory = "../outputs/test2"
+include("../src/tjlf_geometry.jl")
+include("../src/tjlf_multiscale_spectrum.jl")
+
+baseDirectory = "./outputs/test2/"
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
 
@@ -140,22 +142,23 @@ potential = hcat(potentialTmp...)
 
 fileDirectory = baseDirectory * "out.tglf.gbflux"
 lines = readlines(fileDirectory)
-width::Integer = length(lines)/2
-fluxes = transpose(reshape(parse.(Float64,split(lines[1])), (2,width)))
+width::Integer = round(length(split(lines[1]))/4)
+fluxes = transpose(reshape(parse.(Float64,split(lines[1])), (width,4)))
 
-# sat_1 = sum_ky_spectrum(inputs['SAT_RULE'], ky_spect, gammas, ave_p0, R_unit, kx0_e, potential,
-#                         particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL, **inputs)
+# inputs["BETA_LOC"] = 0.0
 
-# expected_sat1 = fluxes[1]
-# python_sat1 = np.sum(np.sum(sat_1['energy_flux_integral'], axis=2), axis=0)
+sat_1 = sum_ky_spectrum(inputs, inputs["SAT_RULE"], ky_spect, gammas, ave_p0, R_unit, kx0_e, potential, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL)
+expected_sat1 = fluxes[2,:]
+julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
 
-# assert_allclose(python_sat1, expected_sat1, rtol=1e-3)
+@assert isapprox(julia_sat1, expected_sat1, rtol=1e-3)
 
 inputs["DRMINDX_LOC"] = 1.0
 inputs["ALPHA_E"] = 1.0
 inputs["VEXB_SHEAR"] = 0.080234
 inputs["SIGN_IT"] = 1.0
 kx0epy, satgeo1, satgeo2, runit, bt0, bgeo0, gradr0, _, _, _, _ = get_sat_params(1, ky_spect, Matrix(gammas'), inputs)
+
 
 @assert isapprox(kx0epy, kx0_e, rtol=1e-3)
 @assert isapprox(inputs["SAT_geo1_out"], satgeo1, rtol=1e-6)
@@ -168,4 +171,4 @@ if inputs["VEXB_SHEAR"] != 0.0
     @assert isapprox(inputs["B_geo0_out"], bgeo0, rtol=1e-6)
 end
 
-end
+println("SUCCESS")
