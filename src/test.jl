@@ -36,3 +36,22 @@ function test()
 end
 
 test()
+
+function scope()
+    # a = [1,2,3,4]
+    # b = [2,3,4,5]
+    # c = zeros(4)
+
+    # c .= ifelse.(b.>a, b.+max.(b,a.*3), 0)
+    # println(c)
+
+    if false
+        a = "asdf"
+    else
+        a = 2
+    end
+    print(a)
+
+end
+
+scope()
