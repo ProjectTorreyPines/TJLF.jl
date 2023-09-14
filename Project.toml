@@ -4,4 +4,6 @@ authors = ["Tom Neiser <neisert@fusion.gat.com>"]
 version = "0.1.0"
 
 [deps]
+AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
 IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
+JuliaInterpreter = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"

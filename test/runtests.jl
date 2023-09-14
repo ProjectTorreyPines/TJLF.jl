@@ -1,17 +1,22 @@
 using Test
 using Revise
+# using AxisArrays
 
-include("../src/tjlf_geometry.jl")
+include("../src/tjlf_modules.jl")
 include("../src/tjlf_multiscale_spectrum.jl")
+include("../src/tjlf_geometry.jl")
 
 baseDirectory = "./outputs/test2/"
+
+
+
+
+
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
-
 # 5, 2, 3, 21, 2
 (ntype, nspecies, nfield, nky, nmodes) = parse.(Int32, split(lines[4]))
-
-ql = []
+ql = Vector{Float64}()
 for line in lines[7:length(lines)]
     line = split(line)
     if any(occursin.(["m","s"],string(line))) continue end
@@ -21,12 +26,11 @@ for line in lines[7:length(lines)]
     end
 
 end
-
 # 5, 21, 2, 3, 2
 QLw = reshape(ql, (ntype, nky, nmodes, nfield, nspecies))
 QL_data = permutedims(QLw,(2,3,5,4,1))
+# QL = AxisArray(QL_data, Axis{:nky}(1:nky), Axis{:nmodes}(1:nmodes), Axis{:nspecies}(1:nspecies), Axis{:nfield}(1:nfield), Axis{:ntype}(("particle","energy","toroidal_stress","parrllel_stress","exchange_stress")))
 
-# QL_data = QL_data_array.transpose('ky', 'mode', 'species', 'field', 'type').data
 particle_QL = QL_data[:, :, :, :, 1]
 energy_QL = QL_data[:, :, :, :, 2]
 toroidal_stress_QL = QL_data[:, :, :, :, 3]
@@ -36,14 +40,14 @@ exchange_QL = QL_data[:, :, :, :, 5]
 # Read spectral shift and ave_p0 (only needed for SAT0)
 fileDirectory = baseDirectory * "out.tglf.spectral_shift_spectrum"
 lines = readlines(fileDirectory)
-kx0_e = []
+kx0_e = Vector{Float64}()
 for line in lines[6:length(lines)]
         push!(kx0_e,parse(Float64, line))
 end
 
 fileDirectory = baseDirectory * "out.tglf.ave_p0_spectrum"
 lines = readlines(fileDirectory)
-ave_p0 = []
+ave_p0 = Vector{Float64}()
 for line in lines[4:length(lines)]
         push!(ave_p0,parse(Float64, line))
 end
@@ -67,27 +71,6 @@ for line in lines[1:length(lines)]
     line .= strip.(line)
     inputs[string(line[1])] = parse(Float64, line[2])
 end
-
-# Read input.tglf
-fileDirectory = baseDirectory * "input.tglf"
-lines = readlines(fileDirectory)
-for line in lines[2:length(lines)]
-    line = split(line, "\n")
-    line = strip.(split(line[1],"="))
-    try
-        inputs[string(line[1])] = parse(Float64, line[2])
-    catch ValueError
-        continue
-    end
-        
-end
-
-# Added inputs
-inputs["UNITS"] = "GYRO"
-inputs["ALPHA_ZF"] = 1.0
-inputs["RLNP_CUTOFF"] = 18.0
-inputs["NS"] = ceil(inputs["NS"])
-inputs["ALPHA_QUENCH"] = 0.0
 
 # Get ky spectrum
 fileDirectory = baseDirectory * "out.tglf.ky_spectrum"
@@ -133,9 +116,6 @@ for (ik, k) in enumerate(columns)
     end
     tmpdict[k] = tmp
 end
-# for k, v in list(tmpdict.items()):
-#     potential = xr.DataArray(v, dims=('mode_num', 'ky'), coords={'ky': ky_spect, 'mode_num': np.arange(nmodes) + 1})
-# potential = potential.T
 potentialTmp = tmpdict[columns[length(columns)]]
 potential = hcat(potentialTmp...)
 
@@ -145,22 +125,105 @@ lines = readlines(fileDirectory)
 width::Integer = round(length(split(lines[1]))/4)
 fluxes = transpose(reshape(parse.(Float64,split(lines[1])), (width,4)))
 
-# inputs["BETA_LOC"] = 0.0
 
-sat_1 = sum_ky_spectrum(inputs, inputs["SAT_RULE"], ky_spect, gammas, ave_p0, R_unit, kx0_e, potential, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL)
+
+
+
+
+
+
+# Read input.tglf
+fileDirectory = baseDirectory * "input.tglf"
+lines = readlines(fileDirectory)
+for line in lines[2:length(lines)]
+    line = split(line, "\n")
+    line = strip.(split(line[1],"="))
+    try
+        inputs[string(line[1])] = parse(Float64, line[2])
+    catch ValueError
+        continue
+    end
+        
+end
+
+# Added inputs
+inputs["UNITS"] = "GYRO"
+inputs["ALPHA_ZF"] = 1.0
+inputs["RLNP_CUTOFF"] = 18.0
+inputs["NS"] = ceil(inputs["NS"])
+inputs["ALPHA_QUENCH"] = 0.0
+inputs["BETA_LOC"] = 0.0
+inputs["DRMINDX_LOC"] = 1.0
+inputs["ALPHA_E"] = 1.0
+inputs["VEXB_SHEAR"] = 0.080234
+inputs["SIGN_IT"] = 1.0
+
+
+
+
+# struct attempt
+inputTJLF = InputTJLF{Float64}()
+
+for line in lines[2:length(lines)]
+    line = split(line, "\n")
+    line = split(line[1],"=")
+
+    #### for the species vector
+    check = match(r"_\d",line[1])
+    if check !== nothing
+        temp = split(line[1],"_")
+        speciesField = Symbol(replace(line[1], r"_\d"=>""))
+        speciesIndex = check.match[2:end]
+        setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
+    
+        # if not for the species vector
+    else
+
+        field = Symbol(line[1])
+        if line[1] == "NS"
+            global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
+            for i in 1:length(inputSpecies)
+                inputSpecies[i] = Species{Float64}()
+            end
+        end
+        # string
+        if line[2][1] == '\''
+            val = string(strip(line[2], ['\'']))
+        # bool
+        elseif line[2][1] == '.'
+            val = strip(line[2], ['\'']) == "true"
+        # int
+        elseif !contains(line[2],'.')
+            val = parse(Int, strip(line[2], ['\'','.',' ']))
+        # float
+        else
+            val = parse(Float64,strip(line[2], ['\'','.',' ']))
+        end
+
+        try
+            setfield!(inputTJLF,field,val)
+        catch
+            throw(error(field))
+        end
+
+    end
+    
+end
+
+setfield!(inputTJLF,:SPECIES,inputSpecies)
+
+
+
+sat_1 = sum_ky_spectrum(inputTJLF, ky_spect, gammas, ave_p0, R_unit, kx0_e, potential, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL)
 expected_sat1 = fluxes[2,:]
 julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
 
 @assert isapprox(julia_sat1, expected_sat1, rtol=1e-3)
 
-inputs["DRMINDX_LOC"] = 1.0
-inputs["ALPHA_E"] = 1.0
-inputs["VEXB_SHEAR"] = 0.080234
-inputs["SIGN_IT"] = 1.0
-kx0epy, satgeo1, satgeo2, runit, bt0, bgeo0, gradr0, _, _, _, _ = get_sat_params(1, ky_spect, Matrix(gammas'), inputs)
-
+kx0epy, satgeo0, satgeo1, satgeo2, runit, bt0, bgeo0, gradr0, _, _, _, _ = get_sat_params(inputTJLF, ky_spect, Matrix(gammas))
 
 @assert isapprox(kx0epy, kx0_e, rtol=1e-3)
+@assert isapprox(inputs["SAT_geo0_out"], satgeo0, rtol=1e-6)
 @assert isapprox(inputs["SAT_geo1_out"], satgeo1, rtol=1e-6)
 @assert isapprox(inputs["SAT_geo2_out"], satgeo2, rtol=1e-6)
 @assert isapprox(R_unit[1, 1], runit,  rtol=1e-6)

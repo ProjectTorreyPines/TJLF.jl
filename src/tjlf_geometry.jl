@@ -1,13 +1,13 @@
 # export get_sat_params, xgrid_functions_geo, mercier_luc, miller_geo
 
 ### get_zonal_mixing()
+include("tjlf_modules.jl")
 include("tjlf_multiscale_spectrum.jl")
 
-function get_sat_params(sat_rule_in::Integer, ky::AbstractVector{T}, gammas::AbstractMatrix{T}, kwargs::AbstractDict) where T<:Real
-
-    kwargs = Dict(kwargs)
+function get_sat_params(inputs::InputTJLF, ky::AbstractVector{T}, gammas::AbstractMatrix{T}) where T<:Real
 
     kx0_e,
+    SAT_geo0_out,
     SAT_geo1_out,
     SAT_geo2_out,
     R_unit,
@@ -17,27 +17,53 @@ function get_sat_params(sat_rule_in::Integer, ky::AbstractVector{T}, gammas::Abs
     theta_out,
     Bt_out,
     grad_r_out,
-    B_unit_out = xgrid_functions_geo(sat_rule_in, ky, gammas, kwargs)
+    B_unit_out = xgrid_functions_geo(inputs, ky, gammas)
 
     return (
-        kx0_e,
-        SAT_geo1_out,
-        SAT_geo2_out,
-        R_unit,
-        Bt0_out,
-        B_geo0_out,
-        grad_r0_out,
-        theta_out,
-        Bt_out,
-        grad_r_out,
-        B_unit_out,
+        kx0_e, # xgrid_functions_geo
+        SAT_geo0_out, # xgrid_functions_geo
+        SAT_geo1_out, # xgrid_functions_geo
+        SAT_geo2_out, # xgrid_functions_geo
+        R_unit, # xgrid_functions_geo
+
+        Bt0_out, # mercier_luc
+        B_geo0_out, # mercier_luc
+        grad_r0_out, # mercier_luc
+
+        theta_out, # miller_geo
+        Bt_out, # miller_geo
+        grad_r_out, # miller_geo
+        B_unit_out, # miller_geo
     )
 end
 
 
+function get_sat_params(param::Type{Val{:grad_r0}}, inputs::InputTJLF)
+    _, _, b_geo, _, qrat_geo, _, _, _, _, _, _, _ = mercier_luc(inputs)
+    return b_geo[1]/qrat_geo[1]
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #### LINES 220-326, 439-478 in tglf_geometry.f90
-function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas::AbstractMatrix{T}, kwargs::AbstractDict, 
-    mts::AbstractFloat=5.0, ms::Integer=128, small::AbstractFloat=0.00000001) where T<:Real
+function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::AbstractMatrix{T}, 
+    mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
     #******************************************************************************#************************
     #
     # PURPOSE: compute the geometric coefficients on the x-grid
@@ -45,30 +71,28 @@ function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas
     #
     #******************************************************************************#************************
     #
-
-    kwargs = Dict(kwargs)
-
-    ### might be different depending on geometry
-    rmaj_s = kwargs["RMAJ_LOC"]
-    rmin_s = kwargs["RMIN_LOC"]
-    q_s = kwargs["Q_LOC"]
+    ### different geometries!!!
+    rmaj_s = inputs.RMAJ_LOC
+    rmin_s = inputs.RMIN_LOC
+    q_s = inputs.Q_LOC
 
     ### needed for this function
-    alpha_quench_in = kwargs["ALPHA_QUENCH"]
-    alpha_e_in = kwargs["ALPHA_E"]
-    sign_IT = kwargs["SIGN_IT"]
-    vexb_shear = kwargs["VEXB_SHEAR"]
-    mass_2 = kwargs["MASS_2"]
-    taus_2 = kwargs["TAUS_2"]
-    zs_2 = kwargs["ZS_2"]
-    units_in = kwargs["UNITS"]
+    sat_rule_in = inputs.SAT_RULE
+    alpha_quench_in = inputs.ALPHA_QUENCH
+    alpha_e_in = inputs.ALPHA_E
+    sign_IT = inputs.SIGN_IT
+    vexb_shear = inputs.VEXB_SHEAR
+    mass_2 = inputs.SPECIES[2].MASS
+    taus_2 = inputs.SPECIES[2].TAUS
+    zs_2 = inputs.SPECIES[2].ZS
+    units_in = inputs.UNITS
 
     vs_2 = √(taus_2 / mass_2)
-    gamma_reference_kx0 = gammas[1, :]
+    gamma_reference_kx0 = gammas[:, 1]
 
-    s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, B = mercier_luc(kwargs)
+    s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, B = mercier_luc(inputs)
     
-    y = zeros(Real,ms+1)
+    y = zeros(Float64,ms+1)
 
     #
     # find length along magnetic field y
@@ -105,12 +129,11 @@ function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas
     
 
     if(alpha_quench_in==0.0 && gamma_reference_kx0[1]!=0.0)
-        ### line from Python
         vexb_shear_s = vexb_shear * sign_IT
         vexb_shear_kx0 = alpha_e_in*vexb_shear_s
 
         kyi = ky.*(vs_2*mass_2/abs(zs_2))
-        wE = zeros(Real, length(ky))
+        wE = zeros(Float64, length(ky))
         ### not used 
         wd0 = abs.(ky./rmaj_s)
         
@@ -123,15 +146,11 @@ function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas
                 (ifelse.(kyi.<0.3,kyi./0.3,1.0))./gamma_reference_kx0
         else
             kx0_factor = 1.0
-            ### redundant line
-            wE = zeros(Real, length(ky))
         end
         grad_r0_out = b_geo[1]/qrat_geo[1]
         B_geo0_out = b_geo[1]
         kx_geo0_out= 1.0/qrat_geo[1]
 
-        ### kx0_e defined differently, in Fortran, just the first value, 
-        ### in Python it's an array
         kx0_e = -(0.36*vexb_shear_kx0./gamma_reference_kx0
                 .+ (0.38.*wE.*tanh.((0.69.*wE).^6)))
 
@@ -144,17 +163,17 @@ function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas
                     (0.25.*wE.*tanh.((0.69.*wE).^6)))
         elseif(sat_rule_in==2 || sat_rule_in==3)
             a0=1.6
-            vzf_out, kymax_out, _ = get_zonal_mixing(ky, gamma_reference_kx0, kwargs...)
+            vzf_out, kymax_out, _ = get_zonal_mixing(inputs, ky, gamma_reference_kx0)
             if(abs(kymax_out*vzf_out*vexb_shear_kx0) > small)
                 kx0_e = -(0.32*vexb_shear_kx0).*((ky./kymax_out).^0.3)./(ky.*vzf_out)
             else
-                kx0_e = zeros(Real,length(ky))
+                kx0_e = zeros(Float64,length(ky))
             end
         end
 
-        kx0_e = ifelse.(abs.(kx0_e).>a0, a0.*kx0_e./abs.(kx0_e), kx0_e)
+        kx0_e = ifelse.(abs.(kx0_e) .> a0 , a0.*kx0_e./abs.(kx0_e) , kx0_e)
         ### copied from the Python, why is this a thing
-        kx0_e = ifelse.(isnan.(kx0_e), 0, kx0_e)
+        kx0_e = ifelse.(isnan.(kx0_e) , 0 , kx0_e)
 
         #### not in the Python
         # if(units_in=="GYRO")
@@ -206,13 +225,9 @@ function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas
         SAT_geo0_out = 1.0
         SAT_geo1_out = 1.0
         SAT_geo2_out = 1.0
-    # else
-    # # Nov 2019     SAT_geo0_out = 0.946/qrat_geo(0) # normed to GASTD with CGYRO
-    #     SAT_geo0_out = 0.946/qrat_geo(0)          # normed to GASTD with CGYRO
-    #     if(sat_rule_in.eq.2 .OR. sat_rule_in.eq.3)SAT_geo0_out = 1.0 end
-    # #    write(*,*)"SAT_geo0_out = ",SAT_geo0_out
-    #     grad_r0_out = B_geo(0)/qrat_geo(0)
-    #     B_geo0_out = b_geo(0)
+    else
+        SAT_geo0_out = 0.946/qrat_geo[1]          # normed to GASTD with CGYRO
+        if(sat_rule_in==2 || sat_rule_in==3) SAT_geo0_out = 1.0 end
     end
     ### line 276-277
     grad_r0_out = b_geo[1]/qrat_geo[1]
@@ -227,6 +242,7 @@ function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas
     Bt_out = B  # total magnetic field matching theta_out grid.
 
     return kx0_e,
+            SAT_geo0_out,
             SAT_geo1_out,
             SAT_geo2_out,
             R_unit,
@@ -238,8 +254,6 @@ function xgrid_functions_geo(sat_rule_in::Integer, ky::AbstractVector{T}, gammas
             grad_r_out,
             B_unit_out
 
-
-
 end
 
 
@@ -250,7 +264,7 @@ end
 
 
 
-function mercier_luc(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=128, small::AbstractFloat=0.00000001)
+function mercier_luc(inputs::InputTJLF, mts::AbstractFloat=5.0, ms::Integer=128, small::AbstractFloat=0.00000001)
     #-------------------------------------------
     # the following must be defined from a previous call to one of the
     # geometry routines miller_geo, fourier_geo,ELITE_geo and stored in tglf_sgrid:
@@ -271,14 +285,12 @@ function mercier_luc(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=1
     # to make sure that the input flux surface coordinates R(s), Z(s) are ok.
     #
 
-    kwargs = Dict(kwargs)
 
-    ### there are also variables in sgrid named this, not sure if this has to be separated for the different geometries
-    ### this might be geometry dependent, maybe save from output of miller_geo()?
-    q_s = kwargs["Q_LOC"]
-    Rmaj_input = kwargs["RMAJ_LOC"]
-    rmin_s = kwargs["RMIN_LOC"]
-    rmaj_s = kwargs["RMAJ_LOC"]
+    ### geometry dependent!!!!!!, maybe save from output of miller_geo()?
+    q_s = inputs.Q_LOC
+    rmaj_input = inputs.RMAJ_LOC
+    rmin_s = inputs.RMIN_LOC
+    rmaj_s = inputs.RMAJ_LOC
     b_geo = zeros(Real, ms+1)
 
     ### technically don't have to initialize here, but maybe better looking?
@@ -288,19 +300,20 @@ function mercier_luc(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=1
     pk_geo = zeros(Real, ms+1)
     qrat_geo = zeros(Real, ms+1)
     costheta_geo = zeros(Real, ms+1)
-    ### defined for this function
-    s_p = zeros(Real,ms+1)
-    r_curv = zeros(Real,ms+1)
-    sin_u = zeros(Real,ms+1)
-
-    R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, grad_r_out, ds, t_s = miller_geo(kwargs)
     
+
+    R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, grad_r_out, ds, t_s = miller_geo(inputs)
     
     
     psi_x = R.*Bp
     delta_s = 12.0*ds
     ds2 = 12.0*ds^2
+
+
     # note that the point 1 and ms+1 are the same so m+1->1 and m-1->ms-1 at m=0
+    s_p = zeros(Real,ms+1)
+    r_curv = zeros(Real,ms+1)
+    sin_u = zeros(Real,ms+1)
     for m in 1:ms + 1
         m1 = ((ms + m - 2) % (ms+1)) + 1
         m2 = ((ms + m - 1) % (ms+1)) + 1
@@ -334,7 +347,7 @@ function mercier_luc(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=1
     f = 2π*q_s/f
 
     ### return value
-    Bt0_out = f/Rmaj_input
+    Bt0_out = f/rmaj_input
 
     ###### not in the python
     # Bref_out = 1.0
@@ -470,9 +483,9 @@ function mercier_luc(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=1
     # epsl_geo = (2.0/rmaj_s).*qrat_geo./b_geo
     # ### not used
     # costheta_p_geo = (4.0*π*p_prime_s*p_prime_zero_s*rmaj_s) .* (Bp.*R./B.^2)
-    costheta_geo .= 
+    costheta_geo .= (
             -rmaj_s.* (Bp./(B.^2)) .*
-            ((Bp./r_curv) .- (f^2 ./(Bp.*R.^3) ).*sin_u) 
+            ((Bp./r_curv) .- (f^2 ./(Bp.*R.^3) ).*sin_u) )
     
 
     #### not done in the python
@@ -534,26 +547,30 @@ function mercier_luc(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=1
 end
 
 
-function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=128)
-    # create dictionary
-    kwargs = Dict(kwargs)
+function miller_geo(inputs::InputTJLF, mts::AbstractFloat=5.0, ms::Integer=128)
 
-    rmin_loc = kwargs["RMIN_LOC"]
-    rmaj_loc = kwargs["RMAJ_LOC"]
-    zmaj_loc = kwargs["ZMAJ_LOC"]
-    delta_loc = kwargs["DELTA_LOC"]
-    kappa_loc = kwargs["KAPPA_LOC"]
-    zeta_loc = kwargs["ZETA_LOC"]
-    q_loc = kwargs["Q_LOC"]
-    p_prime_s = kwargs["P_PRIME_LOC"]
-    q_prime_s = kwargs["Q_PRIME_LOC"]
+    rmin_loc = inputs.RMIN_LOC
+    rmaj_loc = inputs.RMAJ_LOC
+    
+    delta_loc = inputs.DELTA_LOC
+    kappa_loc = inputs.KAPPA_LOC
+    zeta_loc = inputs.ZETA_LOC
+    q_loc = inputs.Q_LOC
+    #### these might be global variables
+    p_prime_s = inputs.P_PRIME_LOC
+    q_prime_s = inputs.Q_PRIME_LOC
 
-    drmajdx_loc = kwargs["DRMAJDX_LOC"]
-    drmindx_loc = kwargs["DRMINDX_LOC"]
+    drmajdx_loc = inputs.DRMAJDX_LOC
+    drmindx_loc = inputs.DRMINDX_LOC
+
+
+    ### these are set to 0.0 despite having definitions in the inputs
+    zmaj_loc = 0.0
     dzmajdx_loc = 0.0
-    s_zeta_loc = kwargs["S_ZETA_LOC"]
-    s_delta_loc = kwargs["S_DELTA_LOC"]
-    s_kappa_loc = kwargs["S_KAPPA_LOC"]
+    s_zeta_loc = inputs.S_ZETA_LOC
+    s_delta_loc = inputs.S_DELTA_LOC
+    s_kappa_loc = inputs.S_KAPPA_LOC
+
     R = zeros(Real,ms+1)
     Z = zeros(Real,ms+1)
     Bp = zeros(Real,ms+1)
@@ -603,31 +620,20 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
 
         l_t1 = l_t
     end
+
+    ds = arclength/ms
     
     # Find the theta points which map to an equally spaced s-grid of ms points along the arclength
     # going clockwise from the outboard midplane around the flux surface
     # by searching for the theta where dR**2 + dZ**2 >= ds**2 for a centered difference df=f(m+1)-f(m-1).
     # This keeps the finite difference error of dR/ds, dZ/ds on the s-grid small
     
-    ds = arclength/ms
-    
     t_s = zeros(Real,ms+1)
     t_s[ms+1]=-2π
     # make a first guess based on theta=0.0
     theta = 0.0
-    arg_r = theta + x_delta*sin(theta)
-    darg_r = 1.0 + x_delta*cos(theta)
-    arg_z = theta + zeta_loc*sin(2.0*theta)
-    darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
-    r_t = -rmin_loc*sin(arg_r)*darg_r
-    z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
-    l_t = √(r_t^2 + z_t^2)
-    dtheta = -ds/l_t
-    theta = dtheta
-    l_t1 = l_t
 
-    ### weird because array is offset weird
-    for m in 2:round(Integer, ms/2)+1
+    for m in 1:round(Integer, ms/2)+1
         arg_r = theta + x_delta*sin(theta)
         darg_r = 1.0 + x_delta*cos(theta)
         arg_z = theta + zeta_loc*sin(2.0*theta)
@@ -635,32 +641,27 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
         r_t = -rmin_loc*sin(arg_r)*darg_r
         z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
         l_t = √(r_t^2 + z_t^2)
-        dtheta = -ds/(0.5*(l_t+l_t1))
-        t_s[m]=t_s[m-1]+dtheta
-        theta = t_s[m] +dtheta
+        if m == 1
+            dtheta = -ds/l_t
+            theta = dtheta
+        else
+            dtheta = -ds/(0.5*(l_t+l_t1))
+            t_s[m] = t_s[m-1] + dtheta
+            theta = t_s[m] + dtheta
+        end
         l_t1 = l_t
     end
+
     # distribute endpoint error over interior points
-    dtheta = (t_s[round(Integer, ms/2+1)]+π) / (ms/2)
+    dtheta = (t_s[round(Int, ms/2+1)]+π) / (ms/2)
 
     for m in 2:round(Integer, ms/2)+1
         t_s[m] = t_s[m] - (m-1)*dtheta
-        #### check that it is +2
-        t_s[ms-m+2]=-2π - t_s[m]
+        t_s[ms-m+2] = -2π - t_s[m]
     end
-    
-    #---------------------------------------------------------------
-    #
-    #
-    #---------------------------------------------------------------
+
     # Loop to compute most geometrical quantities needed for Mercie-Luc expansion
     # R, Z, R*Bp on flux surface s-grid
-    #
-    # NOTES:
-    # If grad_r_theta diverges because denominator goes
-    # through zero, magnetic field lines are intersecting
-    # and the magnetic surfaces are not nested.
-    #
     B_unit_out = zeros(Real, ms + 1)
     grad_r_out = zeros(Real, ms + 1)
     for m in 1:ms+1
@@ -670,7 +671,6 @@ function miller_geo(kwargs::AbstractDict, mts::AbstractFloat=5.0, ms::Integer=12
         arg_z = theta + zeta_loc*sin(2.0*theta)
         darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
 
-        ### saved in sgrid
         R[m] = rmaj_loc + rmin_loc*cos(arg_r) # R(theta)
         Z[m] = zmaj_loc + kappa_loc*rmin_loc*sin(arg_z) # Z(theta)
         

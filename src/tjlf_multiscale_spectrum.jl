@@ -14,32 +14,36 @@ using Revise
 #     array, then after finding the max, interpolate the value to improve accuracy
 #   
 
-##### define the parameter data types?
-function get_zonal_mixing(ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}, kwargs::AbstractDict) where T<:Real
-
-    # create dictionary
-    kwargs=Dict(kwargs)
-### so ugly
-    sat_rule_in = kwargs["SAT_RULE"]
+include("tjlf_modules.jl")
+function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
 
 
+    sat_rule_in = inputs.SAT_RULE
+    alpha_zf = inputs.ALPHA_ZF
+
+    zs_2 = inputs.SPECIES[2].ZS
+    taus_2 = inputs.SPECIES[2].TAUS
+    mass_2 = inputs.SPECIES[2].MASS
+
+    rho_ion = abs(zs_2) / √(taus_2*mass_2)
     #
     # find the local maximum of gamma_mix/ky_mix with the largest gamma_mix/ky_mix^2
     #
     ### kycut is defined with global variables in the python version, but rho_ion is a globalVar
     ### abs(kw["ZS_2"]) / np.sqrt(kw["TAUS_2"] * kw["MASS_2"])
-    kycut=0.8/kwargs["rho_ion"]
+    kycut=0.8/rho_ion
     kymin = 0.0  
 
     testmax = 0.0
     jmax_mix = 1
 
 
-    if(kwargs["ALPHA_ZF"] < 0.0) kymin = 0.173 * √(2.0) / kwargs["rho_ion"] end
+    if(alpha_zf < 0.0) kymin = 0.173 * √(2.0) / rho_ion end
     # saturation rules
     if sat_rule_in==2 || sat_rule_in==3
-        kycut = kwargs["grad_r0_out"] * kycut
-        kymin = kwargs["grad_r0_out"] * kymin
+        grad_r0 = get_sat_params(Val{:grad_r0},inputs)
+        kycut = grad_r0 * kycut
+        kymin = grad_r0 * kymin
     end
 
     # find the low and high ky peaks of gamma/ky
@@ -50,7 +54,7 @@ function get_zonal_mixing(ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}
 
     ##### What should i initialize j1 to???
     j1 = 0
-    for j in range(1, length(ky_mix)-1)
+    for j in 1:length(ky_mix)-1
         if((ky_mix[j+1] >= kymin) && (ky_mix[j] <= kycut))
             # save index in case no max
             j1=j
@@ -175,9 +179,6 @@ function mode_transition_function(x, y1, y2, x_ITG, x_TEM)
 end
 		
 function linear_interpolation(x::AbstractArray, y::AbstractArray, x0)
-		
-    # real, dimension(NKY) :: x, y
-    # real :: x0, y0
     
     i = 2
     ### try findfirst
@@ -191,15 +192,44 @@ end
 
 
 function intensity_sat(
-    kwargs::AbstractDict,
-    sat_rule_in::AbstractFloat,
-    ky_spect::AbstractArray,
-    gp::AbstractMatrix,
-    kx0_e::AbstractArray,
-    nmodes::Integer,
-    QL_data::AbstractArray,
-    expsub::Real=2.0,
-    return_phi_params::Bool=false)
+    inputs::InputTJLF,
+    ky_spect::Vector{T},
+    gp::Array{T},
+    kx0_e::Vector{T},
+    nmodes::Int,
+    QL_data::Array{T},
+    expsub::T=2.0,
+    return_phi_params::Bool=false) where T<:Real
+
+    ############ figure out how to make this prettier
+    kx0_e,
+    SAT_geo0_out,
+    SAT_geo1_out,
+    SAT_geo2_out,
+    R_unit,
+    Bt0_out,
+    B_geo0_out,
+    grad_r0_out,
+    theta_out,
+    Bt_out,
+    grad_r_out,
+    B_unit_out = get_sat_params(inputs,ky_spect,gp)
+    
+    sat_rule_in = inputs.SAT_RULE
+    rlnp_cutoff = inputs.RLNP_CUTOFF
+    beta_loc = inputs.BETA_LOC
+    ns = inputs.NS
+    rmaj_loc = inputs.RMAJ_LOC
+    p_prime_loc = inputs.P_PRIME_LOC
+    alpha_zf = inputs.ALPHA_ZF
+    alpha_quench = inputs.ALPHA_QUENCH
+
+    zs_2 = inputs.SPECIES[2].ZS
+    taus_2 = inputs.SPECIES[2].TAUS
+    mass_2 = inputs.SPECIES[2].MASS
+    taus_1 = inputs.SPECIES[1].TAUS
+
+    rho_ion = abs(zs_2) / √(taus_2*mass_2)
 
     # if(jmax_out == 0)
     #     first_pass = true
@@ -222,30 +252,31 @@ function intensity_sat(
     end
     gamma_net = zeros(nky)
 
-    vzf_out, kymax_out, jmax_out = get_zonal_mixing(ky_spect, gammas1, kwargs)
+    vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gammas1)
 
 
 
     # model fit parameters
     # Miller geometry values igeo=1
-    if(kwargs["RLNP_CUTOFF"] > 0.0)
-        if(kwargs["BETA_LOC"] == 0.0)
+    if(rlnp_cutoff > 0.0)
+        if(beta_loc == 0.0)
             dlnpdr = 0.0
             ptot = 0.0
-            for i::Integer in 1:kwargs["NS"]
-                ptot = ptot + kwargs["AS_$i"]*kwargs["TAUS_$i"]
+            for i::Integer in 1:ns
+                ptot = ptot + inputs.SPECIES[i].AS*inputs.SPECIES[i].TAUS
                 dlnpdr = (dlnpdr + 
-                    kwargs["AS_$i"]*kwargs["TAUS_$i"]*
-                    (kwargs["RLNS_$i"]+kwargs["RLTS_$i"]))
+                    inputs.SPECIES[i].AS*inputs.SPECIES[i].TAUS*
+                    (inputs.SPECIES[i].RLNS+inputs.SPECIES[i].RLTS))
             end
             ### kwargs["RMAJ_LOC"] used for rmaj_input
-            dlnpdr = kwargs["RMAJ_LOC"]*dlnpdr/max(ptot,0.01)
+            dlnpdr = rmaj_loc*dlnpdr/max(ptot,0.01)
         else
-            dlnpdr = (-kwargs["P_PRIME_LOC"]*(8.0π/beta_loc)*
+            ##### need to define rmin_input
+            dlnpdr = (-p_prime_loc*(8.0π/beta_loc)*
                 (rmin_input/q_loc)*rmaj_input)
         end
 
-        if(dlnpdr > kwargs["RLNP_CUTOFF"]) dlnpdr = rlnp_cutoff_in end
+        if(dlnpdr > rlnp_cutoff) dlnpdr = rlnp_cutoff_in end
         if(dlnpdr < 4.0) dlnpdr = 4.0 end
 
     else
@@ -254,7 +285,7 @@ function intensity_sat(
 
 
     ### coefficients for SAT_RULE = 1
-    czf = abs(kwargs["ALPHA_ZF"])
+    czf = abs(alpha_zf)
     cnorm = 14.29
     cz1=0.48*czf
     cz2=1.0*czf
@@ -262,20 +293,19 @@ function intensity_sat(
     sqcky=√(cky)
     cnorm = 14.29
     etg_streamer=1.05
-    kyetg = etg_streamer * abs(kwargs["ZS_2"]) / √(kwargs["TAUS_2"] * kwargs["MASS_2"])
+    kyetg = etg_streamer * abs(zs_2) / √(taus_2 * mass_2)
     
-    measure = √(kwargs["TAUS_1"]*kwargs["MASS_2"])
+    measure = √(taus_1 * mass_2)
     # if(USE_SUB1)
     #     cnorm=12.12
     #     expsub=1
     # end
-    if(kwargs["ALPHA_QUENCH"] != 0.0) etg_streamer=2.1 end
+    if(alpha_quench != 0.0) etg_streamer=2.1 end
     # if(igeo == 0)then # s-alpha
     #     cnorm=14.63
     #     cz1=0.90*czf
     #     cz2=1.0*czf
     # end
-
 
 
     ### coefficents for SAT_RULE = 2
@@ -286,10 +316,10 @@ function intensity_sat(
         if(nmodes > 1) b2 = 3.55 end
         b3 = 1.0
 
-        d1 = (kwargs["Bt0_out"]/kwargs["B_geo0_out"])^4    # PPCF paper 2020
-        d1 = d1/kwargs["grad_r0_out"]
+        d1 = (Bt0_out/b_geo0_out)^4    # PPCF paper 2020
+        d1 = d1/grad_r0_out
         # WARNING: this is correct, but it's the reciprocal in the paper (typo in paper)
-        Gq = kwargs["B_geo0_out"]/kwargs["grad_r0_out"]
+        Gq = b_geo0_out/grad_r0_out
         d2 = b3/(Gq^2)
         cnorm = b2*(12.0/dlnpdr)
         kyetg = 1000.0   # does not impact SAT2
@@ -307,7 +337,7 @@ function intensity_sat(
         kmin = 0.685 * kmax
         aoverb = - 1.0 / (2 * kmin)
         coverb = - 0.751 * kmax
-        kT = 1.0 / kwargs["rho_ion"] # SAT3 used up to ky rho_av = 1.0, then SAT2
+        kT = 1.0 / rho_ion # SAT3 used up to ky rho_av = 1.0, then SAT2
         k0 = 0.6 * kmin
         kP = 2.0 * kmin
         c_1 = - 2.42
@@ -358,7 +388,7 @@ function intensity_sat(
     ax=0.0
     ay=0.0
     exp_ax = 1
-    if(kwargs["ALPHA_QUENCH"] == 0.0)
+    if(alpha_quench == 0.0)
         #spectral shift model parameters
         ax = 1.15
         ay = 0.56
@@ -378,9 +408,9 @@ function intensity_sat(
             if(sat_rule_in==2 || sat_rule_in==3)
                 ky0 = ky_spect[i]
                 if(ky0<kycut)
-                    kx_width = kycut/kwargs["grad_r0_out"]
+                    kx_width = kycut/grad_r0_out
                 else
-                    kx_width = kycut/kwargs["grad_r0_out"] + b1*(ky0 - kycut)*Gq
+                    kx_width = kycut/grad_r0_out + b1*(ky0 - kycut)*Gq
                 end
                 kx = kx*ky0/kx_width
             end
@@ -388,7 +418,7 @@ function intensity_sat(
         end
 
         if(sat_rule_in==1)
-            vzf_out, kymax_out, jmax_out = get_zonal_mixing(ky_spect, gamma_net, kwargs)
+            vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gamma_net)
         else
             vzf_out_fp = vzf_out # used for recreation of first pass for SAT3
             vzf_out = vzf_out*gamma_net[jmax_out]/max(gammas1[jmax_out], small)
@@ -510,13 +540,13 @@ function intensity_sat(
 	            kx = kx0_e[l]
 
                 if(ky0 < kycut)
-                    kx_width = kycut/kwargs["grad_r0_out"]
-                    sat_geo_factor = kwargs["SAT_geo0_out"]*d1*kwargs["SAT_geo1_out"]
+                    kx_width = kycut/grad_r0_out
+                    sat_geo_factor = SAT_geo0_out*d1*SAT_geo1_out
                 else
-                    kx_width = kycut/kwargs["grad_r0_out"] + b1*(ky0 - kycut)*Gq
-                    sat_geo_factor = (kwargs["SAT_geo0_out"]*
-                                (d1*kwargs["SAT_geo1_out"]*kycut +
-                                (ky0 - kycut)*d2*kwargs["SAT_geo2_out"])/ky0
+                    kx_width = kycut/grad_r0_out + b1*(ky0 - kycut)*Gq
+                    sat_geo_factor = (SAT_geo0_out*
+                                (d1*SAT_geo1_out*kycut +
+                                (ky0 - kycut)*d2*SAT_geo2_out)/ky0
                     )
                 end
 	            kx = kx*ky0/kx_width
@@ -566,17 +596,17 @@ function intensity_sat(
         ky0 = ky_spect[j]
         kx = kx0_e[j]
         if(sat_rule_in==1)
-          sat_geo_factor = kwargs["SAT_geo0_out"]
+          sat_geo_factor = SAT_geo0_out
           kx_width = ky0
         elseif(sat_rule_in==2 || sat_rule_in==3)
             if(ky0 < kycut)
-                kx_width = kycut/ kwargs["grad_r0_out"]
-                sat_geo_factor = kwargs["SAT_geo0_out"] * d1 * kwargs["SAT_geo1_out"]
+                kx_width = kycut/ grad_r0_out
+                sat_geo_factor = SAT_geo0_out * d1 * SAT_geo1_out
             else
-                kx_width = kycut/kwargs["grad_r0_out"] + b1*(ky0 - kycut)*Gq
-                sat_geo_factor = (kwargs["SAT_geo0_out"]*
-                                    (d1*kwargs["SAT_geo1_out"]*kycut +
-                                    (ky0 - kycut)*d2*kwargs["SAT_geo2_out"])/ky0)
+                kx_width = kycut/grad_r0_out + b1*(ky0 - kycut)*Gq
+                sat_geo_factor = (SAT_geo0_out*
+                                    (d1*SAT_geo1_out*kycut +
+                                    (ky0 - kycut)*d2*SAT_geo2_out)/ky0)
             end
             kx = kx*ky0/kx_width
         end
@@ -594,7 +624,7 @@ function intensity_sat(
                 field_spectrum_out[j,i] = (measure*cnorm*
                                 ((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2)
 
-                if(kwargs["UNITS"] != "GYRO")
+                if(inputs.UNITS != "GYRO")
                     field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
                 end
 
@@ -768,27 +798,27 @@ end
 
 
 function sum_ky_spectrum(
-    kwargs,
-    sat_rule_in,
-    ky_spect,
-    gp,
-    ave_p0,
-    R_unit,
-    kx0_e,
-    potential,
-    particle_QL,
-    energy_QL,
-    toroidal_stress_QL,
-    parallel_stress_QL,
-    exchange_QL,
-    etg_fact=1.25,
-    c0=32.48,
-    c1=0.534,
-    exp1=1.547,
-    cx_cy=0.56,
-    alpha_x=1.15,
-)
+    inputs::InputTJLF,
+    ky_spect::Vector{T},
+    gp::Array{T},
+    ave_p0::Vector{T},
+    R_unit::Array{T},
+    kx0_e::Vector{T},
+    potential::Array{T},
+    particle_QL::Array{T},
+    energy_QL::Array{T},
+    toroidal_stress_QL::Array{T},
+    parallel_stress_QL::Array{T},
+    exchange_QL::Array{T},
+    etg_fact::T=1.25,
+    c0::T=32.48,
+    c1::T=0.534,
+    exp1::T=1.547,
+    cx_cy::T=0.56,
+    alpha_x::T=1.15,
+)where T <: Real
 
+    sat_rule_in = inputs.SAT_RULE
 
     NM = length(energy_QL[1, :, 1, 1])  # get the number of modes
     NS = length(energy_QL[1, 1, :, 1])  # get the number of species
@@ -806,10 +836,9 @@ function sum_ky_spectrum(
     )
 
     # Multiply QL weights with desired intensity
-    occursin
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
         intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(
-            kwargs, sat_rule_in, ky_spect, gp, kx0_e, NM, QL_data
+            inputs, ky_spect, gp, kx0_e, NM, QL_data
         )
     else
         throw(error(
