@@ -186,7 +186,9 @@ for line in lines[1:length(lines)]
 end
 setfield!(inputTJLF,:SPECIES,inputSpecies)
 
-inputTJLF.UNITS = "CGYRO"
+if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+    inputTJLF.UNITS = "CGYRO"
+end
 
 kx0epy, satgeo0, satgeo1, satgeo2, runit, bt0, bgeo0, gradr0, _, _, _, _ = get_sat_params(inputTJLF, ky_spect, Matrix(gammas))
 @assert isapprox(kx0epy, kx0_e, rtol=1e-3)
