@@ -15,6 +15,7 @@ using Revise
 #   
 
 include("tjlf_modules.jl")
+include("intensity_sat_rules.jl")
 function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
 
 
@@ -25,23 +26,20 @@ function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mi
     taus_2 = inputs.SPECIES[2].TAUS
     mass_2 = inputs.SPECIES[2].MASS
 
-    rho_ion = abs(zs_2) / √(taus_2*mass_2)
+    rho_ion =  √(taus_2*mass_2) / abs(zs_2)
     #
     # find the local maximum of gamma_mix/ky_mix with the largest gamma_mix/ky_mix^2
     #
-    ### kycut is defined with global variables in the python version, but rho_ion is a globalVar
-    ### abs(kw["ZS_2"]) / np.sqrt(kw["TAUS_2"] * kw["MASS_2"])
-    kycut=0.8/rho_ion
+    kycut = 0.8/rho_ion
     kymin = 0.0  
 
     testmax = 0.0
     jmax_mix = 1
 
-
     if(alpha_zf < 0.0) kymin = 0.173 * √(2.0) / rho_ion end
     # saturation rules
     if sat_rule_in==2 || sat_rule_in==3
-        grad_r0 = get_sat_params(Val{:grad_r0},inputs)
+        grad_r0 = get_sat_params(:grad_r0,inputs)
         kycut = grad_r0 * kycut
         kymin = grad_r0 * kymin
     end
@@ -53,7 +51,7 @@ function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mi
     # update testmax and max index if necessary
 
     ##### What should i initialize j1 to???
-    j1 = 0
+    j1 = nothing
     for j in 1:length(ky_mix)-1
         if((ky_mix[j+1] >= kymin) && (ky_mix[j] <= kycut))
             # save index in case no max
@@ -67,7 +65,10 @@ function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mi
         end
     end
 
-    ###### What do you do if jmax_mix = NOTHING (0 in this case)
+    ###### What do you do if jmax_mix = NOTHING
+    if isnothing(j1)
+        error("There is nothing in ky and gamma that meet saturation requirements, IDK what to do -DSun")
+    end
     # if testmax is not updated a single time
     if(testmax==0.0) jmax_mix=j1 end
 
@@ -85,18 +86,16 @@ function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mi
         gammamax1 = (gamma_mix[1] 
             + (gamma_mix[2]-gamma_mix[1])*(kymin-ky_mix[1])/(ky_mix[2]-ky_mix[1]))
     end
-
     # determine kymax1 and gammamax1 bounded by the tree points f0,f1,f2
     # use a quadratic fit: f = a + b x + c x^2    to f = gamma/ky centered at jmax1
     # scale it to be quadratic where x goes from 0 to 1
-    ##### Are we not worried that jmax_mix is at the edge?
     if(jmax_mix>1 && jmax_mix < j1)
         jmax1 = jmax_mix
-        f0 = gamma_mix[jmax1-1]/ky_mix[jmax1-1]
-        f1 = gamma_mix[jmax1]/ky_mix[jmax1]
-        f2 = gamma_mix[jmax1+1]/ky_mix[jmax1+1]
-        deltaky = ky_mix[jmax1+1]-ky_mix[jmax1-1]
-        x1 = (ky_mix[jmax1]-ky_mix[jmax1-1])/deltaky
+        f0 = gamma_mix[jmax1-1] / ky_mix[jmax1-1]
+        f1 = gamma_mix[jmax1] / ky_mix[jmax1]
+        f2 = gamma_mix[jmax1+1] / ky_mix[jmax1+1]
+        deltaky = ky_mix[jmax1+1] - ky_mix[jmax1-1]
+        x1 = (ky_mix[jmax1] - ky_mix[jmax1-1])/deltaky
         a = f0
         b = (f1 - f0*(1-x1*x1)-f2*x1*x1)/(x1-x1*x1)
         c = f2 - f0 - b
@@ -128,13 +127,13 @@ function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mi
             if(xmax >= 1.0)
                 kymax1 = ky_mix[jmax1+1]
                 gammamax1 = f2*kymax1
-            elseif(xmax <= xmin)   
+            elseif(xmax < xmin)   
                 # use the quadratic fit to determine gammamax1 at kymin 
                 if(xmin > 0.0)
                     kymax1 = kymin
                     gammamax1 = (a + b*xmin + c*xmin*xmin)*kymin
                 # if xmax<=0 use f0 as the maximum
-                elseif(xmax < 0.0)
+                else
                     kymax1 = ky_mix[jmax1-1]
                     gammamax1 = f0*kymax1
                 end
@@ -149,7 +148,6 @@ function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mi
         end #f0 < f1
 
     end    # jmax_mix > 1
-
     vzf_mix = gammamax1/kymax1
     kymax_mix = kymax1
     ### commented out in original Fortran code
@@ -179,36 +177,48 @@ function mode_transition_function(x, y1, y2, x_ITG, x_TEM)
 end
 		
 function linear_interpolation(x::AbstractArray, y::AbstractArray, x0)
-    
-    i = 2
+    i = 1
     ### try findfirst
-    while (x[i] < x0)
-        i += i
+    while (x[i] <= x0)
+        i += 1
     end
-
-    return ((y[i] - y[i-1]) * x0 + (x[i] * y[i-1] - x[i-1]*y[i])) / (x[i] - x[i-1]) # y = m x0 + c
+    return ((y[i] - y[i-1]) * x0 + (x[i] * y[i-1] - x[i-1]*y[i])) / (x[i] - x[i-1])
 
 end
 
+function intensity_sat(inputs::InputTJLF, ky_spect::Vector{T}, gp::Array{T}, QL_data::Array{T}, expsub::T=2.0, return_phi_params::Bool=false) where T<: Real
+    if inputs.SAT_RULE == 1
+        return intensity_sat1(inputs, ky_spect, gp, QL_data)
+    elseif inputs.SAT_RULE == 2
+        return intensity_sat2(inputs, ky_spect, gp, QL_data)
+    elseif inputs.SAT_RULE == 3
+        return intensity_sat3(inputs, ky_spect, gp, QL_data)
+    end
+end
 
+##### called tglf_multiscale_spectrum in Fortran
 function intensity_sat(
     inputs::InputTJLF,
     ky_spect::Vector{T},
     gp::Array{T},
-    kx0_e::Vector{T},
-    nmodes::Int,
-    QL_data::Array{T},
+    kx0_e::Vector{T}, ### can get with get_sat_params
+    QL_data::Array{T}, ### taken from the output file
     expsub::T=2.0,
     return_phi_params::Bool=false) where T<:Real
 
     ############ figure out how to make this prettier
+    units_in = inputs.UNITS
+    if inputs.SAT_RULE == 2 || inputs.SAT_RULE == 3
+        if inputs.SAT_RULE == 2 inputs.UNITS = "CGYRO" end
+        units_in = "CGYRO"
+    end
     kx0_e,
     SAT_geo0_out,
     SAT_geo1_out,
     SAT_geo2_out,
     R_unit,
     Bt0_out,
-    B_geo0_out,
+    b_geo0_out,
     grad_r0_out,
     theta_out,
     Bt_out,
@@ -228,20 +238,7 @@ function intensity_sat(
     taus_2 = inputs.SPECIES[2].TAUS
     mass_2 = inputs.SPECIES[2].MASS
     taus_1 = inputs.SPECIES[1].TAUS
-
-    rho_ion = abs(zs_2) / √(taus_2*mass_2)
-
-    # if(jmax_out == 0)
-    #     first_pass = true
-    # else
-    #     first_pass = false
-    # end
-
-    # if(first_pass)  # first pass for spectral shift model or only pass for quench rule
-    #     gamma_net(:) = eigenvalue_spectrum_out(1,:,1) 
-    #     vzf_out, kymax_out, jmax_out = get_zonal_mixing(ky_spectrum,gamma_net, kwargs) 
-    #     gamma_net(:) = eigenvalue_spectrum_out(1,:,1)
-    # end
+    rho_ion = √(taus_2*mass_2)/ abs(zs_2)
 
     small = 10^-10
     nky = length(ky_spect)
@@ -253,16 +250,13 @@ function intensity_sat(
     gamma_net = zeros(nky)
 
     vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gammas1)
-
-
-
     # model fit parameters
     # Miller geometry values igeo=1
     if(rlnp_cutoff > 0.0)
         if(beta_loc == 0.0)
             dlnpdr = 0.0
             ptot = 0.0
-            for i::Integer in 1:ns
+            for i in 1:ns
                 ptot = ptot + inputs.SPECIES[i].AS*inputs.SPECIES[i].TAUS
                 dlnpdr = (dlnpdr + 
                     inputs.SPECIES[i].AS*inputs.SPECIES[i].TAUS*
@@ -331,13 +325,13 @@ function intensity_sat(
         measure = 1.0/kymax_out
     end
     ### coefficents for SAT_RULE = 3
-    if(sat_rule_in == 3)
+    if(sat_rule_in==3)
         kmax = kymax_out
         gmax = vzf_out * kymax_out
         kmin = 0.685 * kmax
         aoverb = - 1.0 / (2 * kmin)
         coverb = - 0.751 * kmax
-        kT = 1.0 / rho_ion # SAT3 used up to ky rho_av = 1.0, then SAT2
+        kT = 1.0/rho_ion # SAT3 used up to ky rho_av = 1.0, then SAT2
         k0 = 0.6 * kmin
         kP = 2.0 * kmin
         c_1 = - 2.42
@@ -349,19 +343,17 @@ function intensity_sat(
         
         Ys = zeros(nmodes)
         xs = zeros(nmodes)
-
+        ######## what is up with these indexing??????
         for k in 1:nmodes
 
-            sum_W_i = 0
-            ### size(QL_data)[3] == ns
+            sum_W_i = zeros(length(QL_data[:, k, 1, 1, 2]))
             for is in 2:size(QL_data)[3] # sum over ion species, requires electrons to be species 1
                 ### check this!
                 ### type,nspecies,field,ky,mode)"
                 ### QL_flux_spectrum_out(2,is,1,:,k)
                 ### QL = [ky, nm, ns, nf, type]
-                sum_W_i = sum_W_i + QL_data[:, k, is, 1, 2]
+                sum_W_i .= sum_W_i .+ QL_data[:, k, is, 1, 2]
             end
-
             # check for singularities in weight ratio near kmax
             ### isn't i jmax? try find first
             i = 1
@@ -373,12 +365,14 @@ function intensity_sat(
             if(sum_W_i[i]==0.0 || sum_W_i[i-1]==0.0)
                 x = 0.5
             else
-                abs_W_ratio = abs(QL_data[:,k,1,1,2]/ sum_W_i)
-                x = linear_interpolation(ky_spectrum, abs_W_ratio, kmax)
+                abs_W_ratio = abs.(QL_data[:,k,1,1,2]./sum_W_i)
+                x = linear_interpolation(ky_spect, abs_W_ratio, kmax)
             end
-
+            
 	        xs[k] = x
-            Y = mode_transition_function(x, Y_ITG, Y_TEM, x_ITG, x_TEM)  
+            Y = mode_transition_function(x, Y_ITG, Y_TEM, x_ITG, x_TEM)
+            # println(Y)
+            # println(ky_spect)
             Ys[k] = Y
         end
     end
@@ -398,37 +392,31 @@ function intensity_sat(
             ax = 1.21
             ay = 1.0
             exp_ax = 2
-            units_in = "CGYRO"
         end
     end
 
     # if(!first_pass)  # second pass for spectral shift model
-        for i in 1:nky
-            kx = kx0_e[i]
-            if(sat_rule_in==2 || sat_rule_in==3)
-                ky0 = ky_spect[i]
-                if(ky0<kycut)
-                    kx_width = kycut/grad_r0_out
-                else
-                    kx_width = kycut/grad_r0_out + b1*(ky0 - kycut)*Gq
-                end
-                kx = kx*ky0/kx_width
+    for i in 1:nky
+        kx = kx0_e[i]
+        if(sat_rule_in==2 || sat_rule_in==3)
+            ky0 = ky_spect[i]
+            if(ky0<kycut)
+                kx_width = kycut/grad_r0_out
+            else
+                kx_width = kycut/grad_r0_out + b1*(ky0 - kycut)*Gq
             end
-            gamma_net[i] = gammas1[i]/(1.0 + abs(ax*kx)^exp_ax)
+            kx = kx*ky0/kx_width
         end
-
-        if(sat_rule_in==1)
-            vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gamma_net)
-        else
-            vzf_out_fp = vzf_out # used for recreation of first pass for SAT3
-            vzf_out = vzf_out*gamma_net[jmax_out]/max(gammas1[jmax_out], small)
-        end
-
+        gamma_net[i] = gammas1[i]/(1.0 + abs(ax*kx)^exp_ax)
+    end
+    if(sat_rule_in==1)
+        vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gamma_net)
+    else
+        vzf_out_fp = vzf_out # used for recreation of first pass for SAT3
+        vzf_out = vzf_out*gamma_net[jmax_out]/max(gammas1[jmax_out], small)
+    end
     # end   # second pass complete
 
-
-    # compute multi-scale phi-intensity spectrum field_spectrum(2,,) = phi_bar_out
-    # note that the field_spectrum(1,,) = v_bar_out = 1.0 for sat_rule_in = 1
     gammamax1= vzf_out*kymax_out
     kymax1 = kymax_out
     jmax1 = jmax_out
@@ -445,20 +433,19 @@ function intensity_sat(
     elseif(sat_rule_in==2 || sat_rule_in==3)
         gamma .= ifelse.(ky_spect.<kymax1,
                     gamma_net,
-                    gammamax1 .+ max.(gamma_net .- (cz2*vzf1.*ky_spect), 0.0))
+                    gammamax1 .+ max.(gamma_net .- cz2*vzf1.*ky_spect, 0.0))
     end
     gamma_mix1 .= gamma
-
 
 
     # if(USE_MIX)
         # mix over ky > kymax with integration weight = sqcky*ky0**2/(ky0**2 + cky*(ky-ky0)**2)
         #### unsure of this index
-        mixnorm = 0.0
+        mixnorm1 = 0.0
         for j in jmax1+2:nky
             gamma_ave = 0.0
             ky0 = ky_spect[j]
-            mixnorm = (ky0*
+            mixnorm1 = (ky0*
                         (atan(sqcky*(ky_spect[nky]/ky0 - 1.0))
                         - atan(sqcky*(ky_spect[jmax1+1]/ky0 - 1.0)))
             )
@@ -477,7 +464,7 @@ function intensity_sat(
                 )
                 gamma_ave = gamma_ave + (gamma[i] - ky1*delta)*mix1 + delta*mix2
             end
-            gamma_mix1[j] = gamma_ave/mixnorm
+            gamma_mix1[j] = gamma_ave/mixnorm1
         end
     # end
     
@@ -485,10 +472,11 @@ function intensity_sat(
     if(sat_rule_in==3)
         # if(!first_pass)
             gamma_fp = zeros(size(ky_spect))
+            gamma = zeros(size(ky_spect))
 
             gamma .= ifelse.(ky_spect.<kymax1,
-                            gammas1[j], 
-                            ((gammamax1 * (vzf_out_fp/vzf_out)) .+ max.(gammas1 .- (cz2*vzf_out_fp*ky0),0.0)))
+                            gammas1, 
+                            ((gammamax1 * (vzf_out_fp/vzf_out)) .+ max.(gammas1 .- (cz2.*vzf_out_fp.*ky_spect),0.0)))
         
             gamma_fp .= gamma
         # end
@@ -515,7 +503,7 @@ function intensity_sat(
                             + (ky0*ky0/(2.0*sqcky))*(log(cky*(ky2-ky0)^2+ky0^2)
                             - log(cky*(ky1-ky0)^2+ky0^2))
                     )
-                    gamma_ave = gamma_ave + (gamma[i]-ky1*delta)*mix1 + delta*mix2
+                    gamma_ave = gamma_ave + (gamma[i] - ky1*delta)*mix1 + delta*mix2
                 end
                 gamma_fp[j] = gamma_ave/mixnorm
             end  
@@ -523,20 +511,24 @@ function intensity_sat(
     # else
     #     gamma_fp = gamma_mix1
     end
+    
 
 
     # generate SAT2 potential for SAT3 to connect to for electron scale
 
     ### why is this not just one if statement, why is it broken into 2???
+    YTs = zeros(nmodes)
     if(sat_rule_in==3) 
         if(ky_spect[nky] >= kT)
             dummy_interp = zeros(size(ky_spect))
             ### not sure if this works
-            k = findfirst(ky_spect.<kT, ky_spect)
-
+            k = 1
+            while ky_spect[k] < kT
+                k += 1
+            end
             for l in k-1:k
                 gamma0 = gammas1[l]
-	            ky0 = ky_spectrum[l]
+	            ky0 = ky_spect[l]
 	            kx = kx0_e[l]
 
                 if(ky0 < kycut)
@@ -554,17 +546,12 @@ function intensity_sat(
 	            if(gamma0 > small) gammaeff = gamma_fp[l] end
 	            # potentials without multimode and ExB effects, added later
 	            dummy_interp[l] = scal*measure*cnorm*(gammaeff/(kx_width*ky0))^2
-	            
                 if(units_in != "GYRO") dummy_interp[l] = sat_geo_factor*dummy_interp[l] end
             end
-	        YT = linear_interpolation(ky_spectrum, dummy_interp, kT)
-            YTs = zeros(nmodes)
+	        YT = linear_interpolation(ky_spect, dummy_interp, kT)
 	        YTs .= YT
 	    else
-	        if(aoverb*(kP^2)+kP+coverb-((kP-kT)*(2*aoverb*kP+1))==0)
-	            YTs = zeros(nmodes)
-	        else
-                YTs = zeros(nmodes)
+	        if(aoverb*(kP^2)+kP+coverb-((kP-kT)*(2*aoverb*kP+1))!=0)
 	            for l in 1:nmodes
 	                YTs[l] = (Ys[l]*
                             (
@@ -580,9 +567,7 @@ function intensity_sat(
                 end
             end
         end
-	end
-  
-    
+	end 
     
     # intensity model
 
@@ -596,8 +581,8 @@ function intensity_sat(
         ky0 = ky_spect[j]
         kx = kx0_e[j]
         if(sat_rule_in==1)
-          sat_geo_factor = SAT_geo0_out
-          kx_width = ky0
+            sat_geo_factor = SAT_geo0_out
+            kx_width = ky0
         elseif(sat_rule_in==2 || sat_rule_in==3)
             if(ky0 < kycut)
                 kx_width = kycut/ grad_r0_out
@@ -619,65 +604,66 @@ function intensity_sat(
                 if(gamma0>small)
                     gammaeff = gamma_mix1[j]*(gp[j,i]/gamma0)^expsub
                 end
-                if(ky0>kyetg) gammaeff = gammaeff*√(ky0/kyetg) end
+                if(ky0>kyetg) gammaeff = gammaeff * √(ky0/kyetg) end
 
                 field_spectrum_out[j,i] = (measure*cnorm*
                                 ((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2)
-
-                if(inputs.UNITS != "GYRO")
+                if(units_in != "GYRO")
                     field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
                 end
-
                 gammaeff_out[j, i] = gammaeff
-            end    
+            end
+    
         elseif(sat_rule_in==3) # SAT3
             if(gamma_fp[j]==0)
                 Fky=0.0
             else
-		        Fky =  ((gamma_kymix[j] / gamma_fp[j])^2) / ((1.0 + ay*(kx^2))^2)
+		        Fky =  ( (gamma_mix1[j] / gamma_fp[j])^2 ) / ((1.0 + ay*(kx^2))^2)
             end
-
             for i in 1:nmodes
                 field_spectrum_out[j,i] = 0.0  
+                gammaeff = 0.0
                 if(gamma0 > small)
-                    if (ky0 <= kP) then # initial quadratic
+                    if (ky0 <= kP) # initial quadratic
 			            sig_ratio = (aoverb * (ky0^2) + ky0 + coverb) / (aoverb * (k0^2) + k0 + coverb)	
-			            field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky *(gp[j,i]/gamma0)^(2 * expsub)
-		            elseif (ky0 <= kT) then # connecting quadratic
-		                if(YTs[i]==0.0 || kP==kT) field_spectrum_out[j,i] = 0.0 end
-		            else
-                        doversig0 = ( (Ys[i] / YTs[i]) ^ (1.0/abs(c_1))
-                                    - (aoverb*kP^2 + kP + coverb - (kP-kT)*(2*aoverb*kP + 1))
-                                    /(aoverb*k0^2 + k0 + coverb))
-                        doversig0 = doversig0 * (1.0/((kP-kT)^2))
-                        eoversig0 = - 2 * doversig0 * kP + ((2 * aoverb * kP + 1)/(aoverb * (k0^2) + k0 + coverb))
-                        foversig0 = ((Ys[i] / YTs[i])^(1.0/abs(c_1))) - eoversig0 * kT - doversig0 * (kT^2)
-                        sig_ratio = doversig0*(ky0^2) + eoversig0*ky0 + foversig0
-                        field_spectrum_out[j,i] = Ys[i] * (sig_ratio ^ c_1) * Fky * (gp[j,i]/gamma0)^(2*expsub)
+			            field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky * (gp[j,i]/gamma0)^(2 * expsub)
+                        # println(Ys[i])
+                        # println(sig_ratio)
+                        # println(Fky)
+                        # println(gp[j,i])
+                    elseif (ky0 <= kT) # connecting quadratic
+		                if(YTs[i]==0.0 || kP==kT) 
+                            field_spectrum_out[j,i] = 0.0
+		                else
+                            doversig0 = ( (Ys[i] / YTs[i]) ^ (1.0/abs(c_1))
+                                        - (aoverb*kP^2 + kP + coverb - (kP-kT)*(2*aoverb*kP + 1))
+                                        /(aoverb*k0^2 + k0 + coverb))
+                            doversig0 = doversig0 * (1.0/((kP-kT)^2))
+                            eoversig0 = -2 * doversig0 * kP + ((2 * aoverb * kP + 1)/(aoverb * (k0^2) + k0 + coverb))
+                            foversig0 = ((Ys[i] / YTs[i])^(1.0/abs(c_1))) - eoversig0 * kT - doversig0 * (kT^2)
+                            sig_ratio = doversig0*(ky0^2) + eoversig0*ky0 + foversig0
+                            field_spectrum_out[j,i] = Ys[i] * (sig_ratio ^ c_1) * Fky * (gp[j,i]/gamma0)^(2*expsub)
+                        end
+                    else # SAT2 for electron scale
+                        gammaeff = gamma_mix1[j]*(gp[j,i]/gamma0)^expsub
+                        if(ky0 > kyetg) gammaeff = gammaeff*√(ky0/kyetg) end
+
+                        field_spectrum_out[j,i] = (scal*measure*cnorm*
+                                        ((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2)
+                        if(units_in != "GYRO")
+                            field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
+                        end
                     end
-		        else # SAT2 for electron scale
-			        gammaeff = gamma_mix1[j]*(gp[j,i]/gamma0)^expsub
-			        if(ky0 > kyetg) gammaeff = gammaeff*√(ky0/kyetg) end
-
-			        field_spectrum_out[j,i] = (scal*measure*cnorm*
-                                    ((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2)
-
-			        if(units_in!="GYRO")
-                        field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
-                    end
-
                 end
                 gammaeff_out[j, i] = gammaeff
             end
         end
     end
     
-       
 	#SAT3 QLA here
-    QLA_P = 0.0
-    QLA_E = 0.0
-    QLA_E = 0.0
     if(sat_rule_in==3)
+        QLA_P = zeros(nmodes)
+	    QLA_E = zeros(nmodes)
 	    for k in 1:nmodes
 	        # factor of 2 included for real symmetry
             QLA_P[k] = 2 * mode_transition_function(xs[k], 1.1, 0.6, x_ITG, x_TEM)
@@ -713,20 +699,17 @@ function intensity_sat(
 		
 end
 
-
+######### i think dky0 is sometimes a different type for some reason
 function flux_integrals(
-    NM,
-    NS,
-    NF,
-    i,
-    ky,
-    dky0,
-    dky1,
-    particle,
-    energy,
-    toroidal_stress,
-    parallel_stress,
-    exchange,
+    i::Int,
+    ky::T,
+    dky0::K,
+    dky1::T,
+    particle::Array{T},
+    energy::Array{T},
+    toroidal_stress::Array{T},
+    parallel_stress::Array{T},
+    exchange::Array{T},
     particle_flux_out,
     energy_flux_out,
     stress_tor_out,
@@ -735,40 +718,35 @@ function flux_integrals(
     q_low_out,
     taus_1=1.0,
     mass_2=1.0,
-)
+) where {T <: Real, K<: Real}
     """
     Compute the flux integrals
     """
-    for nm in 1:NM
-        for ns in 1:NS
-            for j in 1:NF
-                particle_flux_out[nm,ns,j] += (
-                    dky0 * (i==1 ? 0 : particle[i - 1,nm,ns,j])
-                    + dky1 * particle[i,nm,ns,j]
-                )
-                energy_flux_out[nm,ns,j] += (
-                    dky0 * (i==1 ? 0 : energy[i - 1,nm,ns,j])
-                    + dky1 * energy[i,nm,ns,j]
-                )
-                stress_tor_out[nm,ns,j] += (
-                    dky0 * (i==1 ? 0 : toroidal_stress[i - 1,nm,ns,j])
-                    + dky1 * toroidal_stress[i,nm,ns,j]
-                )
-                stress_par_out[nm,ns,j] += (
-                    dky0 * (i==1 ? 0 : parallel_stress[i - 1,nm,ns,j])
-                    + dky1 * parallel_stress[i,nm,ns,j]
-                )
-                exchange_out[nm,ns,j] += (
-                    dky0 * (i==1 ? 0 : exchange[i - 1,nm,ns,j])
-                    + dky1 * exchange[i,nm,ns,j]
-                )
-            end
-            if ky * taus_1 * mass_2 <= 1
-                q_low_out[nm,ns] = (
-                    energy_flux_out[nm,ns,1] + energy_flux_out[nm,ns,2]
-                )
-            end
-        end
+    particle_flux_out .+= (
+        dky0 .* (i==1 ? 0 : particle[i - 1,:,:,:])
+        .+ dky1 .* particle[i,:,:,:]
+    )
+    energy_flux_out .+= (
+        dky0 .* (i==1 ? 0 : energy[i - 1,:,:,:])
+        .+ dky1 .* energy[i,:,:,:]
+    )
+    stress_tor_out .+= (
+        dky0 .* (i==1 ? 0 : toroidal_stress[i - 1,:,:,:])
+        .+ dky1 .* toroidal_stress[i,:,:,:]
+    )
+    stress_par_out .+= (
+        dky0 .* (i==1 ? 0 : parallel_stress[i - 1,:,:,:])
+        .+ dky1 .* parallel_stress[i,:,:,:]
+    )
+    exchange_out .+= (
+        dky0 .* (i==1 ? 0 : exchange[i - 1,:,:,:])
+        .+ dky1 .* exchange[i,:,:,:]
+    )
+
+    if ky * taus_1 * mass_2 <= 1
+        q_low_out .= (
+            energy_flux_out[:,:,1] + energy_flux_out[:,:,2]
+        )
     end
     return (
         particle_flux_out,
@@ -779,21 +757,6 @@ function flux_integrals(
         q_low_out,
     )
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -830,15 +793,14 @@ function sum_ky_spectrum(
     exchange_out = zeros((NM, NS, NF))
     q_low_out = zeros((NM, NS))
 
-    # println(size(toroidal_stress_QL))
+    
     QL_data = cat(
-        dims=3, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL
+        dims=5, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL
     )
-
     # Multiply QL weights with desired intensity
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
         intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(
-            inputs, ky_spect, gp, kx0_e, NM, QL_data
+            inputs, ky_spect, gp, kx0_e, QL_data
         )
     else
         throw(error(
@@ -846,18 +808,12 @@ function sum_ky_spectrum(
             )
         )
     end
-    ### why is this like this??????
-    shapes = [
-        size(item)
-        for item in [
-            particle_QL,
-            energy_QL,
-            toroidal_stress_QL,
-            parallel_stress_QL,
-            exchange_QL,
-        ]
-        if !ismissing(item)
-    ][1]
+
+    if size(particle_QL) == size(energy_QL) == size(toroidal_stress_QL) == size(parallel_stress_QL) == size(exchange_QL)
+        shapes = size(particle_QL)
+    else
+        error("QL matrices are different sizes!")
+    end
 
     particle = zeros(shapes)
     energy = zeros(shapes)
@@ -865,34 +821,14 @@ function sum_ky_spectrum(
     parallel_stress = zeros(shapes)
     exchange = zeros(shapes)
 
-    for i in 1:NS  # iterate over the species
-        for j in 1:NF  # iterate over the fields
-            if !ismissing(particle_QL)
-                particle[:, :, i, j] = (
-                    particle_QL[:, :, i, j] .* intensity_factor .* QLA_P
-                )
-            end
-            if !ismissing(energy_QL)
-                energy[:, :, i, j] = energy_QL[:, :, i, j] .* intensity_factor .* QLA_E
-            end
-            if !ismissing(toroidal_stress_QL)
-                toroidal_stress[:, :, i, j] = (
-                    toroidal_stress_QL[:, :, i, j] .* intensity_factor .* QLA_O
-                )
-            end
-            if !ismissing(parallel_stress_QL)
-                parallel_stress[:, :, i, j] = (
-                    parallel_stress_QL[:, :, i, j] .* intensity_factor .* QLA_O
-                )
-            end
-            if !ismissing(exchange_QL)
-                exchange[:, :, i, j] = (
-                    exchange_QL[:, :, i, j] .* intensity_factor .* QLA_O
-                )
-            end
-        end
-    end
 
+    particle .= particle_QL .* (intensity_factor .* QLA_P')
+    energy .= energy_QL .* (intensity_factor .* QLA_E')
+    toroidal_stress .= toroidal_stress_QL .* (intensity_factor .* QLA_O)
+    parallel_stress .= parallel_stress_QL .* (intensity_factor .* QLA_O)
+    exchange .= exchange_QL .* (intensity_factor .* QLA_O)
+
+    
     dky0 = 0
     ky0 = 0
     for i in eachindex(ky_spect)
@@ -914,9 +850,6 @@ function sum_ky_spectrum(
             exchange_out,
             q_low_out,
         ) = flux_integrals(
-            NM,
-            NS,
-            NF,
             i,
             ky,
             dky0,
@@ -934,14 +867,15 @@ function sum_ky_spectrum(
             q_low_out,
         )
         ky0 = ky1
-        global results = Dict(
+    end
+
+    results = Dict(
             "particle_flux_integral" =>particle_flux_out,
             "energy_flux_integral" => energy_flux_out,
             "toroidal_stresses_integral" => stress_tor_out,
             "parallel_stresses_integral" => stress_par_out,
             "exchange_flux_integral" => exchange_out,
-        )
-    end
+    )
 
     return results
 

@@ -38,15 +38,18 @@ function get_sat_params(inputs::InputTJLF, ky::AbstractVector{T}, gammas::Abstra
 end
 
 
-function get_sat_params(param::Type{Val{:grad_r0}}, inputs::InputTJLF)
-    _, _, b_geo, _, qrat_geo, _, _, _, _, _, _, _ = mercier_luc(inputs)
-    return b_geo[1]/qrat_geo[1]
+function get_sat_params(param::Symbol, inputs::InputTJLF)
+    if param == :Bt0_out
+        _, _, b_geo, _, qrat_geo, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
+        return Bt0_out
+    elseif param == :B_geo0
+        _, _, b_geo, _, qrat_geo, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
+        return b_geo[1]
+    elseif param == :grad_r0
+        _, _, b_geo, _, qrat_geo, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
+        return b_geo[1]/qrat_geo[1]
+    end
 end
-
-
-
-
-
 
 
 
@@ -141,7 +144,6 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
         if(units_in=="GYRO")
             kx0_factor = abs(b_geo[1]/qrat_geo[1]^2)
             kx0_factor = 1.0 + 0.40*(kx0_factor-1.0)^2
-            ### wE is an array for Python but not Fotran
             wE .= (kx0_factor*vexb_shear_kx0) .*
                 (ifelse.(kyi.<0.3,kyi./0.3,1.0))./gamma_reference_kx0
         else
@@ -153,9 +155,7 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
 
         kx0_e = -(0.36*vexb_shear_kx0./gamma_reference_kx0
                 .+ (0.38.*wE.*tanh.((0.69.*wE).^6)))
-
-
-
+        
         a0 = 1.3
         if(sat_rule_in==1)
             a0 = 1.45

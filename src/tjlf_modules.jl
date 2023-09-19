@@ -104,6 +104,7 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     
     DAMP_PSI::Union{T,Missing} = missing
     DAMP_SIG::Union{T,Missing} = missing
+    WDIA_TRAPPED::Union{T,Missing} = missing
     PARK::Union{T,Missing} = missing
     GHAT::Union{T,Missing} = missing
     GCHAT::Union{T,Missing} = missing

@@ -6,7 +6,7 @@ include("../src/tjlf_modules.jl")
 include("../src/tjlf_multiscale_spectrum.jl")
 include("../src/tjlf_geometry.jl")
 
-baseDirectory = "./outputs/test2/"
+baseDirectory = "./outputs/test_SAT3/"
 
 
 
@@ -55,7 +55,7 @@ end
 # Read scalar saturation parameters
 fileDirectory = baseDirectory * "out.tglf.scalar_saturation_parameters"
 lines = readlines(fileDirectory)
-inputs = Dict()
+inputComparison = Dict()
 for line in lines[1:length(lines)]
     line = split(line, "\n")
     #### no idea why this is here
@@ -69,7 +69,7 @@ for line in lines[1:length(lines)]
         
     line = split(line[1]," = ")
     line .= strip.(line)
-    inputs[string(line[1])] = parse(Float64, line[2])
+    inputComparison[string(line[1])] = parse(Float64, line[2])
 end
 
 # Get ky spectrum
@@ -128,43 +128,24 @@ fluxes = transpose(reshape(parse.(Float64,split(lines[1])), (width,4)))
 
 
 
-
-
-
-
 # Read input.tglf
 fileDirectory = baseDirectory * "input.tglf"
 lines = readlines(fileDirectory)
-for line in lines[2:length(lines)]
-    line = split(line, "\n")
-    line = strip.(split(line[1],"="))
-    try
-        inputs[string(line[1])] = parse(Float64, line[2])
-    catch ValueError
-        continue
-    end
-        
-end
-
-# Added inputs
-inputs["UNITS"] = "GYRO"
-inputs["ALPHA_ZF"] = 1.0
-inputs["RLNP_CUTOFF"] = 18.0
-inputs["NS"] = ceil(inputs["NS"])
-inputs["ALPHA_QUENCH"] = 0.0
-inputs["BETA_LOC"] = 0.0
-inputs["DRMINDX_LOC"] = 1.0
-inputs["ALPHA_E"] = 1.0
-inputs["VEXB_SHEAR"] = 0.080234
-inputs["SIGN_IT"] = 1.0
-
-
-
-
 # struct attempt
 inputTJLF = InputTJLF{Float64}()
 
-for line in lines[2:length(lines)]
+for line in lines[1:length(lines)]
+    line = split(line, "\n")
+    line = split(line[1],"=")
+    if line[1] == "NS"
+        global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
+        for i in 1:length(inputSpecies)
+            inputSpecies[i] = Species{Float64}()
+        end
+    end
+end
+
+for line in lines[1:length(lines)]
     line = split(line, "\n")
     line = split(line[1],"=")
 
@@ -174,18 +155,12 @@ for line in lines[2:length(lines)]
         temp = split(line[1],"_")
         speciesField = Symbol(replace(line[1], r"_\d"=>""))
         speciesIndex = check.match[2:end]
+        if parse(Int,speciesIndex) > length(inputSpecies) continue end
         setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
     
         # if not for the species vector
     else
-
         field = Symbol(line[1])
-        if line[1] == "NS"
-            global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
-            for i in 1:length(inputSpecies)
-                inputSpecies[i] = Species{Float64}()
-            end
-        end
         # string
         if line[2][1] == '\''
             val = string(strip(line[2], ['\'']))
@@ -209,29 +184,28 @@ for line in lines[2:length(lines)]
     end
     
 end
-
 setfield!(inputTJLF,:SPECIES,inputSpecies)
 
+inputTJLF.UNITS = "CGYRO"
+
+kx0epy, satgeo0, satgeo1, satgeo2, runit, bt0, bgeo0, gradr0, _, _, _, _ = get_sat_params(inputTJLF, ky_spect, Matrix(gammas))
+@assert isapprox(kx0epy, kx0_e, rtol=1e-3)
+@assert isapprox(inputComparison["SAT_geo0_out"], satgeo0, rtol=1e-6)
+@assert isapprox(inputComparison["SAT_geo1_out"], satgeo1, rtol=1e-6)
+@assert isapprox(inputComparison["SAT_geo2_out"], satgeo2, rtol=1e-6)
+@assert isapprox(R_unit[1, 1], runit,  rtol=1e-6)
+@assert isapprox(inputComparison["Bt0_out"], bt0, rtol=1e-6)
+@assert isapprox(inputComparison["grad_r0_out"], gradr0, rtol=1e-6)
+
+if inputTJLF.VEXB_SHEAR != 0.0
+    @assert isapprox(inputComparison["B_geo0_out"], bgeo0, rtol=1e-6)
+end
 
 
 sat_1 = sum_ky_spectrum(inputTJLF, ky_spect, gammas, ave_p0, R_unit, kx0_e, potential, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL)
-expected_sat1 = fluxes[2,:]
 julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
-
+expected_sat1 = fluxes[2,:]
 @assert isapprox(julia_sat1, expected_sat1, rtol=1e-3)
 
-kx0epy, satgeo0, satgeo1, satgeo2, runit, bt0, bgeo0, gradr0, _, _, _, _ = get_sat_params(inputTJLF, ky_spect, Matrix(gammas))
-
-@assert isapprox(kx0epy, kx0_e, rtol=1e-3)
-@assert isapprox(inputs["SAT_geo0_out"], satgeo0, rtol=1e-6)
-@assert isapprox(inputs["SAT_geo1_out"], satgeo1, rtol=1e-6)
-@assert isapprox(inputs["SAT_geo2_out"], satgeo2, rtol=1e-6)
-@assert isapprox(R_unit[1, 1], runit,  rtol=1e-6)
-@assert isapprox(inputs["Bt0_out"], bt0, rtol=1e-6)
-@assert isapprox(inputs["grad_r0_out"], gradr0, rtol=1e-6)
-
-if inputs["VEXB_SHEAR"] != 0.0
-    @assert isapprox(inputs["B_geo0_out"], bgeo0, rtol=1e-6)
-end
 
 println("SUCCESS")
