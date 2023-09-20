@@ -1,4 +1,7 @@
 **/.DS_Store
 Manifest.toml
-test.jl
-test2.jl
+# Ignore compiled object files
+*.o
+*.obj
+
+test*
