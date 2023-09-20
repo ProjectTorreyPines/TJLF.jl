@@ -1,4 +1,4 @@
 **/.DS_Store
 Manifest.toml
-./test.jl
-./test2.jl
+test.jl
+test2.jl
