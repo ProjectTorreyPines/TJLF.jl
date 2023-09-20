@@ -204,7 +204,7 @@ if inputTJLF.VEXB_SHEAR != 0.0
 end
 
 
-sat_1 = sum_ky_spectrum(inputTJLF, ky_spect, gammas, ave_p0, R_unit, kx0_e, potential, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL)
+sat_1 = sum_ky_spectrum(inputTJLF, ky_spect, gammas, ave_p0, potential, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL)
 julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
 expected_sat1 = fluxes[2,:]
 @assert isapprox(julia_sat1, expected_sat1, rtol=1e-3)

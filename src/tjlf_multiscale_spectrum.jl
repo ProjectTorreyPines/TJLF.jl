@@ -163,6 +163,9 @@ end
 
 
 
+
+
+
 function mode_transition_function(x, y1, y2, x_ITG, x_TEM)
 
     if (x < x_ITG)
@@ -196,12 +199,12 @@ function intensity_sat(inputs::InputTJLF, ky_spect::Vector{T}, gp::Array{T}, QL_
     end
 end
 
+
 ##### called tglf_multiscale_spectrum in Fortran
 function intensity_sat(
     inputs::InputTJLF,
     ky_spect::Vector{T},
     gp::Array{T},
-    kx0_e::Vector{T}, ### can get with get_sat_params
     QL_data::Array{T}, ### taken from the output file
     expsub::T=2.0,
     return_phi_params::Bool=false) where T<:Real
@@ -209,22 +212,10 @@ function intensity_sat(
     ############ figure out how to make this prettier
     units_in = inputs.UNITS
     if inputs.SAT_RULE == 2 || inputs.SAT_RULE == 3
-        if inputs.SAT_RULE == 2 inputs.UNITS = "CGYRO" end
+        inputs.UNITS = "CGYRO"
         units_in = "CGYRO"
     end
-    kx0_e,
-    SAT_geo0_out,
-    SAT_geo1_out,
-    SAT_geo2_out,
-    R_unit,
-    Bt0_out,
-    b_geo0_out,
-    grad_r0_out,
-    theta_out,
-    Bt_out,
-    grad_r_out,
-    B_unit_out = get_sat_params(inputs,ky_spect,gp)
-    
+
     sat_rule_in = inputs.SAT_RULE
     rlnp_cutoff = inputs.RLNP_CUTOFF
     beta_loc = inputs.BETA_LOC
@@ -239,17 +230,31 @@ function intensity_sat(
     mass_2 = inputs.SPECIES[2].MASS
     taus_1 = inputs.SPECIES[1].TAUS
     rho_ion = √(taus_2*mass_2)/ abs(zs_2)
-
     small = 10^-10
     nky = length(ky_spect)
+
+    kx0_e,
+    SAT_geo0_out,
+    SAT_geo1_out,
+    SAT_geo2_out,
+    R_unit,
+    Bt0_out,
+    b_geo0_out,
+    grad_r0_out,
+    theta_out,
+    Bt_out,
+    grad_r_out,
+    B_unit_out = get_sat_params(inputs,ky_spect,gp)
+
+
     if length(size(gp)) > 1
         gammas1 = gp[:, 1] # SAT1 and SAT2 use the growth rates of the most unstable modes
     else
         gammas1 = gp
     end
-    gamma_net = zeros(nky)
 
     vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gammas1)
+    
     # model fit parameters
     # Miller geometry values igeo=1
     if(rlnp_cutoff > 0.0)
@@ -310,13 +315,12 @@ function intensity_sat(
         if(nmodes > 1) b2 = 3.55 end
         b3 = 1.0
 
-        d1 = (Bt0_out/b_geo0_out)^4    # PPCF paper 2020
+        d1 = (Bt0_out/b_geo0_out)^4 
         d1 = d1/grad_r0_out
-        # WARNING: this is correct, but it's the reciprocal in the paper (typo in paper)
         Gq = b_geo0_out/grad_r0_out
         d2 = b3/(Gq^2)
         cnorm = b2*(12.0/dlnpdr)
-        kyetg = 1000.0   # does not impact SAT2
+        kyetg = 1000.0
         cky = 3.0
         sqcky = √(cky)
         kycut = b0*kymax_out
@@ -331,7 +335,7 @@ function intensity_sat(
         kmin = 0.685 * kmax
         aoverb = - 1.0 / (2 * kmin)
         coverb = - 0.751 * kmax
-        kT = 1.0/rho_ion # SAT3 used up to ky rho_av = 1.0, then SAT2
+        kT = 1.0/rho_ion
         k0 = 0.6 * kmin
         kP = 2.0 * kmin
         c_1 = - 2.42
@@ -343,19 +347,14 @@ function intensity_sat(
         
         Ys = zeros(nmodes)
         xs = zeros(nmodes)
-        ######## what is up with these indexing??????
-        for k in 1:nmodes
 
+        for k in 1:nmodes
             sum_W_i = zeros(length(QL_data[:, k, 1, 1, 2]))
             for is in 2:size(QL_data)[3] # sum over ion species, requires electrons to be species 1
-                ### check this!
-                ### type,nspecies,field,ky,mode)"
-                ### QL_flux_spectrum_out(2,is,1,:,k)
-                ### QL = [ky, nm, ns, nf, type]
                 sum_W_i .= sum_W_i .+ QL_data[:, k, is, 1, 2]
             end
             # check for singularities in weight ratio near kmax
-            ### isn't i jmax? try find first
+            ### isn't i == jmax_out? I don't think you need the loop
             i = 1
             while (ky_spect[i] < kmax)
 	            i += 1
@@ -368,11 +367,9 @@ function intensity_sat(
                 abs_W_ratio = abs.(QL_data[:,k,1,1,2]./sum_W_i)
                 x = linear_interpolation(ky_spect, abs_W_ratio, kmax)
             end
-            
-	        xs[k] = x
             Y = mode_transition_function(x, Y_ITG, Y_TEM, x_ITG, x_TEM)
-            # println(Y)
-            # println(ky_spect)
+
+            xs[k] = x
             Ys[k] = Y
         end
     end
@@ -396,6 +393,7 @@ function intensity_sat(
     end
 
     # if(!first_pass)  # second pass for spectral shift model
+    gamma_net = zeros(nky)
     for i in 1:nky
         kx = kx0_e[i]
         if(sat_rule_in==2 || sat_rule_in==3)
@@ -409,6 +407,7 @@ function intensity_sat(
         end
         gamma_net[i] = gammas1[i]/(1.0 + abs(ax*kx)^exp_ax)
     end
+
     if(sat_rule_in==1)
         vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gamma_net)
     else
@@ -422,7 +421,8 @@ function intensity_sat(
     jmax1 = jmax_out
     vzf1 = vzf_out
 
-    # include zonal flow effects on growth rate model:
+
+
     gamma_mix1 = zeros(nky)
     gamma = zeros(nky)
 
@@ -516,12 +516,10 @@ function intensity_sat(
 
     # generate SAT2 potential for SAT3 to connect to for electron scale
 
-    ### why is this not just one if statement, why is it broken into 2???
     YTs = zeros(nmodes)
     if(sat_rule_in==3) 
         if(ky_spect[nky] >= kT)
             dummy_interp = zeros(size(ky_spect))
-            ### not sure if this works
             k = 1
             while ky_spect[k] < kT
                 k += 1
@@ -625,13 +623,12 @@ function intensity_sat(
                 gammaeff = 0.0
                 if(gamma0 > small)
                     if (ky0 <= kP) # initial quadratic
+
 			            sig_ratio = (aoverb * (ky0^2) + ky0 + coverb) / (aoverb * (k0^2) + k0 + coverb)	
 			            field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky * (gp[j,i]/gamma0)^(2 * expsub)
-                        # println(Ys[i])
-                        # println(sig_ratio)
-                        # println(Fky)
-                        # println(gp[j,i])
+
                     elseif (ky0 <= kT) # connecting quadratic
+
 		                if(YTs[i]==0.0 || kP==kT) 
                             field_spectrum_out[j,i] = 0.0
 		                else
@@ -644,7 +641,9 @@ function intensity_sat(
                             sig_ratio = doversig0*(ky0^2) + eoversig0*ky0 + foversig0
                             field_spectrum_out[j,i] = Ys[i] * (sig_ratio ^ c_1) * Fky * (gp[j,i]/gamma0)^(2*expsub)
                         end
+
                     else # SAT2 for electron scale
+
                         gammaeff = gamma_mix1[j]*(gp[j,i]/gamma0)^expsub
                         if(ky0 > kyetg) gammaeff = gammaeff*√(ky0/kyetg) end
 
@@ -653,6 +652,7 @@ function intensity_sat(
                         if(units_in != "GYRO")
                             field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
                         end
+                        
                     end
                 end
                 gammaeff_out[j, i] = gammaeff
@@ -765,8 +765,6 @@ function sum_ky_spectrum(
     ky_spect::Vector{T},
     gp::Array{T},
     ave_p0::Vector{T},
-    R_unit::Array{T},
-    kx0_e::Vector{T},
     potential::Array{T},
     particle_QL::Array{T},
     energy_QL::Array{T},
@@ -800,7 +798,7 @@ function sum_ky_spectrum(
     # Multiply QL weights with desired intensity
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
         intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(
-            inputs, ky_spect, gp, kx0_e, QL_data
+            inputs, ky_spect, gp, QL_data
         )
     else
         throw(error(
