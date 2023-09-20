@@ -37,3 +37,35 @@ f = [1,2,3,4]
 println(ifelse.(f.<=2,f, f.-1))
 
 a()
+
+
+
+
+
+
+
+
+
+
+
+
+
+libpath = "./src/simplemodule.so"
+
+h = Int32[3]
+ccall((:main, "./src/simplemodule.so"), Cvoid, (Ptr{Int32},), h)
+
+# ccall((:__simplemodule_MOD_foo, lib), Int32, (Ptr{Int32},), h)
+# ccall((:__tglf, "./src/Fortran/tglf.so"), Int32, (Ptr{Int32},), h)
+
+
+
+
+
+
+# h = "../test_SAT3/"
+# ccall((:__tglf_MOD_foo, "./src/Fortran/tglf.so"), Cvoid, (Ptr{Cchar},), h)
+
+
+
+ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
