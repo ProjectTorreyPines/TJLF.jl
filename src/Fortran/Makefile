@@ -91,13 +91,13 @@ OBJECTS = tglf_isnan.o      \
 
 .SUFFIXES : .o .f90 .F90
 
-all: $(LLIB).a $(EXEC1) Makefile
+all: $(LLIB).a $(EXEC1) $(EXEC1).so Makefile
 
-$(EXEC1): $(LLIB).a $(EXEC1).o
+$(EXEC1): $(LLIB).a $(EXEC1).o 
 	$(FC1) $(FFLAGS) -o $(EXEC1) $(EXEC1).o $(LLIB).a $(LMATH) $(NN_LIB)
 
-#$(EXEC1).so: $(LLIB).a $(EXEC1).o
-#	$(FC1) $(FFLAGS) -shared -o $(EXEC1).so $(EXEC1).o $(LLIB).a $(LMATH) $(NN_LIB)
+$(EXEC1).so: $(LLIB).a $(EXEC1).o
+	$(FC1) $(FFLAGS) -shared -o $(EXEC1).so $(EXEC1).o $(LLIB).a $(LMATH) $(NN_LIB)
 
 $(LLIB).a: $(OBJECTS)
 	$(ARCH) $(LLIB).a $(OBJECTS)
