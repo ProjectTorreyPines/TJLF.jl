@@ -258,6 +258,7 @@ function intensity_sat(
     taus_2 = inputs.SPECIES[2].TAUS
     mass_2 = inputs.SPECIES[2].MASS
     taus_1 = inputs.SPECIES[1].TAUS
+    nmodes = inputs.NMODES
     rho_ion = √(taus_2*mass_2)/ abs(zs_2)
     small = 10^-10
     nky = length(ky_spect)
