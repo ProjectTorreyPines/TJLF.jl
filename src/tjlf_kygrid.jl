@@ -1,5 +1,5 @@
 include("tjlf_modules.jl")
-include("tjlf_modules.jl")
+include("tjlf_geometry.jl")
 
 #
 #     parameters: 
