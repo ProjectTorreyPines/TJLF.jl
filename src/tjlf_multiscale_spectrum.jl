@@ -229,6 +229,7 @@ end
 #     takes in the input.tglf file, ky values, gammas, quasilinear weights, and
 #     some other optional parameters and returns the intensity value and QLA
 #     parameter values dependent on the 3 saturation rules
+#     called get_multiscale_spectrum in the Fortran
 # 
 function intensity_sat(
     inputs::InputTJLF,
