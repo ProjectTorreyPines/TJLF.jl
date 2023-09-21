@@ -4,4 +4,6 @@ Manifest.toml
 *.o
 *.obj
 
-test*
+test.jl
+test2.jl
+simplemodule.*
