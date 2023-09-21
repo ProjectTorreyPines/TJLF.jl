@@ -1,6 +1,5 @@
 # export get_sat_params, xgrid_functions_geo, mercier_luc, miller_geo
 
-### get_zonal_mixing()
 include("tjlf_modules.jl")
 include("tjlf_multiscale_spectrum.jl")
 
