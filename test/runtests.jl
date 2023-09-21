@@ -5,7 +5,7 @@ using Base.Filesystem
 include("../src/tjlf_modules.jl")
 include("../src/tjlf_multiscale_spectrum.jl")
 include("../src/tjlf_geometry.jl")
-include("../src/tjlf_kygrid")
+include("../src/tjlf_kygrid.jl")
 
 
 
