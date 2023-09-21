@@ -1,9 +1,13 @@
 using Revise
+
+include("tjlf_modules.jl")
+include("intensity_sat_rules.jl")
+
 #
 #     parameters: 
+#     inputs - InputTJLF struct constructed using the input.TGLF file
 #     ky_mix - array of ky (mode number)
 #     gamma_mix - array of gamma (net growth rate)
-#     kwargs - dictionary of global variables (rho_ion, alpha_zf_in, grad_r0_out)
 #     
 #     outputs:
 #     vzf_mix - zonal flow mixing rate
@@ -13,9 +17,6 @@ using Revise
 #     finds the maximum of gamma/ky spectrum at low-k values by going through the ky_mix
 #     array, then after finding the max, interpolate the value to improve accuracy
 #   
-
-include("tjlf_modules.jl")
-include("intensity_sat_rules.jl")
 function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
 
 
@@ -165,8 +166,12 @@ end
 
 
 
-
-function mode_transition_function(x, y1, y2, x_ITG, x_TEM)
+#
+#     helper function that returns either the smaller value if x is
+#     less than, larger value if x is greater than, or a linear 
+#     interpolation of the two if x is within the bounds
+# 
+function mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where T<:Real
 
     if (x < x_ITG)
         y = y1
@@ -178,10 +183,13 @@ function mode_transition_function(x, y1, y2, x_ITG, x_TEM)
 
     return y
 end
-		
-function linear_interpolation(x::AbstractArray, y::AbstractArray, x0)
+
+#
+#     helper function that returns either the linear interpolated y value
+#     at a x0 value given the x and y arrays
+# 
+function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
     i = 1
-    ### try findfirst
     while (x[i] <= x0)
         i += 1
     end
@@ -189,6 +197,9 @@ function linear_interpolation(x::AbstractArray, y::AbstractArray, x0)
 
 end
 
+
+######### DSUN thoughts of splitting intensity_sat into 3 functions to help with readability?
+######### abandoned for now, but can be seen in the intensity.jl file
 function intensity_sat(inputs::InputTJLF, ky_spect::Vector{T}, gp::Array{T}, QL_data::Array{T}, expsub::T=2.0, return_phi_params::Bool=false) where T<: Real
     if inputs.SAT_RULE == 1
         return intensity_sat1(inputs, ky_spect, gp, QL_data)
@@ -200,7 +211,25 @@ function intensity_sat(inputs::InputTJLF, ky_spect::Vector{T}, gp::Array{T}, QL_
 end
 
 
-##### called tglf_multiscale_spectrum in Fortran
+#
+#     parameters: 
+#     inputs                  - InputTJLF struct constructed using the input.TGLF file
+#     ky_spect                - array of ky (mode number)
+#     gp                      - array of gamma (net growth rate)
+#     QL_data                 - array of quasilinear weights
+#     expsub (opt)            - float for the exponent
+#     return_phi_params (opt) - boolean flag to change how much is output
+#     
+#     outputs:
+#     phinorm           - intensity of the saturation rule
+#     QLA_P             - QLA particle value
+#     QLA_E             - QLA energy value
+#     QLA_O             - QLA value
+#
+#     takes in the input.tglf file, ky values, gammas, quasilinear weights, and
+#     some other optional parameters and returns the intensity value and QLA
+#     parameter values dependent on the 3 saturation rules
+# 
 function intensity_sat(
     inputs::InputTJLF,
     ky_spect::Vector{T},
@@ -699,6 +728,10 @@ function intensity_sat(
 		
 end
 
+#
+#     helper function that calculates the flux integrals given the index,
+#     and ky/QL values among other things
+# 
 ######### i think dky0 is sometimes a different type for some reason
 function flux_integrals(
     i::Int,
@@ -759,6 +792,28 @@ function flux_integrals(
 end
 
 
+
+
+#
+#     parameters: 
+#     inputs            - InputTJLF struct constructed using the input.TGLF file
+#     ky_spect          - array of ky (mode number)
+#     gp                - array of gamma (net growth rate)
+#     QL_data           - split into separate types of QL weights
+#     (optional)        - a lot of optional parameters that I don't use -DSUN
+#     
+#     outputs:
+#     a dictionary with the flux integral values:
+#           "particle_flux_integral" =>particle_flux_out,
+#           "energy_flux_integral" => energy_flux_out,
+#           "toroidal_stresses_integral" => stress_tor_out,
+#           "parallel_stresses_integral" => stress_par_out,
+#           "exchange_flux_integral" => exchange_out,
+#
+#     takes in the input.tglf file, ky values, gammas, quasilinear weights, calls
+#     intensity_sat() which returns the QL intensity values, then calls
+#     flux_integrals() which numerically integrates the fluxes
+# 
 
 function sum_ky_spectrum(
     inputs::InputTJLF,
