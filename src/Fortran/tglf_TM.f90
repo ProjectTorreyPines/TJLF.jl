@@ -71,12 +71,14 @@
        iflux_in=.FALSE.     ! do not compute eigenvectors on first pass
        vexb_shear_s = 0.0  ! do not use spectral shift on first pass
        jmax_out = 0         ! ID for first pass
+    !    write(*,*) "this is a"
        CALL get_bilinear_spectrum
        eigenvalue_first_pass(:,:,:) = eigenvalue_spectrum_out(:,:,:)
        vexb_shear_s = save_vexb_shear
        find_width_in = .FALSE.
        iflux_in = save_iflux
        if(sat_rule_in.eq.0)jmax_out = 1   ! flag for second pass
+    !    write(*,*) "this is b"
        CALL get_bilinear_spectrum
 !  reset eigenvalues to the values with vexb_shear=0.
 !  note ql weights are with vexb_shear
@@ -84,6 +86,7 @@
        find_width_in = save_find_width
       else
         jmax_out = 0
+        ! write(*,*) "this is c"
         CALL get_bilinear_spectrum
       endif
 !

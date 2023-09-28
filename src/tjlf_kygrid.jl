@@ -7,6 +7,7 @@ include("tjlf_geometry.jl")
 #     
 #     outputs:
 #     ky_spectrum - array of floats that form the ky grid
+#     nky - size of the ky_spectrum array
 #
 #     the input file provides the type of kygrid to create (values 1 to 5)
 #     and this function creates it accordingly
@@ -232,6 +233,6 @@ function get_ky_spectrum(inputs::InputTJLF)
         # end
     end
 
-    return ky_spectrum
+    return ky_spectrum, nky
 
 end

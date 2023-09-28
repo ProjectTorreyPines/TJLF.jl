@@ -37,16 +37,32 @@ function get_sat_params(inputs::InputTJLF, ky::AbstractVector{T}, gammas::Abstra
 end
 
 
-function get_sat_params(param::Symbol, inputs::InputTJLF)
+function get_sat_params(param::Symbol, inputs::InputTJLF, ms::Int=128)
     if param == :Bt0_out
-        _, _, b_geo, _, qrat_geo, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
+        _, _, _, _, _, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
         return Bt0_out
     elseif param == :B_geo0
-        _, _, b_geo, _, qrat_geo, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
+        _, _, b_geo, _, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
         return b_geo[1]
+    elseif param == :minB
+        _, _, b_geo, _, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
+        return findmin(b_geo)[1]
     elseif param == :grad_r0
         _, _, b_geo, _, qrat_geo, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
         return b_geo[1]/qrat_geo[1]
+    elseif param ==:rq_units ### for tjlf_max
+        s_p, _, b_geo, pk_geo, qrat_geo, costheta_geo, _, _, _, ds, _, _ = mercier_luc(inputs)
+        rmaj_s = inputs.RMAJ_LOC ### different for different geometries
+        y = zeros(Float64,ms+1)
+        y[1]=0.0
+        for m in 2:ms+1
+            y[m] = y[m-1]+s_p[m]*ds*4.0/(pk_geo[m]+pk_geo[m-1])
+        end
+        Ly=y[ms+1]
+        R_unit = rmaj_s*b_geo[1]/(qrat_geo[1]*costheta_geo[1])
+        q_unit = Ly/(2π*R_unit)
+
+        return R_unit, q_unit
     end
 end
 

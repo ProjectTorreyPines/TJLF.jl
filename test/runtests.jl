@@ -6,6 +6,7 @@ include("../src/tjlf_modules.jl")
 include("../src/tjlf_multiscale_spectrum.jl")
 include("../src/tjlf_geometry.jl")
 include("../src/tjlf_kygrid.jl")
+include("../src/tjlf_TM.jl")
 
 
 
@@ -168,7 +169,7 @@ for dir_name in tests
                 val = string(strip(line[2], ['\'']))
             # bool
             elseif line[2][1] == '.'
-                val = strip(line[2], ['\'']) == "true"
+                val = strip(line[2], ['\'','.']) == "true"
             # int
             elseif !contains(line[2],'.')
                 val = parse(Int, strip(line[2], ['\'','.',' ']))
@@ -236,8 +237,9 @@ for dir_name in tests
     fileDirectory = baseDirectory * "out.tglf.ky_spectrum"
     lines = readlines(fileDirectory)
     ky_spect = Array{Float64}(undef, 0)
+    nky = parse(Int, strip(lines[2]))
     for line in lines[3:length(lines)]
-            push!(ky_spect,parse(Float64, line))
+        push!(ky_spect,parse(Float64, line))
     end
 
     # Read input.tglf
@@ -278,7 +280,87 @@ for dir_name in tests
                 val = string(strip(line[2], ['\'']))
             # bool
             elseif line[2][1] == '.'
-                val = strip(line[2], ['\'']) == "true"
+                val = strip(line[2], ['\'','.']) == "true"
+            # int
+            elseif !contains(line[2],'.')
+                val = parse(Int, strip(line[2], ['\'','.',' ']))
+            # float
+            else
+                val = parse(Float64,strip(line[2], ['\'','.',' ']))
+            end
+
+            try
+                setfield!(inputTJLF,field,val)
+            catch
+                throw(error(field))
+            end
+
+        end
+        
+    end
+    setfield!(inputTJLF,:SPECIES,inputSpecies)
+
+    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+        inputTJLF.UNITS = "CGYRO"
+    end
+    ## maybe check the nky value?
+    Julia_ky_spect, Julia_nky = get_ky_spectrum(inputTJLF)
+    @assert isapprox(Julia_ky_spect, ky_spect, rtol=1e-6)
+    @assert isapprox(Julia_nky, nky)
+
+end
+
+
+
+
+
+
+satRuleDirectory = "./outputs/test_TM/"
+tests = readdir(satRuleDirectory)
+# for dir_name in tests
+#     if dir_name == ".DS_Store" continue end
+    baseDirectory = satRuleDirectory*"test1/"
+
+    # Read input.tglf
+    fileDirectory = baseDirectory * "input.tglf"
+    lines = readlines(fileDirectory)
+    # struct attempt
+    inputTJLF = InputTJLF{Float64}()
+
+    for line in lines[1:length(lines)]
+        line = split(line, "\n")
+        line = split(line[1],"=")
+        if line[1] == "NS"
+            global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
+            for i in 1:length(inputSpecies)
+                inputSpecies[i] = Species{Float64}()
+            end
+        end
+    end
+
+    for line in lines[1:length(lines)]
+        line = split(line, "\n")
+        line = split(line[1],"=")
+
+        #### for the species vector
+        check = match(r"_\d",line[1])
+        if check !== nothing
+            temp = split(line[1],"_")
+            speciesField = Symbol(replace(line[1], r"_\d"=>""))
+            speciesIndex = check.match[2:end]
+            if parse(Int,speciesIndex) > length(inputSpecies) continue end
+            setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
+        
+            # if not for the species vector
+        else
+            field = Symbol(line[1])
+            
+            # string
+            if line[2][1] == '\''
+                val = string(strip(line[2], ['\'']))
+            # bool
+            elseif line[2][1] == '.'
+                val = strip(line[2], ['\'','.']) == "true"
             # int
             elseif !contains(line[2],'.')
                 val = parse(Int, strip(line[2], ['\'','.',' ']))
@@ -302,9 +384,22 @@ for dir_name in tests
         inputTJLF.UNITS = "CGYRO"
     end
 
-    Julia_ky_spect = get_ky_spectrum(inputTJLF)
-    @assert isapprox(Julia_ky_spect, ky_spect, rtol=1e-6)
+    # save_vexb_shear = vexb_shear_s
+    # save_find_width = find_width_in
+    # save_iflux = iflux_in
+    vexb_shear_s = 0.0
+    jmax_out = 0
 
-end
+    include("../src/tjlf_TM.jl")
+    get_bilinear_spectrum(inputTJLF, vexb_shear_s, jmax_out)
+
+    # eigenvalue_first_pass(:,:,:) = eigenvalue_spectrum_out(:,:,:)
+    # vexb_shear_s = save_vexb_shear
+    # find_width_in = .FALSE.
+    # iflux_in = save_iflux
+    # if(sat_rule_in.eq.0)jmax_out = 1
+    # CALL get_bilinear_spectrum
+
+# end
 
 println("SUCCESS")

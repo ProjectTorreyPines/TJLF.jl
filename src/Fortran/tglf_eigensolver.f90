@@ -13,6 +13,8 @@
 !
       IMPLICIT NONE
 !
+      CHARACTER(16) :: fluxfile="out.tglf.matrixA"
+      character (len=256)  :: tglf_path_in
       CHARACTER(1) :: rightvectors
       INTEGER :: is,js
       INTEGER ::  j1, j2, j, i
@@ -2855,7 +2857,34 @@
 !        write(*,*)i,j,at(i,j),bt(i,j)
       enddo
       enddo
-!      call system_clock(cpucount1)
+
+
+      OPEN(unit=33,file="matrixA",status='replace')
+    !   
+      write(33,*)"iur = ",iur
+      do is=1,iur
+        write(33,*)"i = ",is
+        do js=1,iur
+               write(33,*)"j = ",js
+               write(33,*) amat(is,js)
+        enddo  ! j
+     enddo  ! i
+    !
+      CLOSE(33)
+
+      OPEN(unit=33,file="matrixB",status='replace')
+    !
+      write(33,*)"iur = ",iur
+      do is=1,iur
+        write(33,*)"i = ",is
+        do js=1,iur
+               write(33,*)"j = ",js
+               write(33,*) bmat(is,js)
+        enddo  ! j
+     enddo  ! i
+    !
+      CLOSE(33)
+
       call zggev("N",rightvectors,iur,at,iur,bt,iur,    &
                   alpha,beta,vleft,iur,vright,iur,work,lwork,rwork,info)
 !      call system_clock(cpucount2,cpurate)

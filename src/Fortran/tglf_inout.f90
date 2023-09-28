@@ -2251,7 +2251,7 @@ SUBROUTINE write_tglf_ave_p0_spectrum(tglf_path_in)
  END SUBROUTINE write_tglf_width_spectrum
 !-----------------------------------------------------------------
 !
- SUBROUTINE write_tglf_scalar_saturation_parameters
+ SUBROUTINE write_tglf_scalar_saturation_parameters(tglf_path_in)
 !
   USE tglf_dimensions
   USE tglf_global
@@ -2260,13 +2260,14 @@ SUBROUTINE write_tglf_ave_p0_spectrum(tglf_path_in)
 !
   IMPLICIT NONE
   CHARACTER(37) :: fluxfile="out.tglf.scalar_saturation_parameters"
+  character (len=256)  :: tglf_path_in
   !
   if(new_start)then
      write(*,*)"error: tglf_TM must be called before write_tglf_saturation_parameters"
      write(*,*)"       NN doesn't compute spectra -> if needed set tglf_nn_max_error_in=-1"
   endif
   !
-  OPEN(unit=33,file=fluxfile,status='replace')
+  OPEN(unit=33,file=trim(tglf_path_in)//fluxfile,status='replace')
 !
   write(33,*)"!This file has all of the scalar staturation parameters used for different SAT_RULE options"
   write(33,*)"SAT_RULE = ", sat_rule_in
