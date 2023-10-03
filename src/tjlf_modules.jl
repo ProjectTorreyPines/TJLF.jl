@@ -118,10 +118,24 @@ end
 
 
 ##########################################################
+#       Get from tjlf_hermite
+##########################################################
+
+mutable struct OutputHermite{T<:Real}
+
+    x::Vector{T}
+    wx::Vector{T}
+    h::Matrix{T}
+    
+end
+
+##########################################################
 #       Get from xgrid_functions_geo
 ##########################################################
 
 mutable struct OutputGeometry{T<:Real}
+
+    fts::Vector{T}
 
     kxx::Vector{T}
     
@@ -137,17 +151,23 @@ mutable struct OutputGeometry{T<:Real}
     
 end
 
-##########################################################
-#       Get from tjlf_hermite
-##########################################################
+mutable struct SaturationParameters{T<:Real}
 
-mutable struct OutputHermite{T<:Real}
+    SAT_geo0_out::T
+    SAT_geo1_out::T
+    SAT_geo2_out::T
+    R_unit::T
+    q_unit::T
+    Bt0_out::T
+    B_geo0_out::T
+    grad_r_out::T
+    grad_r0_out::T
+    theta_out::Vector{T}
+    Bt_out::Vector{T}
+    B_unit_out::Vector{T}
 
-    x::Vector{T}
-    wx::Vector{T}
-    h::Matrix{T}
-    
 end
+
 
 
 ##########################################################
@@ -162,6 +182,7 @@ mutable struct Ave{T<:Real}
     wdg::Matrix{T}
     modwdg::Matrix{T}
 
+    gradB::Matrix{T}
     b0::Matrix{T}
     b0inv::Matrix{T}
     lnB::Matrix{T}
@@ -185,6 +206,7 @@ mutable struct Ave{T<:Real}
         modwdh = zeros(T, nbasis, nbasis)
         wdg = zeros(T, nbasis, nbasis)
         modwdg = zeros(T, nbasis, nbasis)
+        gradB = zeros(T, nbasis, nbasis)
         b0 = zeros(T, nbasis, nbasis)
         b0inv = zeros(T, nbasis, nbasis)
         lnB = zeros(T, nbasis, nbasis)
@@ -203,7 +225,7 @@ mutable struct Ave{T<:Real}
 
         new(kx,
         wdh,modwdh,wdg,modwdg,
-        b0,b0inv,lnB,p0,p0inv,bp,bpinv,
+        gradB,b0,b0inv,lnB,p0,p0inv,bp,bpinv,
         c_par_par,c_tor_par,c_tor_per,
         kpar,modkpar,kpar_eff,modkpar_eff)
     end
@@ -444,7 +466,7 @@ mutable struct AveK
 
         new(
             kparhnp0,kparhp1p0,kparhp3p0,kparhu1,kparhu3,kparht1,kparht3,modkparhu1,modkparhu3,
-            kparhp1b0,kparhr11b0kparhr13b0,
+            kparhp1b0,kparhr11b0,kparhr13b0,
             kparhnbp,kparhp3bp,kparhp1bp,kparhr11bp,kparhr13bp
             )
     end

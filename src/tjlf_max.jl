@@ -1,8 +1,8 @@
 include("tjlf_modules.jl")
 include("tjlf_geometry.jl")
-include("tjlf_LS.jl")
+include("tjlf_LINEAR_SOLUTION.jl")
 
-function tjlf_max(inputs::InputTJLF, ky_s::T, vexb_shear_s::T) where T<:Real
+function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::OutputHermite, ky_s::T, vexb_shear_s::T) where T<:Real
 
     R_unit, q_unit= get_sat_params(:rq_units, inputs)
     ### basically calls xgrid_functions_geo() to get R_unit, q_unit, make sure this is not redundant! maybe create output struct
@@ -101,7 +101,7 @@ function tjlf_max(inputs::InputTJLF, ky_s::T, vexb_shear_s::T) where T<:Real
         T_bar_out,
         U_bar_out,
         Q_bar_out,
-        Ns_Ts_phase_out = tjlf_LS(inputs, ky_s, vexb_shear_s) ############### have to create this ###############
+        Ns_Ts_phase_out = tjlf_LS(inputs, outputGeo, outputHermite, ky_s, vexb_shear_s) ############### have to create this ###############
         ############### these are prob outputs ###############
         error("STOP")
         width_n[i] = inputs.WIDTH

@@ -2830,7 +2830,7 @@ function FLR_dHw133(ft,b)
     if(gt>g[nf]) gt = g[nf] end
 
     # find grid position
-    if(gt<g[2])then
+    if(gt<g[2])
         i=1
     else
         i = Int(floor(gt/0.025))
@@ -3188,7 +3188,7 @@ function FLR_dHw333(ft,b)
     if(gt>g[nf]) gt = g[nf] end
 
     # find grid position
-    if(gt<g[2])then
+    if(gt<g[2])
         i=1
     else
         i = Int(floor(gt/0.025))

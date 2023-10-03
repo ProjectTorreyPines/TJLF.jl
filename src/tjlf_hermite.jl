@@ -1,3 +1,5 @@
+
+
 include("tjlf_modules.jl")
 
 
@@ -8,16 +10,19 @@ function gauss_hermite(inputs::InputTJLF)
 
 
     # set up the hermite basis x-grid
+    nbasis = inputs.NBASIS_MAX
     nx = 2*inputs.NXGRID -1
     h0 = 1.0/π^0.25
-    m = (nx+1)/2 ### NXGRID
+    m = Int((nx+1)/2) ### NXGRID
 
     #     computes abscisca's and weights for Gauss- Hermite integration
     #     adapted from Numerical Recipes in Fortran Pg.147
     #     reversed order of roots so that x(m) is largest and x(1) is smallest
     #     only the positive roots are found and stored
+
     y = Vector{Float64}(undef, m)
     wy = Vector{Float64}(undef, m)
+    z = 0.0
     for i = m:-1:1
         # initial guess z
         if(i==m)
@@ -32,6 +37,7 @@ function gauss_hermite(inputs::InputTJLF)
             z = 2.0*z - y[i+2]
         end
         
+        pp = 0
         for its = 1:maxit
             p1 = h0
             p2 = 0.0
@@ -94,7 +100,7 @@ function gauss_hermite(inputs::InputTJLF)
     h[2,:] .= x.*(√(2)*h0)
 
     if nbasis>2
-        for i = i:nx
+        for i = 1:nx
             for j = 3:nbasis
                 h[j,i] = x[i]* √(2.0/(j-1)) * h[j-1,i] - √((j-2)/(j-1)) * h[j-2,i]
             end

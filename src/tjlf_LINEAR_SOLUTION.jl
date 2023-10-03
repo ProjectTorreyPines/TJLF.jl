@@ -9,7 +9,7 @@ include("tjlf_matrix.jl")
 #  for a single ky
 #
 #***********************************************************************
-function tjlf_LS(inputs::InputTJLF, ky::T, vexb_shear_s::T) where T <: Real
+function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::OutputHermite, ky::T, vexb_shear_s::T) where T <: Real
 
     small = 1.0e-13
     epsilon1 = 1.0e-12
@@ -73,7 +73,7 @@ function tjlf_LS(inputs::InputTJLF, ky::T, vexb_shear_s::T) where T <: Real
     new_matrix = true ####### hard code for now
     if(new_matrix)
         # trace_path[7]=1
-        ave_p0inv, ave_b0inv, ave_bpinv, ave_wdh, ave_b0, ave_kx, ave_c_par_par, ave_kpar, ave_c_tor_par, ave_c_tor_per, ave_hp1 = get_matrix() ############### have to create this ###############
+        ave,aveH,aveW,aveK = get_matrix(inputs, outputGeo, outputHermite, ky) ############### have to create this ###############
     end
 
     #  solver for linear eigenmodes of tglf equations

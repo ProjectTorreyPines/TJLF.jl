@@ -3,7 +3,7 @@
 include("tjlf_modules.jl")
 include("tjlf_multiscale_spectrum.jl")
 
-function get_sat_params(inputs::InputTJLF, ky::AbstractVector{T}, gammas::AbstractMatrix{T}) where T<:Real
+function get_sat_params(inputs::InputTJLF, ky::Vector{T}, gammas::Matrix{T}) where T<:Real
 
     kx0_e,
     SAT_geo0_out,
@@ -39,19 +39,19 @@ end
 
 function get_sat_params(param::Symbol, inputs::InputTJLF, ms::Int=128)
     if param == :Bt0_out
-        _, _, _, _, _, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
+        _, _, _, _, _, _, _, _, Bt0_out, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
         return Bt0_out
     elseif param == :B_geo0
-        _, _, b_geo, _, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
+        _, _, b_geo, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
         return b_geo[1]
     elseif param == :minB
-        _, _, b_geo, _, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
+        _, _, b_geo, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
         return findmin(b_geo)[1]
     elseif param == :grad_r0
-        _, _, b_geo, _, qrat_geo, _, Bt0_out, _, _, _, _, _ = mercier_luc(inputs)
+        _, _, b_geo, _, qrat_geo, _, _, _, Bt0_out, _, _, _, _, _, _, _, _, _  = mercier_luc(inputs)
         return b_geo[1]/qrat_geo[1]
     elseif param ==:rq_units ### for tjlf_max
-        s_p, _, b_geo, pk_geo, qrat_geo, costheta_geo, _, _, _, ds, _, _ = mercier_luc(inputs)
+        s_p, _, b_geo, pk_geo, qrat_geo, _, costheta_geo, _, _, _, _, ds, _, _, _, _, _, _ = mercier_luc(inputs)
         rmaj_s = inputs.RMAJ_LOC ### different for different geometries
         y = zeros(Float64,ms+1)
         y[1]=0.0
@@ -74,86 +74,32 @@ end
 
 
 
-
-
-
-
-
-#### LINES 220-478 in tglf_geometry.f90
-function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::AbstractMatrix{T}, 
-    mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
-    #******************************************************************************#************************
-    # PURPOSE: compute the geometric coefficients on the x-grid
-    #******************************************************************************#************************
-    #
-    ### different for different geometries!!!
-    rmaj_s = inputs.RMAJ_LOC
-    rmin_s = inputs.RMIN_LOC
-    q_s = inputs.Q_LOC
-
-    
+function xgrid_functions_geo(inputs::InputTJLF, outputGeo::OutputGeometry, ky::Vector{T}, gammas::Matrix{T}) where T<:Real
+    sign_IT = inputs.SIGN_IT
+    vexb_shear = inputs.VEXB_SHEAR
     sat_rule_in = inputs.SAT_RULE
     alpha_quench_in = inputs.ALPHA_QUENCH
     alpha_e_in = inputs.ALPHA_E
-    sign_IT = inputs.SIGN_IT
-    vexb_shear = inputs.VEXB_SHEAR
+    
     mass_2 = inputs.SPECIES[2].MASS
     taus_2 = inputs.SPECIES[2].TAUS
     zs_2 = inputs.SPECIES[2].ZS
     units_in = inputs.UNITS
     nx = 2*inputs.NXGRID - 1
-
     vs_2 = √(taus_2 / mass_2)
-    gamma_reference_kx0 = gammas[:, 1]
 
-    s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, B = mercier_luc(inputs)
-    
-    y = zeros(Float64,ms+1)
-
-    #*************************************************************
-    # find length along magnetic field y
-    #*************************************************************
-    y[1]=0.0
-    for m in 2:ms+1
-        
-        y[m] = y[m-1]+s_p[m]*ds*4.0/(pk_geo[m]+pk_geo[m-1])
-    end
-    # set the global units
-    Ly=y[ms+1]
-    R_unit = rmaj_s*b_geo[1]/(qrat_geo[1]*costheta_geo[1])
-    q_unit = Ly/(2π*R_unit)
-
-    #### not used in Python
-    # # midplane effective shear: reduces to s-alpha in shifted circle
-    # # note: S_prime(0)=0.0, S_prime(ms)=-2 pi q_prime, y(0)=0.0, y(ms)=Ly
-    # # midplane shear is average of left and right y-derivatives at midplane for general geometry
-    # midplane_shear = -(Ly/(2π))*((rmin_s/q_s)^2)*0.5
-    #         *(S_prime[2]/y[2]+(S_prime[ms+1]-S_prime[ms])/(y[ms+1]-y[ms]))
-    # midplane_shear += 0.11
-    # # # save f for output
-    # # RBt_ave_out = f/B_unit
-
-
-    # #
-    # # generalized quench rule kx0 shift
-    # #
     # kx0 = kx0_loc/ky # note that kx0 is kx/ky
-    # kx0_e=0.0
-    # kx0_p=0.0
-    # #EPS2011 sign_kx0=1.0
 
-    
 
+    # generalized quench rule kx0 shift
+    gamma_reference_kx0 = gammas[:, 1]
     if(alpha_quench_in==0.0 && gamma_reference_kx0[1]!=0.0)
         vexb_shear_s = vexb_shear * sign_IT
         vexb_shear_kx0 = alpha_e_in*vexb_shear_s
 
         kyi = ky.*(vs_2*mass_2/abs(zs_2))
         wE = zeros(Float64, length(ky))
-        ### not used 
-        wd0 = abs.(ky./rmaj_s)
-        
-        ### ordering of the conditions is different between fortran and Python
+
         if(units_in=="GYRO")
             kx0_factor = abs(b_geo[1]/qrat_geo[1]^2)
             kx0_factor = 1.0 + 0.40*(kx0_factor-1.0)^2
@@ -185,7 +131,6 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
         end
 
         kx0_e = ifelse.(abs.(kx0_e) .> a0 , a0.*kx0_e./abs.(kx0_e) , kx0_e)
-        ### copied from the Python, why is this a thing
         kx0_e = ifelse.(isnan.(kx0_e) , 0 , kx0_e)
 
         #### not in the Python
@@ -197,76 +142,268 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
         #     # note kx0 = alpha_e*gamma_ExB_HB/gamma Hahm - Burrell form of gamma_ExB
         #     # The 2.1 effectively increases ay0 & ax0 and reduces toroidal stress to agree with CGYRO
         # end
-        
     end
 
-    # #*************************************************************
-    # # begin calculation of wdx and b0x
-    # #*************************************************************
-    # for i = 1:nx
-    #     thx = inputs.WIDTH * x[i]
-    #     sign_theta = ifelse(thx>=0, 1.0, -1.0)
+    return kx0_e
+end
 
-    #     loops = Int(floor(abs(thx/(2π))))
-    #     y_x = Ly*(abs(thx) - loops*2π)/ (2π)
-    #     if(thx<0.0)
-    #         y_x = Ly - y_x
-    #         loops = loops + 1
-    #     end
-    #     for m = 1:ms
-    #         if(y[m]>=y_x) break end
-    #     end
-    #     m1 = m - 1
-    #     m2 = m
 
-    #     dkxky1 = sign_theta*loops*S_prime[ms]
-    #     y1 = y[m1]
-    #     dkxky2 = sign_theta*loops*S_prime[ms]
-    #     y2 = y[m2]
 
-    #     ### kxx
-    #     kxx1 = (kx_factor[m1]*(S_prime[m1]+dkxky1)  -   kx0*b_geo[m1]/qrat_geo[m1]^2)    *qrat_geo[m1]/b_geo[m1]
-    #     kxx2 = (kx_factor[m2]*(S_prime[m2]+dkxky2)  -   kx0*b_geo[m2]/qrat_geo[m2]^2)    *qrat_geo[m2]/b_geo[m2]
-    #     kxx[i] = kxx1 + (kxx2 - kxx1)*(y_x - y1)/(y2 - y1)
-    #     kxx[i] = sign_Bt_in*kxx[i]
+
+
+#### LINES 220-478 in tglf_geometry.f90
+function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
+    mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+    #******************************************************************************#************************
+    # PURPOSE: compute the geometric coefficients on the x-grid
+    #******************************************************************************#************************
+    
+    ### different for different geometries!!!
+    rmaj_s = inputs.RMAJ_LOC
+    rmin_s = inputs.RMIN_LOC
+    q_s = inputs.Q_LOC
+
+    
+    sat_rule_in = inputs.SAT_RULE
+    units_in = inputs.UNITS
+    sign_Bt_in = inputs.SIGN_BT
+    ns = inputs.NS
+    ns0 = 1
+    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    nx = 2*inputs.NXGRID - 1
+
+    s_p, Bp, b_geo, pk_geo, qrat_geo, sintheta_geo, costheta_geo, costheta_p_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, f, R, B, S_prime, kx_factor = mercier_luc(inputs)
+    
+
+    #*************************************************************
+    # find length along magnetic field y
+    #*************************************************************
+    y = zeros(Float64,ms+1)
+    y[1]=0.0
+    for m in 2:ms+1
+        y[m] = y[m-1]+s_p[m]*ds*4.0/(pk_geo[m]+pk_geo[m-1])
+    end
+    # set the global units
+    Ly = y[ms+1]
+    R_unit = rmaj_s*b_geo[1]/(qrat_geo[1]*costheta_geo[1])
+    q_unit = Ly/(2π*R_unit)
+
+    # # # save f for output
+    # # RBt_ave_out = f/B_unit
+
+
+    #*************************************************************
+    # begin calculation of wdx and b0x
+    #*************************************************************
+    ### S_prime, kx0, kx_factor
+    kx0 = 0 ### only because there is no gammas yet
+    x = outHermite.x
+    kxx = Vector{Float64}(undef,nx)
+    wdx = Vector{Float64}(undef,nx)
+    wdpx = Vector{Float64}(undef,nx)
+    b0x = Vector{Float64}(undef,nx)
+    b2x = Vector{Float64}(undef,nx)
+    cx_tor_par = Vector{Float64}(undef,nx)
+    cx_tor_per = Vector{Float64}(undef,nx)
+    cx_par_par = Vector{Float64}(undef,nx)
+    for i = 1:nx
+        thx = inputs.WIDTH * x[i]
+        sign_theta = ifelse(thx>=0, 1.0, -1.0)
+
+        loops = Int(floor(abs(thx/(2π))))
+        y_x = Ly*(abs(thx) - loops*2π)/ (2π)
+        if(thx<0.0)
+            y_x = Ly - y_x
+            loops = loops + 1
+        end
+        lastIndex = 2
+        for m = 2:ms+1
+            lastIndex = m
+            if(y[m]>=y_x) break end
+        end
+        m1 = lastIndex - 1
+        m2 = lastIndex
+
+        dkxky1 = sign_theta*loops*S_prime[ms]
+        y1 = y[m1]
+        dkxky2 = sign_theta*loops*S_prime[ms]
+        y2 = y[m2]
+
+        ### kxx
+        kxx1 = (kx_factor[m1]*(S_prime[m1]+dkxky1)  -   kx0*b_geo[m1]/qrat_geo[m1]^2)    *qrat_geo[m1]/b_geo[m1]
+        kxx2 = (kx_factor[m2]*(S_prime[m2]+dkxky2)  -   kx0*b_geo[m2]/qrat_geo[m2]^2)    *qrat_geo[m2]/b_geo[m2]
+        kxx[i] = kxx1 + (kxx2 - kxx1)*(y_x - y1)/(y2 - y1)
+        kxx[i] = sign_Bt_in*kxx[i]
         
-    #     ### wdx
-    #     wd1 = (qrat_geo[m1]/b_geo[m1])*     (costheta_geo[m1] + (kx_factor[m1]*(S_prime[m1]+dkxky1) - kx0*b_geo[m1]/qrat_geo[m1]^2)*sintheta_geo[m1])
-    #     wd2 = (qrat_geo[m2]/b_geo[m2])*     (costheta_geo[m2] + (kx_factor[m2]*(S_prime[m2]+dkxky2) - kx0*b_geo[m2]/qrat_geo[m2]^2)*sintheta_geo[m2])
-    #     wdx[i] = wd1 + (wd2 - wd1)*(y_x - y1)/(y2 - y1)
-    #     wdx[i] = (R_unit/Rmaj_s)*wdx[i]
+        ### wdx
+        wd1 = (qrat_geo[m1]/b_geo[m1])*     (costheta_geo[m1] + (kx_factor[m1]*(S_prime[m1]+dkxky1) - kx0*b_geo[m1]/qrat_geo[m1]^2)*sintheta_geo[m1])
+        wd2 = (qrat_geo[m2]/b_geo[m2])*     (costheta_geo[m2] + (kx_factor[m2]*(S_prime[m2]+dkxky2) - kx0*b_geo[m2]/qrat_geo[m2]^2)*sintheta_geo[m2])
+        wdx[i] = wd1 + (wd2 - wd1)*(y_x - y1)/(y2 - y1)
+        wdx[i] = (R_unit/rmaj_s)*wdx[i]
 
-    #     ### wdpx
-    #     wdp1 = (qrat_geo[m1]/b_geo[m1])*costheta_p_geo[m1]
-    #     wdp2 = (qrat_geo[m2]/b_geo[m2])*costheta_p_geo[m2]
-    #     wdpx[i] = wdp1 + (wdp2 - wdp1)*(y_x - y1)/(y2 - y1)
-    #     wdpx[i] = (R_unit/Rmaj_s)*wdpx[i]
+        ### wdpx
+        wdp1 = (qrat_geo[m1]/b_geo[m1])*costheta_p_geo[m1]
+        wdp2 = (qrat_geo[m2]/b_geo[m2])*costheta_p_geo[m2]
+        wdpx[i] = wdp1 + (wdp2 - wdp1)*(y_x - y1)/(y2 - y1)
+        wdpx[i] = (R_unit/rmaj_s)*wdpx[i]
         
-    #     ### b2x
-    #     b1 = b_geo[m1]^2
-    #     b2 = b_geo[m2]^2
-    #     b2x[i] =  b1 +(b2-b1)*(y_x-y1)/(y2-y1)
+        ### b2x
+        b1 = b_geo[m1]^2
+        b2 = b_geo[m2]^2
+        b2x[i] =  b1 +(b2-b1)*(y_x-y1)/(y2-y1)
 
-    #     ### b0x
-    #     b1 = (1.0 + (kx_factor[m1]*(S_prime[m1]+dkxky1) - kx0*b_geo[m1]/qrat_geo[m1]^2)^2)*qrat_geo[m1]^2
-    #     b2 = (1.0 + (kx_factor[m2]*(S_prime[m2]+dkxky2) - kx0*b_geo[m2]/qrat_geo[m2]^2)^2)*qrat_geo[m2]^2
-    #     b0x[i] =  b1 +(b2 - b1)*(y_x - y1)/(y2 - y1)
+        ### b0x
+        b1 = (1.0 + (kx_factor[m1]*(S_prime[m1]+dkxky1) - kx0*b_geo[m1]/qrat_geo[m1]^2)^2)*qrat_geo[m1]^2
+        b2 = (1.0 + (kx_factor[m2]*(S_prime[m2]+dkxky2) - kx0*b_geo[m2]/qrat_geo[m2]^2)^2)*qrat_geo[m2]^2
+        b0x[i] =  b1 +(b2 - b1)*(y_x - y1)/(y2 - y1)
 
-    #     if(b0x[i]<0.0)
-    #         error("interpolation error b0x < 0")
-    #     end
+        if(b0x[i]<0.0)
+            error("interpolation error b0x < 0")
+        end
 
-    #     ### viscous stress projection coefficients
+        ### viscous stress projection coefficients
 
-    #     cxtorper1 = -R[m1]*Bp[m1]/b_geo[m1]
-    #     cxtorper2 = -R[m2]*Bp[m2]/b_geo[m2]
-    #     cx_tor_par[i] = f/b_geo[m1] + (f/b_geo[m2]-f/b_geo[m1])*(y_x-y1)/(y2-y1)
-    #     cx_tor_par[i] = sign_Bt_in*cx_tor_par[i]
-    #     cx_tor_per[i] = cxtorper1 + (cxtorper2-cxtorper1)*(y_x-y1)/(y2-y1)
-    #     cx_par_par[i] = b_geo[m1] + (b_geo[m2]-b_geo[m1])*(y_x-y1)/(y2-y1)
-    # end
+        cxtorper1 = -R[m1]*Bp[m1]/b_geo[m1]
+        cxtorper2 = -R[m2]*Bp[m2]/b_geo[m2]
+        cx_tor_par[i] = f/b_geo[m1] + (f/b_geo[m2]-f/b_geo[m1])*(y_x-y1)/(y2-y1)
+        cx_tor_par[i] = sign_Bt_in*cx_tor_par[i]
+        cx_tor_per[i] = cxtorper1 + (cxtorper2-cxtorper1)*(y_x-y1)/(y2-y1)
+        cx_par_par[i] = b_geo[m1] + (b_geo[m2]-b_geo[m1])*(y_x-y1)/(y2-y1)
+    end
 
-    # outputGeo = OutputGeometry(kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
+    #*************************************************************
+    # calculate fts (fraction of trapped electrons)
+    #*************************************************************
+
+    nb_grid = 25
+    By = Vector{Float64}(undef, nb_grid+1)
+    pm = Matrix{Int}(undef, 2, nb_grid+1)
+
+    Bmax, m_max = findmax(b_geo)
+    Bmin, m_min = findmin(b_geo)
+
+    By[1] = Bmin
+    db = (Bmax - Bmin)/(nb_grid)
+    for i = 2:nb_grid+1
+        By[i] = By[i-1] + db
+    end
+
+    # find pairs of m's at the same B starting at Bmin and taking the farthest pair
+    pm[1,1] = m_min
+    pm[2,1] = m_min
+    qm = 1
+    for i = 2:nb_grid
+        ### get the number of values between m_max and m_min
+        j_max = m_max - m_min
+        if(j_max<0) j_max = j_max + ms end
+        ### increment through them
+        for m = 1:j_max
+            # find the farthest gridpoint where b_geo=By
+            j = m_min + m
+            ### remember 1 = ms+1
+            if(j>ms+1) j = j - ms end
+
+            test1 = b_geo[j-1] - By[i]
+            test2 = b_geo[j] - By[i]
+
+            if(test1*test2<=0)
+                if(abs(test1)<abs(test2))
+                    qm = j-1
+                else
+                    qm = j
+                end
+            end
+        end
+        pm[1,i] = qm
+        
+        #### reverse direction
+        j_max = m_min - m_max
+        if(j_max<0) j_max = j_max + ms end
+        qm = 1
+        for m = 1:j_max
+            # find the farthest gridpoint where b_geo=By
+            j = m_min - m
+            if(j<1) j = j + ms end
+
+            test1 = b_geo[j+1] - By[i]
+            test2 = b_geo[j] - By[i]
+
+            if(test1*test2<=0.0)
+                if(abs(test1)<abs(test2))
+                    qm = j+1
+                else
+                    qm = j
+                end
+            end
+        end
+        pm[2,i] = qm
+    end
+    pm[1,nb_grid+1] = m_max
+    pm[2,nb_grid+1] = m_max
+    for i = 1:nb_grid+1
+        if(pm[1,i]>ms+1 || pm[2,i]>ms+1)
+            error("error in get_ft_geo: pm out of bounds")
+        end
+    end
+
+    delta_y = Vector{Float64}(undef, nb_grid+1)
+    delta_y[1] = 0
+    for i = 2:nb_grid+1
+        if(y[pm[1,i]]>y[pm[2,i]])
+            delta_y[i] =      y[pm[1,i]] - y[pm[2,i]]
+        else
+            delta_y[i] = Ly + y[pm[1,i]] - y[pm[2,i]]
+        end
+    end
+    #*************************************************************
+    # compute trapped fraction
+    #*************************************************************
+    kpar= 2π/(Ly*√(2)*inputs.WIDTH)
+    bounce_y = min(Ly, π*inputs.THETA_TRAPPED/kpar)
+
+    B_bounce = Bmax
+    if(bounce_y<Ly)
+        index = 2
+        for i = 2:nb_grid+1
+            index = i
+            if(delta_y[i]>bounce_y) break end
+        end
+        B_bounce = By[index-1] + (By[index] - By[index-1])*(bounce_y-delta_y[index-1])/(delta_y[index]-delta_y[index-1])
+    end
+    ft = √(1.0 - Bmin/B_bounce)
+    modB_min = abs(Bmin)
+    modB_test = 0.5*(Bmax + Bmin)/Bmin
+    
+    fts = Vector{Float64}(undef, ns)
+    for is = ns0:ns
+        fts[is] = max(ft,0.01)
+    end
+
+    xnu_model_in = inputs.XNU_MODEL
+    wdia_trapped_in = inputs.WDIA_TRAPPED
+    if(xnu_model_in==3 && wdia_trapped_in>0.0) 
+        error("NOT IMPLEMENTED YET -DSUN")
+    #     for is=ns0,ns
+    #     wdia = abs(ky*rlns_in(is))/vs(is)
+    # !      write(*,*)is,"wdia = ",wdia
+    #     kpar= pi_2/(Ly*sqrt_two*width_in)
+    #     ft0 = SQRT(1.0 - Bmin/Bmax)
+    #     cdt = wdia_trapped_in*3.0*(1.0-ft0*ft0)
+    #     kpar = kpar/MAX(theta_trapped_in,0.0001) + wdia*cdt
+    #     bounce_y = MIN(Ly,pi/kpar)
+    #     B_bounce = Bmax
+    #     if(bounce_y<Ly)then
+    #         do i=1,nb_grid
+    #         if(delta_y(i)>bounce_y)exit
+    #         enddo
+    #         B_bounce = By(i-1)+(By(i)-By(i-1))* &
+    #         (bounce_y-delta_y(i-1))/(delta_y(i)-delta_y(i-1))
+    #     endif
+    #     fts(is) = MAX(SQRT(1.0 - Bmin/B_bounce),ft_min)
+    #     enddo
+    end
+
+    outputGeo = OutputGeometry(fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
 
     #*************************************************************
     #  compute flux surface averages
@@ -323,18 +460,13 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
     theta_out = t_s  # theta grid over which everything is calculated.
     Bt_out = B  # total magnetic field matching theta_out grid.
 
-    return kx0_e,
-            SAT_geo0_out,
-            SAT_geo1_out,
-            SAT_geo2_out,
-            R_unit,
-            Bt0_out,
-            B_geo0_out,
-            grad_r0_out,
-            theta_out,
-            Bt_out,
-            grad_r_out,
-            B_unit_out
+    satParams = SaturationParameters(SAT_geo0_out,SAT_geo1_out,SAT_geo2_out,
+                                    R_unit,q_unit,
+                                    Bt0_out,B_geo0_out,
+                                    grad_r_out,grad_r0_out,
+                                    theta_out,Bt_out,B_unit_out)
+    
+    return outputGeo, satParams
 
 end
 
@@ -346,7 +478,7 @@ end
 
 
 
-function mercier_luc(inputs::InputTJLF, mts::AbstractFloat=5.0, ms::Integer=128, small::AbstractFloat=0.00000001)
+function mercier_luc(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128, small::Float64=0.00000001)
     #-------------------------------------------
     # the following must be defined from a previous call to one of the
     # geometry routines miller_geo, fourier_geo,ELITE_geo and stored in tglf_sgrid:
@@ -381,7 +513,7 @@ function mercier_luc(inputs::InputTJLF, mts::AbstractFloat=5.0, ms::Integer=128,
     B = zeros(Real, ms+1)
     pk_geo = zeros(Real, ms+1)
     qrat_geo = zeros(Real, ms+1)
-    costheta_geo = zeros(Real, ms+1)
+    
     
 
     R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, grad_r_out, ds, t_s = miller_geo(inputs)
@@ -446,150 +578,109 @@ function mercier_luc(inputs::InputTJLF, mts::AbstractFloat=5.0, ms::Integer=128,
 
 
 
-    #-----------------------------------------------------------
-    #-----------------------------------------------------------
+    #*************************************************************
     # Compute toroidal and total fields:
+    #*************************************************************
     Bt .= f ./R
     B .= .√(Bt.^2 .+ Bp.^2)
 
-    #### not done in the python
-    #-----------------------------------------------------------
-    #-----------------------------------------------------------
+
+    #*************************************************************
     # # Compute Miller's D0 , Dp and Dff'p needed for kx.
-    # d_0(0) = 0.0
-    # d_p(0) = 0.0
-    # d_ffp(0) = 0.0
-    # #
-    # dq1 = ds*s_p(0)*f/(R(0)*psi_x(0)**2)
-    # d0_s1 = -dq1*(2.0/r_curv(0)+2.0*sin_u(0)/R(0))
-    # dp_s1 = dq1*4.0*pi*R(0)/Bp(0)
-    # dffp_s1 = dq1*(R(0)/Bp(0))*(B(0)/f)**2
-    # #
-    # do m=1,ms
-    #     dq2 = ds*s_p(m)*f/(R(m)*psi_x(m)**2)
-    #     d0_s2 = -dq2*(2.0/r_curv(m)+2.0*sin_u(m)/R(m))
-    #     dp_s2 = dq2*4.0*pi*R(m)/Bp(m)
-    #     dffp_s2 = dq2*(R(m)/Bp(m))*(B(m)/f)**2
-    #     #
-    #     d_0(m) = d_0(m-1)+0.5*(d0_s1+d0_s2)
-    #     d_p(m) = d_p(m-1)+0.5*(dp_s1+dp_s2)
-    #     d_ffp(m) = d_ffp(m-1)+0.5*(dffp_s1+dffp_s2)
-    #     #
-    #     d0_s1 = d0_s2
-    #     dp_s1 = dp_s2
-    #     dffp_s1 = dffp_s2
-    #     #
-    # enddo
+    #*************************************************************
+    d_0 = zeros(Float64, ms+1)
+    d_p = zeros(Float64, ms+1)
+    d_ffp = zeros(Float64, ms+1)
+    
+    dq1 = ds*s_p[1]*f/(R[1]*psi_x[1]^2)
+    d0_s1 = -dq1*(2.0/r_curv[1] + 2.0*sin_u[1]/R[1])
+    dp_s1 = dq1*4.0*pi*R[1] /Bp[1]
+    dffp_s1 = dq1*(R[1]/Bp[1])*(B[1]/f)^2
+    
+    for m = 2:ms+1
+        dq2 = ds*s_p[m]*f/(R[m]*psi_x[m]^2)
+        d0_s2 = -dq2*(2.0/r_curv[m]+2.0*sin_u[m]/R[m])
+        dp_s2 = dq2*4π*R[m]/Bp[m]
+        dffp_s2 = dq2*(R[m]/Bp[m])*(B[m]/f)^2
+        
+        d_0[m] = d_0[m-1]+(d0_s1+d0_s2)/2
+        d_p[m] = d_p[m-1]+(dp_s1+dp_s2)/2
+        d_ffp[m] = d_ffp[m-1]+(dffp_s1+dffp_s2)/2
+        
+        d0_s1 = d0_s2
+        dp_s1 = dp_s2
+        dffp_s1 = dffp_s2
+    end
 
 
-    #-----------------------------------------------------------
-    #-----------------------------------------------------------
+    #*************************************************************
     # Begin computing geometric quantities required for solution
     # of gyrokinetic equation:
-    #
-    # - b_geo replaces bmaj(j)=b_theta(j)/b_unit
-    #
-    # - pk_geo is close to pk=2*rmin/(rmaj*q), the coefficient
-    # of d/dtheta
-    #
-    # - qrat_geo -> 1 in a circle
-    #
-    # Note that for the physical quantity
-    #
-    # k_theta = nq/r
-    #
-    # we use
-    #
-    # kyrhos_s = n*q_s/rmin_s*rhos_unit_s
-    #
-    # which is exactly the same as for the circle.
-    #
-    # Also, "omega_star" remains unchanged from circle with
-    # logarithmic density gradients along minor axis.
-    #
-    # - "ky*rhos" in Bessel function is kyrhos_s*qrat_geo(j)/b_geo(j)
-    #
-    # - "kx*rhos" is kxoky_geo(j)*ky*rhos
-    #
-    
+    #*************************************************************
     b_geo .= B
     pk_geo .= 2.0 .*Bp./B
     qrat_geo .= (rmin_s./R).*(B./Bp)/q_s
 
 
     #### not done in the python
-    #-----------------------------------------------------------
-    #---------------------------------------------------------------
-    # # Determine ff_prime from:
-    # #
-    # # 2 pi q_prime = d_0(ms)
-    # # +d_p(ms)*p_prime
-    # # +d_ffp(ms)*ff_prime
-    # #
-    # ff_prime = (2π*q_prime_s-d_0(ms)-d_p(ms)*p_prime_s) &
-    #     /d_ffp(ms)
+    #*************************************************************
+    # Determine ff_prime from:
+    #*************************************************************
+    ff_prime = (2π*q_prime_s-d_0[ms+1]-d_p[ms+1]*p_prime_s)/d_ffp[ms+1]
 
-    #### not done in the python
-    #---------------------------------------------------------------
-    #--------------------------------------------------------------
-    # # Compute [[kx/ky]] (herein, kxoky_geo) from Waltz-Miller [2] paper.
-    # # 2
-    # # (R B_p) S1
-    # # kxoky_geo = ---------- ------
-    # # B R B_p
-    # #
-    # # S1
-    # # ------ = -(d_0(theta)+d_p(theta)*p_prime+d_ffp(theta)*ff_prime)
-    # # R B_p
-    # #
-    # do m=0,ms
-
-    #     S_prime(m) = -(d_0(m)+d_p(m)*p_prime_s+d_ffp(m)*ff_prime)
-    #     kx_factor(m) = (psi_x(m)**2)/B(m)
-    #     kxoky_geo(m) = S_prime(m)*kx_factor(m)
-    #     # write(*,*)"check s_prime",S_prime(m)
-
-    # enddo
+    #*************************************************************
+    # Compute [[kx/ky]] (herein, kxoky_geo) from Waltz-Miller [2] paper.
+    #*************************************************************
+   
+    S_prime = zeros(Float64, ms+1)
+    kx_factor = zeros(Float64, ms+1)
+    kxoky_geo = zeros(Float64, ms+1)
+    for m = 1:ms+1
+        S_prime[m] = -(d_0[m]+d_p[m]*p_prime_s+d_ffp[m]*ff_prime)
+        kx_factor[m] = (psi_x[m]^2)/B[m]
+        kxoky_geo[m] = S_prime[m]*kx_factor[m]
+    end
 
 
-    #---------------------------------------------------------------
-    #---------------------------------------------------------------
-    # # Compute drift coefficients:
-    # # p_prime_zero forces grad-B-curvature to zero to compensates
-    # # for b_par =0
-    # #
-    # p_prime_zero_s = 1.0
-    # if(use_mhd_rule_in) p_prime_zero_s = 0.0 end
+    costheta_geo = zeros(Real, ms+1)
+    #*************************************************************
+    # Compute drift coefficients:
+    #*************************************************************
+    p_prime_zero_s = 1.0
+    if(inputs.USE_MHD_RULE) p_prime_zero_s = 0.0 end
 
     # ### not used
     # epsl_geo = (2.0/rmaj_s).*qrat_geo./b_geo
-    # ### not used
-    # costheta_p_geo = (4.0*π*p_prime_s*p_prime_zero_s*rmaj_s) .* (Bp.*R./B.^2)
+
+    costheta_p_geo = (4π*p_prime_s*p_prime_zero_s*rmaj_s) .* (Bp.*R./B.^2)
     costheta_geo .= (
             -rmaj_s.* (Bp./(B.^2)) .*
             ((Bp./r_curv) .- (f^2 ./(Bp.*R.^3) ).*sin_u) )
     
 
-    #### not done in the python
-    #---------------------------------------------------------------
-    #-------------------------------------------------------------
+    #*************************************************************
     # Functions which require theta-derivatives:
-    #
-    # do m=0,ms
+    #*************************************************************
+    sintheta_geo = zeros(Real, ms+1)
+    for m = 1:ms+1
 
-    #     # Waltz/Miller [[sin]]
-    #     m1=MOD(ms+m-2,ms)
-    #     m2=MOD(ms+m-1,ms)
-    #     m3=MOD(m+1,ms)
-    #     m4=MOD(m+2,ms)
-    #     sintheta_geo(m) = -rmaj_s*(f/(R(m)*B(m)**2))* &
-    #         (B[m1]-8.0*B[m2]+8.0*B(m3)-B(m4))/(delta_s*s_p(m))
-    #     # write(*,*)m,m1,m2,m3,m4,"sintheta_geo=",sintheta_geo(m)
+        m1 = ((ms + m - 2) % (ms+1)) + 1
+        m2 = ((ms + m - 1) % (ms+1)) + 1
+        m3 = (m % (ms+1)) + 1
+        m4 = ((m + 1) % (ms+1)) + 1
+        ### had to do this weird short-circuiting bc of weird indexing
+        m1 < ms || (m1 = ((ms + m - 3) % (ms+1)) + 1)
+        m2 < ms+1 || (m2 = ((ms + m - 2) % (ms+1)) + 1)
+        m3 > 1 || (m3 = ((m + 1) % (ms+1)) + 1)
+        m4 > 2 || (m4 = ((m + 2) % (ms+1)) + 1)
 
-    # enddo
-    # #
-    # # compute vprime and vpp
-    # #
+        sintheta_geo[m] = -rmaj_s*(f/(R[m]*B[m]^2)) * (B[m1]-8*B[m2]+8*B[m3]-B[m4])/(delta_s*s_p[m])
+
+    end
+
+    #*************************************************************
+    # compute vprime and vpp
+    #*************************************************************
     # vprime = 0.0
     # vpp = 0.0
     # dvpp1 = (s_p(0)*R(0)/psi_x(0)**3) &
@@ -624,12 +715,12 @@ function mercier_luc(inputs::InputTJLF, mts::AbstractFloat=5.0, ms::Integer=128,
     # # write(*,*)"H = ",H
     # DR_out = DM_out - (0.5 - H)**2
 
-    return s_p, Bp, b_geo, pk_geo, qrat_geo, costheta_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, B
+    return s_p, Bp, b_geo, pk_geo, qrat_geo, sintheta_geo, costheta_geo, costheta_p_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, f, R, B, S_prime, kx_factor
     
 end
 
 
-function miller_geo(inputs::InputTJLF, mts::AbstractFloat=5.0, ms::Integer=128)
+function miller_geo(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128)
 
     rmin_loc = inputs.RMIN_LOC
     rmaj_loc = inputs.RMAJ_LOC

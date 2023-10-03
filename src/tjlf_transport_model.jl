@@ -2,7 +2,7 @@ include("tjlf_modules.jl")
 include("tjlf_max.jl")
 
 
-function get_bilinear_spectrum(inputs::InputTJLF, ky_spect::Vector{T}, vexb_shear_s::T, jmax_out::Int) where T<:Real
+function get_bilinear_spectrum(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::OutputHermite, ky_spect::Vector{T}, vexb_shear_s::T, jmax_out::Int) where T<:Real
 #
 # computes the bilinear fluctuation moments 
 # and saves them in flux_spectrum_out, intensity_spectrum_out
@@ -86,7 +86,7 @@ function get_bilinear_spectrum(inputs::InputTJLF, ky_spect::Vector{T}, vexb_shea
                     T_bar_out,
                     U_bar_out,
                     Q_bar_out,
-                    Ns_Ts_phase_out = tjlf_max(inputs, ky_s, vexb_shear_s) ############### have to create this ###############
+                    Ns_Ts_phase_out = tjlf_max(inputs, outputGeo, outputHermite, ky_s, vexb_shear_s) ############### have to create this ###############
                 else
                     nbasis = nbasis_max_in
                     new_width = true

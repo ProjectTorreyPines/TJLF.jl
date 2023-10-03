@@ -12,7 +12,8 @@ run(`$(path) $baseDirectory`)
 include("tjlf_modules.jl")
 include("tjlf_hermite.jl")
 include("tjlf_kygrid.jl")
-include("tjlf_transport_model.jl")
+include("tjlf_geometry.jl")
+include("tjlf_TRANSPORT_MODEL.jl")
 
 #******************************************************************************#************************
 # Read input.tglf
@@ -49,12 +50,13 @@ for line in lines[1:length(lines)]
         # if not for the species vector
     else
         field = Symbol(line[1])
+        
         # string
         if line[2][1] == '\''
             val = string(strip(line[2], ['\'']))
         # bool
         elseif line[2][1] == '.'
-            val = strip(line[2], ['\'']) == "true"
+            val = strip(line[2], ['\'','.']) == "true"
         # int
         elseif !contains(line[2],'.')
             val = parse(Int, strip(line[2], ['\'','.',' ']))
@@ -72,6 +74,7 @@ for line in lines[1:length(lines)]
     end
     
 end
+setfield!(inputTJLF,:SPECIES,inputSpecies)
 
 if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
     inputTJLF.UNITS = "CGYRO"
@@ -81,8 +84,14 @@ end
 #******************************************************************************#************************
 
 outputHermite = gauss_hermite(inputTJLF)
-ky_spect = get_ky_spectrum(inputTJLF)
-get_bilinear_spectrum(inputTJLF,vexb_shear_s,jmax_out)
+ky_spect, nky = get_ky_spectrum(inputTJLF)
+outputGeo, satParams = xgrid_functions_geo(inputTJLF,outputHermite)
+
+vexb_shear_s = 0.0
+jmax_out = 0
+include("tjlf_TRANSPORT_MODEL.jl")
+get_bilinear_spectrum(inputTJLF, outputGeo, outputHermite, 
+                        ky_spect, vexb_shear_s, jmax_out)
 
 
 
