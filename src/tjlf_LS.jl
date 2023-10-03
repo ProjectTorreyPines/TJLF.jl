@@ -78,9 +78,15 @@ function tjlf_LS(inputs::InputTJLF, ky::T, vexb_shear_s::T) where T <: Real
 
     #  solver for linear eigenmodes of tglf equations
     amat, bmat, alpha, beta, rr, ri = tjlf_eigensolver(inputs)
+    # println(rr)
+    # println(ri)
+    # println(alpha)
+    # println(beta)
+    # println(amat)
+    # println(bmat)
 
     #  initalize output to zero
-    maxmodes = nmodes_in #### no idea what maxmodes is
+    maxmodes = 16 #### no idea what maxmodes is
     jmax = zeros(Int, maxmodes)
     gamma_out = zeros(Float64, maxmodes)
     freq_out = zeros(Float64, maxmodes)
@@ -160,7 +166,10 @@ function tjlf_LS(inputs::InputTJLF, ky::T, vexb_shear_s::T) where T <: Real
     elseif(inputs.IBRANCH==-1)
         # find the top nmodes most unstable modes
         ### put the unstable modes in ascending order by growthrate
+        sortperm
         jmax = sortperm(rr) #### sort_eigenvalues(nmodes_in,jmax), i believe this does the same thing
+        jmax .= ifelse.(rr[jmax].>epsilon1, jmax, 0)
+        reverse!(jmax)
         nmodes_out = 0
         for j1 = 1:nmodes_in 
             if(jmax[j1]!=0)
@@ -209,6 +218,7 @@ function tjlf_LS(inputs::InputTJLF, ky::T, vexb_shear_s::T) where T <: Real
                 end
                 ### gesv!(A,B) solves Ax = B, A becomes LU factor, and B becomes solution
                 gesv!(zmat,v) 
+                # println(v)
 
                 eigenvalue = im*alpha[jmax[imax]]/beta[jmax[imax]]
                 
@@ -455,8 +465,10 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
                 q_par[is,i] = q_par[is,i] -v[j+nbasis*10+i]
                 q_tot[is,i] = q_tot[is,i] -v[j+nbasis*11+i]
             end
+            # println(n[is,i])
         end
     end
+
 
     # compute vnorm
     vnorm = 0.0
@@ -506,7 +518,6 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
             for j = 1:nbasis
                 phi[i] = phi[i] +ave_p0inv[i,j]*n[is,j]*as*zs
             end
-          
 
             if(use_bper_in)
                 for j = 1:nbasis
@@ -526,6 +537,7 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
             end
         end
     end
+    # println(phi)
 
     # add the adiabatic terms to the total moments
     for is = ns0:ns

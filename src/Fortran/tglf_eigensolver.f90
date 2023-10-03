@@ -2859,7 +2859,7 @@
       enddo
 
 
-      OPEN(unit=33,file="matrixA",status='replace')
+      OPEN(unit=33,file="matrixA",status='replace')!,position='APPEND', action='WRITE')
     !   
       write(33,*)"iur = ",iur
       do is=1,iur
@@ -2872,7 +2872,7 @@
     !
       CLOSE(33)
 
-      OPEN(unit=33,file="matrixB",status='replace')
+      OPEN(unit=33,file="matrixB",status='replace')!,position='APPEND', action='WRITE')
     !
       write(33,*)"iur = ",iur
       do is=1,iur

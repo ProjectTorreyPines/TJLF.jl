@@ -145,6 +145,12 @@ if(new_matrix)then
 !  solver for linear eigenmodes of tglf equations
 !
       call tglf_eigensolver
+    !   open(unit=33,file='temp',status='OLD',position='APPEND', action='WRITE')
+    !   write(33,*) alpha
+    !   close(33)
+    !   write(*,*) beta
+    !   write(*,*) amat
+    !   write(*,*) bmat
 !      write(*,*)"eigensolver done"
 !
 !      initalize output to zero
@@ -272,6 +278,9 @@ if(new_matrix)then
             enddo
           enddo
           call zgesv(iur,1,zmat,iur,ipiv,v,iur,info)
+        !   do i=1,iur
+        !     write(*,*) v(i)
+        !   enddo
 
           ! Check for clean exit from ZGESV
 
@@ -640,8 +649,10 @@ if(new_matrix)then
             q_par(is,i) = q_par(is,i) -v(j+nbasis*10+i)
             q_tot(is,i) = q_tot(is,i) -v(j+nbasis*11+i)
           endif
+        !   write(*,*) n(is,i)
         enddo
       enddo
+
 ! 
 !  compute vnorm
 !
@@ -673,7 +684,9 @@ if(new_matrix)then
         do is=ns0,ns
           do j=1,nbasis
             phi(i) = phi(i) +ave_p0inv(i,j)*as(is)*zs(is)*n(is,j)  
+            ! write(*,*) ave_p0inv(i,j)
           enddo
+        !   write(*,*) phi(i)
           if(use_bper_in)then
             do j=1,nbasis
               psi(i) = psi(i) + &
@@ -692,6 +705,9 @@ if(new_matrix)then
           endif
         enddo
       enddo
+    !   do i=1,nbasis
+    !     write(*,*) phi(i)
+    !   enddo
 ! 
 !  add the adiabatic terms to the total moments
 !    

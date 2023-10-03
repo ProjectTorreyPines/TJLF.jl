@@ -1,18 +1,108 @@
-
-
 # calls the fortran code as a shared library
 # ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
 
 # location for the input.tglf.gen file
-baseDirectory = "../test_SAT3/"
+baseDirectory = "../../test_SAT3/"
 # calls the fortran code as an executable
-path = "./src/Fortran/tglf"
+path = "./Fortran/tglf"
 run(`$(path) $baseDirectory`)
 
 
-include("../src/tjlf_modules.jl")
-include("../src/tjlf_multiscale_spectrum.jl")
-include("../src/tjlf_geometry.jl")
+
+include("tjlf_modules.jl")
+include("tjlf_hermite.jl")
+include("tjlf_kygrid.jl")
+include("tjlf_transport_model.jl")
+
+#******************************************************************************#************************
+# Read input.tglf
+#******************************************************************************#************************
+fileDirectory = baseDirectory * "input.tglf"
+lines = readlines(fileDirectory)
+# struct attempt
+inputTJLF = InputTJLF{Float64}()
+
+for line in lines[1:length(lines)]
+    line = split(line, "\n")
+    line = split(line[1],"=")
+    if line[1] == "NS"
+        global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
+        for i in 1:length(inputSpecies)
+            inputSpecies[i] = Species{Float64}()
+        end
+    end
+end
+
+for line in lines[1:length(lines)]
+    line = split(line, "\n")
+    line = split(line[1],"=")
+
+    #### for the species vector
+    check = match(r"_\d",line[1])
+    if check !== nothing
+        temp = split(line[1],"_")
+        speciesField = Symbol(replace(line[1], r"_\d"=>""))
+        speciesIndex = check.match[2:end]
+        if parse(Int,speciesIndex) > length(inputSpecies) continue end
+        setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
+    
+        # if not for the species vector
+    else
+        field = Symbol(line[1])
+        # string
+        if line[2][1] == '\''
+            val = string(strip(line[2], ['\'']))
+        # bool
+        elseif line[2][1] == '.'
+            val = strip(line[2], ['\'']) == "true"
+        # int
+        elseif !contains(line[2],'.')
+            val = parse(Int, strip(line[2], ['\'','.',' ']))
+        # float
+        else
+            val = parse(Float64,strip(line[2], ['\'','.',' ']))
+        end
+
+        try
+            setfield!(inputTJLF,field,val)
+        catch
+            throw(error(field))
+        end
+
+    end
+    
+end
+
+if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+    inputTJLF.UNITS = "CGYRO"
+end
+#******************************************************************************#************************
+#   start running stuff
+#******************************************************************************#************************
+
+outputHermite = gauss_hermite(inputTJLF)
+ky_spect = get_ky_spectrum(inputTJLF)
+get_bilinear_spectrum(inputTJLF,vexb_shear_s,jmax_out)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

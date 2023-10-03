@@ -79,22 +79,19 @@ end
 
 
 
-#### LINES 220-326, 439-478 in tglf_geometry.f90
+#### LINES 220-478 in tglf_geometry.f90
 function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::AbstractMatrix{T}, 
     mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
     #******************************************************************************#************************
-    #
     # PURPOSE: compute the geometric coefficients on the x-grid
-    #
-    #
     #******************************************************************************#************************
     #
-    ### different geometries!!!
+    ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
     rmin_s = inputs.RMIN_LOC
     q_s = inputs.Q_LOC
 
-    ### needed for this function
+    
     sat_rule_in = inputs.SAT_RULE
     alpha_quench_in = inputs.ALPHA_QUENCH
     alpha_e_in = inputs.ALPHA_E
@@ -104,6 +101,7 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
     taus_2 = inputs.SPECIES[2].TAUS
     zs_2 = inputs.SPECIES[2].ZS
     units_in = inputs.UNITS
+    nx = 2*inputs.NXGRID - 1
 
     vs_2 = √(taus_2 / mass_2)
     gamma_reference_kx0 = gammas[:, 1]
@@ -112,9 +110,9 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
     
     y = zeros(Float64,ms+1)
 
-    #
+    #*************************************************************
     # find length along magnetic field y
-    #
+    #*************************************************************
     y[1]=0.0
     for m in 2:ms+1
         
@@ -195,15 +193,84 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
         #     kx0 = sign_Bt_in*kx0_e # cancel the sign_Bt_in factor in kxx below
         # else
         #     if(sat_rule_in.eq.1)kx0 = sign_Bt_in*kx0_e/(2.1)end  # goes with xnu_model=2
-        #     if(sat_rule_in.eq.2 .OR. sat_rule_in.eq.3)kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out**2 end     # goes with xnu_model=3, the factor 0.7/grad_r0_out**2 is needed for stress_tor
+        #     if(sat_rule_in.eq.2 .OR. sat_rule_in.eq.3)kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out^2 end     # goes with xnu_model=3, the factor 0.7/grad_r0_out^2 is needed for stress_tor
         #     # note kx0 = alpha_e*gamma_ExB_HB/gamma Hahm - Burrell form of gamma_ExB
         #     # The 2.1 effectively increases ay0 & ax0 and reduces toroidal stress to agree with CGYRO
         # end
         
     end
 
-    #####################################################################################################################
+    # #*************************************************************
+    # # begin calculation of wdx and b0x
+    # #*************************************************************
+    # for i = 1:nx
+    #     thx = inputs.WIDTH * x[i]
+    #     sign_theta = ifelse(thx>=0, 1.0, -1.0)
 
+    #     loops = Int(floor(abs(thx/(2π))))
+    #     y_x = Ly*(abs(thx) - loops*2π)/ (2π)
+    #     if(thx<0.0)
+    #         y_x = Ly - y_x
+    #         loops = loops + 1
+    #     end
+    #     for m = 1:ms
+    #         if(y[m]>=y_x) break end
+    #     end
+    #     m1 = m - 1
+    #     m2 = m
+
+    #     dkxky1 = sign_theta*loops*S_prime[ms]
+    #     y1 = y[m1]
+    #     dkxky2 = sign_theta*loops*S_prime[ms]
+    #     y2 = y[m2]
+
+    #     ### kxx
+    #     kxx1 = (kx_factor[m1]*(S_prime[m1]+dkxky1)  -   kx0*b_geo[m1]/qrat_geo[m1]^2)    *qrat_geo[m1]/b_geo[m1]
+    #     kxx2 = (kx_factor[m2]*(S_prime[m2]+dkxky2)  -   kx0*b_geo[m2]/qrat_geo[m2]^2)    *qrat_geo[m2]/b_geo[m2]
+    #     kxx[i] = kxx1 + (kxx2 - kxx1)*(y_x - y1)/(y2 - y1)
+    #     kxx[i] = sign_Bt_in*kxx[i]
+        
+    #     ### wdx
+    #     wd1 = (qrat_geo[m1]/b_geo[m1])*     (costheta_geo[m1] + (kx_factor[m1]*(S_prime[m1]+dkxky1) - kx0*b_geo[m1]/qrat_geo[m1]^2)*sintheta_geo[m1])
+    #     wd2 = (qrat_geo[m2]/b_geo[m2])*     (costheta_geo[m2] + (kx_factor[m2]*(S_prime[m2]+dkxky2) - kx0*b_geo[m2]/qrat_geo[m2]^2)*sintheta_geo[m2])
+    #     wdx[i] = wd1 + (wd2 - wd1)*(y_x - y1)/(y2 - y1)
+    #     wdx[i] = (R_unit/Rmaj_s)*wdx[i]
+
+    #     ### wdpx
+    #     wdp1 = (qrat_geo[m1]/b_geo[m1])*costheta_p_geo[m1]
+    #     wdp2 = (qrat_geo[m2]/b_geo[m2])*costheta_p_geo[m2]
+    #     wdpx[i] = wdp1 + (wdp2 - wdp1)*(y_x - y1)/(y2 - y1)
+    #     wdpx[i] = (R_unit/Rmaj_s)*wdpx[i]
+        
+    #     ### b2x
+    #     b1 = b_geo[m1]^2
+    #     b2 = b_geo[m2]^2
+    #     b2x[i] =  b1 +(b2-b1)*(y_x-y1)/(y2-y1)
+
+    #     ### b0x
+    #     b1 = (1.0 + (kx_factor[m1]*(S_prime[m1]+dkxky1) - kx0*b_geo[m1]/qrat_geo[m1]^2)^2)*qrat_geo[m1]^2
+    #     b2 = (1.0 + (kx_factor[m2]*(S_prime[m2]+dkxky2) - kx0*b_geo[m2]/qrat_geo[m2]^2)^2)*qrat_geo[m2]^2
+    #     b0x[i] =  b1 +(b2 - b1)*(y_x - y1)/(y2 - y1)
+
+    #     if(b0x[i]<0.0)
+    #         error("interpolation error b0x < 0")
+    #     end
+
+    #     ### viscous stress projection coefficients
+
+    #     cxtorper1 = -R[m1]*Bp[m1]/b_geo[m1]
+    #     cxtorper2 = -R[m2]*Bp[m2]/b_geo[m2]
+    #     cx_tor_par[i] = f/b_geo[m1] + (f/b_geo[m2]-f/b_geo[m1])*(y_x-y1)/(y2-y1)
+    #     cx_tor_par[i] = sign_Bt_in*cx_tor_par[i]
+    #     cx_tor_per[i] = cxtorper1 + (cxtorper2-cxtorper1)*(y_x-y1)/(y2-y1)
+    #     cx_par_par[i] = b_geo[m1] + (b_geo[m2]-b_geo[m1])*(y_x-y1)/(y2-y1)
+    # end
+
+    # outputGeo = OutputGeometry(kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
+
+    #*************************************************************
+    #  compute flux surface averages
+    #*************************************************************
     norm_ave = 0.0
     SAT_geo1_out = 0.0
     SAT_geo2_out = 0.0
@@ -214,12 +281,12 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::AbstractVector{T}, gammas::A
         # B2x2 = b_geo[i]^2
         # B2_ave_out = B2_ave_out + dlp*(B2x1+B2x2)/2.0
         # R2x1 = R(i-1)**2
-        # R2x2 = R(i)**2
+        # R2x2 = R[i]**2
         # R2_ave_out = R2_ave_out + dlp*(R2x1+R2x2)/2.0
-        # B_ave_out = B_ave_out + dlp*(b_geo(i-1)+b_geo(i))/2.0
-        # Bt_ave_out = Bt_ave_out + dlp*(f/b_geo(i-1)+f/b_geo(i))/(2.0*Rmaj_s)
-        # Grad_r_ave_out = Grad_r_ave_out + dlp*0.5*((R(i-1)*Bp(i-1))**2+(R(i)*Bp(i))**2)*(q_s/rmin_s)**2
-        # kykx_geo_ave = kykx_geo_ave + dlp*0.5*(B_geo(i-1)**2/qrat_geo(i-1)**4+B_geo(i)**2/qrat_geo(i)**4)
+        # B_ave_out = B_ave_out + dlp*(b_geo(i-1)+b_geo[i])/2.0
+        # Bt_ave_out = Bt_ave_out + dlp*(f/b_geo(i-1)+f/b_geo[i])/(2.0*Rmaj_s)
+        # Grad_r_ave_out = Grad_r_ave_out + dlp*0.5*((R(i-1)*Bp(i-1))**2+(R[i]*Bp[i])**2)*(q_s/rmin_s)**2
+        # kykx_geo_ave = kykx_geo_ave + dlp*0.5*(B_geo(i-1)**2/qrat_geo(i-1)**4+B_geo[i]**2/qrat_geo[i]**4)
         SAT_geo1_out += dlp*((b_geo[1]/b_geo[m-1])^4 +(b_geo[1]/b_geo[m])^4)/2.0
         SAT_geo2_out += dlp*((qrat_geo[1]/qrat_geo[m-1])^4 +(qrat_geo[1]/qrat_geo[m])^4)/2.0
     end
@@ -516,7 +583,7 @@ function mercier_luc(inputs::InputTJLF, mts::AbstractFloat=5.0, ms::Integer=128,
     #     m3=MOD(m+1,ms)
     #     m4=MOD(m+2,ms)
     #     sintheta_geo(m) = -rmaj_s*(f/(R(m)*B(m)**2))* &
-    #         (B(m1)-8.0*B(m2)+8.0*B(m3)-B(m4))/(delta_s*s_p(m))
+    #         (B[m1]-8.0*B[m2]+8.0*B(m3)-B(m4))/(delta_s*s_p(m))
     #     # write(*,*)m,m1,m2,m3,m4,"sintheta_geo=",sintheta_geo(m)
 
     # enddo

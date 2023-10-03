@@ -96,12 +96,17 @@
        width_in = 10.0**tp
 !       write(*,*)"width_in = ",width_in
        new_width = .TRUE.
+       write(*,*) "this is I"
        call tglf_LS
 !       write(*,*)i,width_in,gamma_out(1),freq_out(1),ft
        width_n(i)=width_in
        gamma_n(i) = gamma_out(1)
        freq_n(i) = freq_out(1)
       enddo
+    !   write(*,*) v_bar_out
+    !   write(*,*) ne_te_phase_out
+    !   write(*,*) field_weight_out
+      STOP 'You will not pass'
 !      close(2)
 ! find the global maximum
       gamma_max=gamma_n(nt)
@@ -128,6 +133,7 @@
            tp = (t2+t1)/2.0    
            width_in = 10.0**tp
            new_width = .TRUE.
+           write(*,*) "this is II"
            call tglf_LS
            gm = gamma_out(1)
            tm = tp
@@ -140,6 +146,7 @@
            tp = (t2+t1)/2.0    
            width_in = 10.0**tp
            new_width = .TRUE.
+           write(*,*) "this is III"
            call tglf_LS
            gm = gamma_out(1)
            tm = tp
@@ -168,6 +175,7 @@
                tp = t1-dt
                width_in = 10.0**tp
                new_width = .TRUE.
+               write(*,*) "this is IV"
                call tglf_LS
                tm = t1
                gm = g1
@@ -177,6 +185,7 @@
                tp = tm+dt
                width_in = 10.0**tp
                new_width = .TRUE.
+               write(*,*) "this is V"
                call tglf_LS
                g2 = gamma_out(1)
                t2 = tp
@@ -185,6 +194,7 @@
                tp = t1 + dt
                width_in = 10.0**tp
                new_width = .TRUE.
+               write(*,*) "this is VI"
                call tglf_LS
                g2 = gm
                t2 = tm
@@ -197,6 +207,7 @@
                tp = t2 + dt
                width_in = 10.0**tp
                new_width = .TRUE.
+               write(*,*) "this is VII"
                call tglf_LS
                gm = g2
                tm = t2
@@ -206,6 +217,7 @@
                tp = tm - dt
                width_in = 10.0**tp
                new_width = .TRUE.
+               write(*,*) "this is VIII"
                call tglf_LS
                g1 = gamma_out(1)
                t1 = tp
@@ -214,6 +226,7 @@
                tp = t2 - dt
                width_in = 10.0**tp
                new_width = .TRUE.
+               write(*,*) "this is IX"
                call tglf_LS
                g1 = gm
                t1 = tm
@@ -225,6 +238,7 @@
              tp = tm - dt
              width_in = 10.0**tp
              new_width = .TRUE.
+             write(*,*) "this is X"
              call tglf_LS
              g1 = gamma_out(1)
              t1 = tp
@@ -232,6 +246,7 @@
              tp = tm + dt
              width_in = 10.0**tp
              new_width = .TRUE.
+             write(*,*) "this is XI"
              call tglf_LS
              g2 = gamma_out(1)
              t2 = tp
@@ -266,6 +281,7 @@
 !         write(*,*)"nbasis=",nbasis
          iflux_in=save_iflux
          new_width=.TRUE.
+         write(*,*) "this is XII"
          call tglf_LS
          if(ibranch_in.eq.-1)then
 ! check for inward ballooning modes
@@ -278,6 +294,7 @@
              new_geometry = .FALSE.
              new_width = .FALSE.
              new_matrix = .TRUE.
+             write(*,*) "this is XIII"
              call tglf_LS
            endif
 !           if(alpha_quench_in.eq.0.0)then

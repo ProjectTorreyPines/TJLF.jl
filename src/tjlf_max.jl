@@ -76,6 +76,7 @@ function tjlf_max(inputs::InputTJLF, ky_s::T, vexb_shear_s::T) where T<:Real
         tp = tmin + (i-1)*dt
         inputs.WIDTH = 10.0^tp
         new_width = true
+
         gamma_out, 
         freq_out, 
         v_QL_out, 
@@ -102,6 +103,7 @@ function tjlf_max(inputs::InputTJLF, ky_s::T, vexb_shear_s::T) where T<:Real
         Q_bar_out,
         Ns_Ts_phase_out = tjlf_LS(inputs, ky_s, vexb_shear_s) ############### have to create this ###############
         ############### these are prob outputs ###############
+        error("STOP")
         width_n[i] = inputs.WIDTH
         gamma_n[i] = gamma_out[1]
         freq_n[i] = freq_out[1]

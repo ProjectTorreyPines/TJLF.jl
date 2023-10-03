@@ -2,7 +2,7 @@ include("tjlf_modules.jl")
 include("tjlf_max.jl")
 
 
-function get_bilinear_spectrum(inputs::InputTJLF, vexb_shear_s::T, jmax_out::Int) where T<:Real
+function get_bilinear_spectrum(inputs::InputTJLF, ky_spect::Vector{T}, vexb_shear_s::T, jmax_out::Int) where T<:Real
 #
 # computes the bilinear fluctuation moments 
 # and saves them in flux_spectrum_out, intensity_spectrum_out
@@ -23,7 +23,7 @@ function get_bilinear_spectrum(inputs::InputTJLF, vexb_shear_s::T, jmax_out::Int
     if(inputs.ADIABATIC_ELEC) ns0 = 2 end
 
     nx = 2*nxgrid_in - 1
-    ky_spect, nky = get_ky_spectrum(inputs)
+    nky = length(ky_spect)
 
     # initialize output arrays
     spectral_shift_out = zeros(nky)
@@ -60,6 +60,7 @@ function get_bilinear_spectrum(inputs::InputTJLF, vexb_shear_s::T, jmax_out::Int
         if(new_eikonal_in)
             if(jmax_out == 0) ################ first pass? ###############
                 if(find_width_in)
+                    println("this is 1")
                     gamma_nb_min_out,
                     gamma_out,
                     freq_out,
@@ -106,21 +107,21 @@ function get_bilinear_spectrum(inputs::InputTJLF, vexb_shear_s::T, jmax_out::Int
             mask_save[i] = 1
             if(gamma_out[1] == 0.0) mask_save[i] = 0 end
             #### not used yet
-###            gamma_nb_min_save[i] = gamma_nb_min_out
-###            width_save[i] = width_in
-###            ft_save[i] = ft
-###            R_unit_save[i] = R_unit
-###            q_unit_save[i] = q_unit
-            ############### need these values from the function calls earlier probably
-###            for j = 1:nx
-###                wdx_save[i,j] = wdx[j]
-###                b0x_save[i,j] = b0x[j]
-###                b2x_save[i,j] = b2x[j]
-###                cx_par_par_save[i,j] = cx_par_par[j]
-###                cx_tor_par_save[i,j] = cx_tor_par[j]
-###                cx_tor_per_save[i,j] = cx_tor_per[j]
-###               kxx_save[i,j] = kxx[j]
-###            end
+            gamma_nb_min_save[i] = gamma_nb_min_out
+            width_save[i] = width_in
+            ft_save[i] = ft
+            R_unit_save[i] = R_unit
+            q_unit_save[i] = q_unit
+                ############ need these values from the function calls earlier probably
+            for j = 1:nx
+                wdx_save[i,j] = wdx[j]
+                b0x_save[i,j] = b0x[j]
+                b2x_save[i,j] = b2x[j]
+                cx_par_par_save[i,j] = cx_par_par[j]
+                cx_tor_par_save[i,j] = cx_tor_par[j]
+                cx_tor_per_save[i,j] = cx_tor_per[j]
+                kxx_save[i,j] = kxx[j]
+            end
         else
             ############### need these values from the function calls earlier probably
             gamma_nb_min_out = gamma_nb_min_save[i]
@@ -247,19 +248,19 @@ function get_bilinear_spectrum(inputs::InputTJLF, vexb_shear_s::T, jmax_out::Int
     # inputs.NEW_EIKONAL = true  # reset default for next call to tjlf_TM
 
 
-    for is=ns0:ns
-    for j=1:3
-    for m=1:nmodes
-    for i=1:nky
-    for k=1:5
-           print(QL_flux_spectrum_out[k,is,j,i,m])
-           print(" ")
-    end
-    println()
-    end
-    end
-    end
-    end
+    # for is=ns0:ns
+    # for j=1:3
+    # for m=1:nmodes
+    # for i=1:nky
+    # for k=1:5
+    #        print(QL_flux_spectrum_out[k,is,j,i,m])
+    #        print(" ")
+    # end
+    # println()
+    # end
+    # end
+    # end
+    # end
 
     return eigenvalue_spectrum_out
       

@@ -12,7 +12,7 @@
       USE tglf_kyspectrum
       IMPLICIT NONE
 !
-      INTEGER :: i,j,is,imax, jmax_mix
+      INTEGER :: i,j,is,imax, jmax_mix, k,m
       LOGICAL :: save_iflux, save_find_width
       REAL :: dky
       REAL :: phi_bar0,phi_bar1
@@ -71,14 +71,23 @@
        iflux_in=.FALSE.     ! do not compute eigenvectors on first pass
        vexb_shear_s = 0.0  ! do not use spectral shift on first pass
        jmax_out = 0         ! ID for first pass
-    !    write(*,*) "this is a"
+       write(*,*) "this is a"
        CALL get_bilinear_spectrum
+    !    do is=ns0,ns
+    !     do j=1,3
+    !        do m=1,nmodes_in
+    !          do i=1,nky
+    !            write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
+    !          enddo  ! i
+    !       enddo ! m
+    !     enddo  ! j
+    !  enddo  ! is
        eigenvalue_first_pass(:,:,:) = eigenvalue_spectrum_out(:,:,:)
        vexb_shear_s = save_vexb_shear
        find_width_in = .FALSE.
        iflux_in = save_iflux
        if(sat_rule_in.eq.0)jmax_out = 1   ! flag for second pass
-    !    write(*,*) "this is b"
+       write(*,*) "this is b"
        CALL get_bilinear_spectrum
 !  reset eigenvalues to the values with vexb_shear=0.
 !  note ql weights are with vexb_shear
@@ -86,7 +95,7 @@
        find_width_in = save_find_width
       else
         jmax_out = 0
-        ! write(*,*) "this is c"
+        write(*,*) "this is c"
         CALL get_bilinear_spectrum
       endif
 !
@@ -270,10 +279,12 @@
         if(new_eikonal_in)then
           if(jmax_out.eq.0)then   ! first pass
             if(find_width_in)then
+                write(*,*) "this is 1"
               CALL tglf_max
             else
               nbasis = nbasis_max_in
               new_width = .TRUE.
+              write(*,*) "this is 2"
               CALL tglf_LS
               gamma_nb_min_out = gamma_out(1)
             endif
@@ -283,6 +294,7 @@
               width_in = width_out(i)
               nbasis = nbasis_max_in
               new_width=.TRUE.
+              write(*,*) "this is 3"
               CALL tglf_LS
               gamma_nb_min_out = gamma_out(1)
           endif
@@ -319,6 +331,7 @@
              kxx(j) = kxx_save(i,j)
           enddo
           if(mask_save(i).eq.1)then
+            write(*,*) "this is 4"
             CALL tglf_LS
           else
             gamma_out(1)=0.0

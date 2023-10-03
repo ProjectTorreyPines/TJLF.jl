@@ -6,12 +6,12 @@ include("../src/tjlf_modules.jl")
 include("../src/tjlf_multiscale_spectrum.jl")
 include("../src/tjlf_geometry.jl")
 include("../src/tjlf_kygrid.jl")
-include("../src/tjlf_TM.jl")
+# include("../src/tjlf_transport_model.jl")
 
 
 
 # saturation rule test
-satRuleDirectory = "./outputs/test_SAT_rules/"
+satRuleDirectory = "../outputs/test_SAT_rules/"
 tests = readdir(satRuleDirectory)
 for dir_name in tests
     if dir_name == ".DS_Store" continue end
@@ -227,7 +227,7 @@ end
 
 
 
-satRuleDirectory = "./outputs/test_kygrid/"
+satRuleDirectory = "../outputs/test_kygrid/"
 tests = readdir(satRuleDirectory)
 for dir_name in tests
     if dir_name == ".DS_Store" continue end
@@ -315,7 +315,7 @@ end
 
 
 
-satRuleDirectory = "./outputs/test_TM/"
+satRuleDirectory = "../outputs/test_TM/"
 tests = readdir(satRuleDirectory)
 # for dir_name in tests
 #     if dir_name == ".DS_Store" continue end
@@ -390,8 +390,8 @@ tests = readdir(satRuleDirectory)
     vexb_shear_s = 0.0
     jmax_out = 0
 
-    include("../src/tjlf_TM.jl")
-    get_bilinear_spectrum(inputTJLF, vexb_shear_s, jmax_out)
+    # include("../src/tjlf_TM.jl")
+    # get_bilinear_spectrum(inputTJLF, vexb_shear_s, jmax_out)
 
     # eigenvalue_first_pass(:,:,:) = eigenvalue_spectrum_out(:,:,:)
     # vexb_shear_s = save_vexb_shear

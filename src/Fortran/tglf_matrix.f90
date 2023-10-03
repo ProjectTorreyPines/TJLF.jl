@@ -1946,6 +1946,14 @@
 !       enddo
 !
 !
+    !    do i =1,nm
+    !     do j=1,nm
+    !         if(ave_modwdh(i,j).ne.ave_wdh(i,j))then 
+    !             write(*,*) "wdh: ",ave_wdh(i,j)
+    !             write(*,*) "mod: ",ave_modwdh(i,j)
+    !         endif
+    !     enddo
+    ! enddo
       END SUBROUTINE modwd
 !
       SUBROUTINE modkpar
