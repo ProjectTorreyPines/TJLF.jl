@@ -140,144 +140,21 @@
          if(gradB_factor_in.ne.0.0)call gradB_g
 !
       endif
-
-      ! ave_p0inv, ave_b0inv, ave_bpinv, ave_wdh, ave_b0, ave_kx, ave_c_par_par, ave_kpar, ave_hp1
-    OPEN(unit=33,file="ave_p0inv",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_p0inv(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-
-    OPEN(unit=33,file="ave_b0inv",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_b0inv(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_bpinv",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_bpinv(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_wdh",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_wdh(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_b0",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_b0(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_kx",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_kx(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_c_par_par",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_c_par_par(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_kpar",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_kpar(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_c_tor_par",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_c_tor_par(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_c_tor_per",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,nbasis
-        write(33,*)"i = ",is
-        do js=1,nbasis
-               write(33,*)"j = ",js
-               write(33,*) ave_c_tor_per(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
-    OPEN(unit=33,file="ave_hp1",status='replace')
-    !   
-      write(33,*)"nbasis = ",nbasis
-      do is=1,ns
-        write(33,*)"is = ",is
-        do i=1,nbasis
-               write(33,*)"i = ",i
-               do j=1,nbasis
-                write(33,*)"j = ",j
-                write(33,*) ave_hp1(is,i,j)
-               enddo
-        enddo  ! j
-     enddo  ! i
-    !
-    CLOSE(33)
+      !!!! DSUNNN
+    ! write(*,*) "modwdgt3 ", ave_modwdgt3
+    ! write(*,*) "modwdgu3gt3 ", ave_modwdgu3gt3
+    ! write(*,*) "gu3gt3: ", ave_gu3gt3
+    ! write(*,*) "modwdgu3gt3: ", ave_modwdgu3gt3
+    ! write(*,*) "modwdgu3gt1: ", ave_modwdgu3gt1
+    ! write(*,*) "modwdgt1: ", ave_modwdgt1
+    ! write(*,*) "wdh: ", ave_wdh
+    ! write(*,*) "modwdh: ", ave_modwdh
+    ! write(*,*) "wdg: ", ave_wdg
+    ! write(*,*) "modwdg: ", ave_modwdg
+    ! write(*,*) "gradB: ", ave_gradB
+    ! write(*,*) "b0: ", ave_b0
+    ! write(*,*) "p0: ", ave_p0
+    ! write(*,*) "bp: ", ave_bp
 !
       END SUBROUTINE get_matrix
 !
@@ -903,6 +780,10 @@
        enddo
       enddo  
 !
+      !!!! DSUNNN
+    ! write(*,*) "ave_gu33 ", ave_gu33
+    ! write(*,*) "ave_gt1 ", ave_gt1
+    ! write(*,*) "gu3gt3: ", ave_gu3gt3
       do is=ns0,ns
        do i=1,nbasis
        do j=1,nbasis
@@ -1207,7 +1088,6 @@
         ave_c_tor_par(i,j) = 0.0
         ave_c_tor_per(i,j) = 0.0
         ave_c_par_par(i,j) = 0.0
-!
         do k=1,nx
          ww=wx(k)*h(i,k)*h(j,k)     
          ave_wdh(i,j)    = ave_wdh(i,j)  + ww*wdx(k)

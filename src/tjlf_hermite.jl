@@ -1,16 +1,13 @@
-
-
 include("tjlf_modules.jl")
 
 
-function gauss_hermite(inputs::InputTJLF)
+function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
 
     eps=3.0E-14
     maxit=100
 
-
     # set up the hermite basis x-grid
-    nbasis = inputs.NBASIS_MAX
+    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
     nx = 2*inputs.NXGRID -1
     h0 = 1.0/π^0.25
     m = Int((nx+1)/2) ### NXGRID
@@ -107,5 +104,5 @@ function gauss_hermite(inputs::InputTJLF)
         end
     end
 
-    return OutputHermite(x,wx,h)
+    return OutputHermite{Float64}(x,wx,h)
 end

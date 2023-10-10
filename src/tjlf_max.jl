@@ -2,35 +2,42 @@ include("tjlf_modules.jl")
 include("tjlf_geometry.jl")
 include("tjlf_LINEAR_SOLUTION.jl")
 
-function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::OutputHermite, ky_s::T, vexb_shear_s::T) where T<:Real
+function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
+                 ky_s::T, vexb_shear_s::T) where T<:Real
 
     R_unit, q_unit= get_sat_params(:rq_units, inputs)
     ### basically calls xgrid_functions_geo() to get R_unit, q_unit, make sure this is not redundant! maybe create output struct
 
-    #### organize this better
-    save_iflux = inputs.IFLUX
-    save_ibranch = inputs.IBRANCH
-    save_nbasis = inputs.NBASIS_MAX
-    save_bper = inputs.USE_BPER
-    save_bpar = inputs.USE_BPAR
     alpha_p_in = inputs.ALPHA_P
     sign_It_in = inputs.SIGN_IT
     use_bisection_in = inputs.USE_BISECTION
-
     sat_rule_in = inputs.SAT_RULE
     width_min_in = inputs.WIDTH_MIN
     nbasis_min_in = inputs.NBASIS_MIN
     nwidth_in = inputs.NWIDTH
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
-    save_width = inputs.WIDTH
     width_min = inputs.WIDTH_MIN
     width_max = abs(inputs.WIDTH)
 
-    inputs.IBRANCH = -1
 
+    # #### organize this better
+    # save_iflux = inputs.IFLUX
+    # save_ibranch = inputs.IBRANCH
+    # save_nbasis = inputs.NBASIS_MAX
+    # save_bper = inputs.USE_BPER
+    # save_bpar = inputs.USE_BPAR
+    # save_width = inputs.WIDTH
+
+    ibranch_parameter = -1
+    iflux_parameter = false
+    if(sat_rule_in==2 || sat_rule_in==3)
+        use_bper_parameter = false
+        use_bpar_parameter = false
+    end
+    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
+    
     if(alpha_p_in > 0.0)
         for is = ns0:ns
             mass = inputs.SPECIES[is].MASS
@@ -51,14 +58,7 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
         end
     end
 
-    inputs.IFLUX = false
-    if(nbasis_min_in!=0)
-        nbasis = nbasis_min_in
-    end
-    if(sat_rule_in==2 || sat_rule_in==3)
-        inputs.USE_BPER = false
-        inputs.USE_BPAR = false
-    end
+    
 
     tmax = log10(width_max)
     tmin = log10(width_min)
@@ -74,45 +74,22 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
     width_n = zeros(nt)
     for i = 1:nt
         tp = tmin + (i-1)*dt
-        inputs.WIDTH = 10.0^tp
+        width_parameter = 10.0^tp
         new_width = true
+        println("this is I") ##################
+        nmodes_out, gamma_out, freq_out, 
+        particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                vexb_shear_s) 
 
-        gamma_out, 
-        freq_out, 
-        v_QL_out, 
-        a_par_QL_out,
-        b_par_QL_out,
-        phi_bar_out,
-        a_par_bar_out,
-        b_par_bar_out,
-        v_bar_out,
-        ne_te_phase_out,
-        field_weight_out,
-        particle_QL_out,
-        energy_QL_out,
-        stress_par_QL_out,
-        stress_tor_QL_out,
-        exchange_QL_out,
-        N_QL_out,
-        T_QL_out,
-        U_QL_out,
-        Q_QL_out,
-        N_bar_out,
-        T_bar_out,
-        U_bar_out,
-        Q_bar_out,
-        Ns_Ts_phase_out = tjlf_LS(inputs, outputGeo, outputHermite, ky_s, vexb_shear_s) ############### have to create this ###############
-        ############### these are prob outputs ###############
-        error("STOP")
-        width_n[i] = inputs.WIDTH
+        width_n[i] = width_parameter
         gamma_n[i] = gamma_out[1]
         freq_n[i] = freq_out[1]
     end
 
     ### this might be off by one if there are repeats, og code finds last max value
-    ### this function one finds first max
     (gamma_max, imax) = findmax(gamma_n)
-    inputs.WIDTH = width_n[imax]
+    width_parameter = width_n[imax]
 
     # use bounded bisection search to refine width
     if(use_bisection_in && gamma_max > 0.0)
@@ -124,10 +101,13 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
             g2 = gamma_n[2]
             t2 = log10(width_n[2])
             tp = (t2+t1)/2.0    
-            inputs.WIDTH = 10.0^tp
+            width_parameter = 10.0^tp
             new_width = true
-            tglf_LS() ############### have to create this ###############
-            ############### these are prob outputs ###############
+            println("this is II")
+            nmodes_out, gamma_out, freq_out, 
+            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                            width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                            vexb_shear_s) 
             gm = gamma_out[1]
             tm = tp
 
@@ -138,10 +118,13 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
             g2 = gamma_n[nt]
             t2 = tmax           
             tp = (t2+t1)/2.0    
-            width_in = 10.0^tp
+            width_parameter = 10.0^tp
             new_width = true
-            tglf_LS() ############### have to create this ###############
-            ############### these are prob outputs ###############
+            println("this is III")
+            nmodes_out, gamma_out, freq_out, 
+            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                            width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                            vexb_shear_s) 
             gm = gamma_out[1]
             tm = tp
         
@@ -167,10 +150,13 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
                 if(t1>tmin)
                 # shift past t1 and compute new g1,t1 
                     tp = t1 - dt
-                    inputs.WIDTH = 10.0^tp
+                    width_parameter = 10.0^tp
                     new_width = true
-                    tglf_LS() ############### have to create this ###############
-                    ############### these are prob outputs ###############
+                    println("this is IV")
+                    nmodes_out, gamma_out, freq_out, 
+                    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                            width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                            vexb_shear_s) 
                     tm = t1
                     gm = g1
                     g1 = gamma_out[1]
@@ -178,18 +164,22 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
 
                     # compute new g2,t2
                     tp = tm + dt
-                    inputs.WIDTH = 10.0^tp
+                    width_parameter = 10.0^tp
                     new_width = true
-                    tglf_LS() ############### have to create this ###############
-                    ############### these are prob outputs ###############
+                    println("this is V")
+                    nmodes_out, gamma_out, freq_out, 
+                    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                            width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                            vexb_shear_s) 
                     g2 = gamma_out[1]
                     t2 = tp
 
                 else   # t1 at tmin; shrink towards t1
                     tp = t1 + dt
-                    inputs.WIDTH = 10.0^tp
+                    width_parameter = 10.0^tp
                     new_width = true
-                    tglf_LS() ############### have to create this ###############
+                    println("this is VI")
+                    tjlf_LS() ############### have to create this ###############
                     ############### these are prob outputs ###############
                     g2 = gm
                     t2 = tm
@@ -201,10 +191,13 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
             elseif(g2==gmax)
                 if(t2<tmax) # shift past t2 and compute new g2,t2
                     tp = t2 + dt
-                    inputs.WIDTH = 10.0^tp
+                    width_parameter = 10.0^tp
                     new_width = true
-                    tglf_LS() ############### have to create this ###############
-                    ############### these are prob outputs ###############
+                    println("this is VII")
+                    nmodes_out, gamma_out, freq_out, 
+                    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                            width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                            vexb_shear_s) 
                     gm = g2
                     tm = t2
                     g2 = gamma_out[1]
@@ -212,43 +205,55 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
 
                     # compute new g1,t1
                     tp = tm - dt
-                    inputs.WIDTH = 10.0^tp
+                    width_parameter = 10.0^tp
                     new_width = true
-                    tglf_LS() ############### have to create this ###############
-                    ############### these are prob outputs ###############
+                    println("this is VIII")
+                    nmodes_out, gamma_out, freq_out, 
+                    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                            width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                            vexb_shear_s) 
                     g1 = gamma_out[1]
                     t1 = tp
                 else  # t2 at tmax shrink towards t2
                     tp = t2 - dt
-                    inputs.WIDTH = 10.0^tp
+                    width_parameter = 10.0^tp
                     new_width = true
-                    tglf_LS() ############### have to create this ###############
-                    ############### these are prob outputs ###############
+                    println("this is IX")
+                    nmodes_out, gamma_out, freq_out, 
+                    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                            width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                            vexb_shear_s) 
                     g1 = gm
                     t1 = tm
                     gm = gamma_out[1]
-                    tm = tp               
+                    tm = tp
                 end
 
 
             else  # gm==gmax
                 # compute new g1,t1 and g2,t2 closer to gm,tm
                 tp = tm - dt
-                inputs.WIDTH = 10.0^tp
+                width_parameter = 10.0^tp
                 new_width = true
-                tglf_LS() ############### have to create this ###############
-                ############### these are prob outputs ###############
+                println("this is X")
+                nmodes_out, gamma_out, freq_out, 
+                particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                        width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                        vexb_shear_s)
                 g1 = gamma_out[1]
                 t1 = tp
 
                 tp = tm + dt
-                inputs.WIDTH = 10.0^tp
+                width_parameter = 10.0^tp
                 new_width = true
-                tglf_LS() ############### have to create this ###############
-                ############### these are prob outputs ###############
+                println("this is XI")
+                nmodes_out, gamma_out, freq_out, 
+                particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                        width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                        vexb_shear_s)
                 g2 = gamma_out[1]
                 t2 = tp
-            end          
+            end
         end  # end of bisection search main loop
 
         # find final maximum
@@ -263,51 +268,20 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
             tp = t2
         end
         gamma_max = gmax
-        inputs.WIDTH = 10.0^tp        
+        width_parameter = 10.0^tp        
     end # done with bisection search
 
-
-
-    ### output value??
     gamma_nb_min_out = gamma_max
-    #  reset ibranch_in
-    inputs.IBRANCH = save_ibranch
 
     if(gamma_max!=0.0) # refine eigenvalue with more basis functions
         
-        nbasis = save_nbasis
-        if(sat_rule_in==2 || sat_rule_in==3)
-            inputs.USE_BPER = save_bper
-            inputs.USE_BPAR = save_bpar
-        end
-         
-        inputs.IFLUX = save_iflux
+        nbasis = inputs.NBASIS_MAX
+        println("this is XII")
         new_width = true
-        gamma_out, 
-        freq_out, 
-        v_QL_out, 
-        a_par_QL_out,
-        b_par_QL_out,
-        phi_bar_out,
-        a_par_bar_out,
-        b_par_bar_out,
-        v_bar_out,
-        ne_te_phase_out,
-        field_weight_out,
-        particle_QL_out,
-        energy_QL_out,
-        stress_par_QL_out,
-        stress_tor_QL_out,
-        exchange_QL_out,
-        N_QL_out,
-        T_QL_out,
-        U_QL_out,
-        Q_QL_out,
-        N_bar_out,
-        T_bar_out,
-        U_bar_out,
-        Q_bar_out,
-        Ns_Ts_phase_out = tjlf_LS(inputs, ky_s, vexb_shear_s) ############### have to create this ###############
+        nmodes_out, gamma_out, freq_out, 
+        particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, 
+                width_parameter, iflux_parameter,ibranch_parameter,use_bper_parameter,use_bpar_parameter,
+                vexb_shear_s)
 
         if(inputs.IBRANCH==-1) # check for inward ballooning modes
             if(inputs.USE_INBOARD_DETRAPPED && ft_test > modB_test) ####### find ft_test and modB_test
@@ -315,6 +289,7 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
                 new_geometry = false
                 new_width = false
                 new_matrix = true
+                println("this is XIII")
                 tjlf_LS() ############### have to create this ###############
            end
         end
@@ -329,38 +304,39 @@ function tjlf_max(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::O
             inputs.USE_BPER = save_bper
             inputs.USE_BPAR = save_bpar
         end
-        gamma_out = zeros(Float64,inputs.NMODES)
-        freq_out = zeros(Float64,inputs.NMODES)
+        maxmodes = 16 #### from tglf_modules
+        gamma_out = zeros(Float64,maxmodes)
+        freq_out = zeros(Float64,maxmodes)
     end
+    
+    return nmodes_out, gamma_nb_min_out, gamma_out, freq_out, 
+    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
 
-    nbasis = save_nbasis ####### worrisome, is this an output? 
-    inputs.IFLUX = save_iflux
-
-    return gamma_nb_min_out,
-            gamma_out,
-            freq_out,
-            v_QL_out, 
-            a_par_QL_out,
-            b_par_QL_out,
-            phi_bar_out,
-            a_par_bar_out,
-            b_par_bar_out,
-            v_bar_out,
-            ne_te_phase_out,
-            field_weight_out,
-            particle_QL_out,
-            energy_QL_out,
-            stress_par_QL_out,
-            stress_tor_QL_out,
-            exchange_QL_out,
-            N_QL_out,
-            T_QL_out,
-            U_QL_out,
-            Q_QL_out,
-            N_bar_out,
-            T_bar_out,
-            U_bar_out,
-            Q_bar_out,
-            Ns_Ts_phase_out
+    # return gamma_nb_min_out,
+    #         gamma_out,
+    #         freq_out,
+    #         v_QL_out, 
+    #         a_par_QL_out,
+    #         b_par_QL_out,
+    #         phi_bar_out,
+    #         a_par_bar_out,
+    #         b_par_bar_out,
+    #         v_bar_out,
+    #         ne_te_phase_out,
+    #         field_weight_out,
+    #         particle_QL_out,
+    #         energy_QL_out,
+    #         stress_par_QL_out,
+    #         stress_tor_QL_out,
+    #         exchange_QL_out,
+    #         N_QL_out,
+    #         T_QL_out,
+    #         U_QL_out,
+    #         Q_QL_out,
+    #         N_bar_out,
+    #         T_bar_out,
+    #         U_bar_out,
+    #         Q_bar_out,
+    #         Ns_Ts_phase_out
 
 end

@@ -145,12 +145,14 @@ if(new_matrix)then
 !  solver for linear eigenmodes of tglf equations
 !
       call tglf_eigensolver
+
     !   open(unit=33,file='temp',status='OLD',position='APPEND', action='WRITE')
-    !   write(33,*) alpha
+    !   write(*,*) rr !DSUN
     !   close(33)
-    !   write(*,*) beta
-    !   write(*,*) amat
-    !   write(*,*) bmat
+    !   write(*,*) beta!DSUN
+    !   write(*,*) amat!DSUN
+    !   write(*,*) bmat!DSUN
+    !   STOP 'plz stop'
 !      write(*,*)"eigensolver done"
 !
 !      initalize output to zero

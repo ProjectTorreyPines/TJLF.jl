@@ -73,15 +73,16 @@
        jmax_out = 0         ! ID for first pass
        write(*,*) "this is a"
        CALL get_bilinear_spectrum
-    !    do is=ns0,ns
-    !     do j=1,3
-    !        do m=1,nmodes_in
-    !          do i=1,nky
-    !            write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
-    !          enddo  ! i
-    !       enddo ! m
-    !     enddo  ! j
-    !  enddo  ! is
+       do is=ns0,ns
+        do j=1,3
+           do m=1,nmodes_in
+             do i=1,nky
+               write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
+             enddo  ! i
+          enddo ! m
+        enddo  ! j
+     enddo  ! is
+     stop "STOP"
        eigenvalue_first_pass(:,:,:) = eigenvalue_spectrum_out(:,:,:)
        vexb_shear_s = save_vexb_shear
        find_width_in = .FALSE.
@@ -362,6 +363,7 @@
 !        width_out(i) = width_save(i)
         width_out(i) = width_in
         if(unstable)then
+            write(*,*) "DSUN"
 ! save the spectral shift of the radial wavenumber due to VEXB_SHEAR
          spectral_shift_out(i) = kx0_e
          ave_p0_spectrum_out(i) = ave_p0_out
@@ -418,6 +420,7 @@
               flux_spectrum_out(3,is,j,i,imax) = phi_bar*stress_tor1
               flux_spectrum_out(4,is,j,i,imax) = phi_bar*stress_par1
               flux_spectrum_out(5,is,j,i,imax) = phi_bar*exch1
+              write(*,*) pflux1
             enddo !imax
            enddo ! j
          enddo  ! is 
@@ -432,6 +435,7 @@
            enddo  !imax
           enddo    ! is
         endif !unstable .T.
+        stop "DSUN"
 !
 ! reset width to maximum if used tglf_max
         if(find_width_in)width_in=save_width

@@ -13,7 +13,7 @@ include("tjlf_geometry.jl")
 #     and this function creates it accordingly
 # 
 
-function get_ky_spectrum(inputs::InputTJLF)
+function get_ky_spectrum(inputs::InputTJLF{T})::Tuple{Vector{T}, Int} where T<:Real
     
     ### global variable
     new_kyspectrum = false
@@ -47,8 +47,8 @@ function get_ky_spectrum(inputs::InputTJLF)
 
     if(spectrum_type == 0)
         nky = nky_in
-        ky_spectrum = zeros(nky)
-        dky_spectrum = zeros(nky)
+        ky_spectrum = Vector{Float64}(undef,nky)
+        dky_spectrum = Vector{Float64}(undef,nky)
         ky1 = ky_in
         dky0 = ky1/nky_in
         for i = 1:nky
@@ -58,8 +58,8 @@ function get_ky_spectrum(inputs::InputTJLF)
 
     elseif(spectrum_type == 1)   # APS07 spectrum
         nky = 9
-        ky_spectrum = zeros(nky + nky_in)
-        dky_spectrum = zeros(nky + nky_in)
+        ky_spectrum = Vector{Float64}(undef,nky + nky_in)
+        dky_spectrum = Vector{Float64}(undef,nky + nky_in)
 
         ky_max = 0.9*ky_factor/rho_ion
         dky0 = ky_max/nky
@@ -90,8 +90,8 @@ function get_ky_spectrum(inputs::InputTJLF)
         nky2 = 7
         nky = nky1 + nky2
 
-        ky_spectrum = zeros(nky_in + nky)
-        dky_spectrum = zeros(nky_in + nky)
+        ky_spectrum = Vector{Float64}(undef,nky + nky_in)
+        dky_spectrum = Vector{Float64}(undef,nky + nky_in)
 
         dky0 = 0.05*ky_factor/rho_ion
         for i = 1:nky1
@@ -126,8 +126,8 @@ function get_ky_spectrum(inputs::InputTJLF)
         nky1 = Int(floor(ky_max/ky_in)) - 1
         nky2 = 1
         nky = nky1 + nky2
-        ky_spectrum = zeros(nky_in + nky)
-        dky_spectrum = zeros(nky_in + nky)
+        ky_spectrum = Vector{Float64}(undef,nky + nky_in)
+        dky_spectrum = Vector{Float64}(undef,nky + nky_in)
 
         ky_min = ky_in
         dky0 = ky_min
@@ -170,8 +170,8 @@ function get_ky_spectrum(inputs::InputTJLF)
         nky2 = 7
         nky = nky1 + nky2
 
-        ky_spectrum = zeros(nky_in + nky)
-        dky_spectrum = zeros(nky_in + nky)
+        ky_spectrum = Vector{Float64}(undef,nky + nky_in)
+        dky_spectrum = Vector{Float64}(undef,nky + nky_in)
 
         ky_min = 0.05*ky_factor/rho_ion
         for i = 1:nky1

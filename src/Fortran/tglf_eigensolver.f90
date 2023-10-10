@@ -229,9 +229,9 @@
        damp_sig = 0.0
        if(use_bpar_in)then
          if(nbasis.eq.2)then
-           betae_psi = 0.5*betae_s/(ky*ky+(damp_sig_in*vs(2)/(q_unit*width_in))**2)
+           betae_sig = 0.5*betae_s/(ky*ky+(damp_sig_in*vs(2)/(q_unit*width_in))**2)
          else
-           betae_psi = 0.5*betae_s/(ky*ky)
+           betae_sig = 0.5*betae_s/(ky*ky)
          endif
 !      damp_sig = damp_sig_in/MAX(betae_sig*vs(1)*vs(1),0.001)
        endif
@@ -544,7 +544,7 @@
       do is = ns0,ns
 !
         ft = fts(is)
- !       write(*,*)"fts = ",is,fts(is)
+    !    write(*,*)"fts = ",is,fts(is)
         ft2 = ft*ft
         ft3 = ft*ft2
         ft4 = ft*ft3
@@ -2126,6 +2126,11 @@
         -d_ee*nuei_p1_n  &
         -xnuei*d_ij*xnu_p1_1*(gt1-ft2*gt3) 
       bmat(ia,ja) = -1.0*(phi_B + psi_BN)
+            !DSUNNN
+    !   if(ia.eq.47.and.ja.eq.43)then
+    !     write(*,*) gu2rgt3
+    !     write(*,*) gu2igt3
+    !     endif
 !
       ja = 7*nbasis+jb + ja0
       amat(ia,ja) = k_par1*grad_gu1*vs(is) -1.0*(psi_A + phi_AU)
@@ -2858,32 +2863,32 @@
       enddo
       enddo
 
+      !DSUNNNNN
+    !   OPEN(unit=33,file="matrixA",status='replace')!,position='APPEND', action='WRITE')
+    ! !   
+    !   write(33,*)"iur = ",iur
+    !   do is=1,iur
+    !     write(33,*)"i = ",is
+    !     do js=1,iur
+    !            write(33,*)"j = ",js
+    !            write(33,*) amat(is,js)
+    !     enddo  ! j
+    !  enddo  ! i
+    ! !
+    !   CLOSE(33)
 
-      OPEN(unit=33,file="matrixA",status='replace')!,position='APPEND', action='WRITE')
-    !   
-      write(33,*)"iur = ",iur
-      do is=1,iur
-        write(33,*)"i = ",is
-        do js=1,iur
-               write(33,*)"j = ",js
-               write(33,*) amat(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-      CLOSE(33)
-
-      OPEN(unit=33,file="matrixB",status='replace')!,position='APPEND', action='WRITE')
-    !
-      write(33,*)"iur = ",iur
-      do is=1,iur
-        write(33,*)"i = ",is
-        do js=1,iur
-               write(33,*)"j = ",js
-               write(33,*) bmat(is,js)
-        enddo  ! j
-     enddo  ! i
-    !
-      CLOSE(33)
+    !   OPEN(unit=33,file="matrixB",status='replace')!,position='APPEND', action='WRITE')
+    ! !
+    !   write(33,*)"iur = ",iur
+    !   do is=1,iur
+    !     write(33,*)"i = ",is
+    !     do js=1,iur
+    !            write(33,*)"j = ",js
+    !            write(33,*) bmat(is,js)
+    !     enddo  ! j
+    !  enddo  ! i
+    ! !
+    !   CLOSE(33)
 
       call zggev("N",rightvectors,iur,at,iur,bt,iur,    &
                   alpha,beta,vleft,iur,vright,iur,work,lwork,rwork,info)

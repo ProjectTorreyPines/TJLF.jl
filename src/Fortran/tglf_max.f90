@@ -103,10 +103,6 @@
        gamma_n(i) = gamma_out(1)
        freq_n(i) = freq_out(1)
       enddo
-    !   write(*,*) v_bar_out
-    !   write(*,*) ne_te_phase_out
-    !   write(*,*) field_weight_out
-      STOP 'You will not pass'
 !      close(2)
 ! find the global maximum
       gamma_max=gamma_n(nt)
@@ -231,7 +227,7 @@
                g1 = gm
                t1 = tm
                gm = gamma_out(1)
-               tm = tp               
+               tm = tp
              endif
            else  ! gm.eq.gmax
 ! compute new g1,t1 and g2,t2 closer to gm,tm

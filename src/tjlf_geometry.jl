@@ -74,7 +74,7 @@ end
 
 
 
-function xgrid_functions_geo(inputs::InputTJLF, outputGeo::OutputGeometry, ky::Vector{T}, gammas::Matrix{T}) where T<:Real
+function xgrid_functions_geo(inputs::InputTJLF, ky::Vector{T}, gammas::Matrix{T}) where T<:Real
     sign_IT = inputs.SIGN_IT
     vexb_shear = inputs.VEXB_SHEAR
     sat_rule_in = inputs.SAT_RULE
@@ -148,54 +148,37 @@ function xgrid_functions_geo(inputs::InputTJLF, outputGeo::OutputGeometry, ky::V
 end
 
 
-
-
-
-#### LINES 220-478 in tglf_geometry.f90
 function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
+    ky::T, width_parameter::T,
     mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
-    #******************************************************************************#************************
-    # PURPOSE: compute the geometric coefficients on the x-grid
-    #******************************************************************************#************************
-    
+
+
+
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
     rmin_s = inputs.RMIN_LOC
     q_s = inputs.Q_LOC
 
     
-    sat_rule_in = inputs.SAT_RULE
-    units_in = inputs.UNITS
     sign_Bt_in = inputs.SIGN_BT
     ns = inputs.NS
     ns0 = 1
     if(inputs.ADIABATIC_ELEC) ns0 = 2 end
     nx = 2*inputs.NXGRID - 1
-
-    s_p, Bp, b_geo, pk_geo, qrat_geo, sintheta_geo, costheta_geo, costheta_p_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, f, R, B, S_prime, kx_factor = mercier_luc(inputs)
     
-
     #*************************************************************
-    # find length along magnetic field y
+    # begin calculation of wdx and b0x
     #*************************************************************
+    s_p, Bp, b_geo, pk_geo, qrat_geo, sintheta_geo, costheta_geo, costheta_p_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, f, R, B, S_prime, kx_factor = mercier_luc(inputs)
     y = zeros(Float64,ms+1)
     y[1]=0.0
     for m in 2:ms+1
         y[m] = y[m-1]+s_p[m]*ds*4.0/(pk_geo[m]+pk_geo[m-1])
     end
-    # set the global units
     Ly = y[ms+1]
     R_unit = rmaj_s*b_geo[1]/(qrat_geo[1]*costheta_geo[1])
     q_unit = Ly/(2π*R_unit)
 
-    # # # save f for output
-    # # RBt_ave_out = f/B_unit
-
-
-    #*************************************************************
-    # begin calculation of wdx and b0x
-    #*************************************************************
-    ### S_prime, kx0, kx_factor
     kx0 = 0 ### only because there is no gammas yet
     x = outHermite.x
     kxx = Vector{Float64}(undef,nx)
@@ -207,7 +190,7 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
     cx_tor_per = Vector{Float64}(undef,nx)
     cx_par_par = Vector{Float64}(undef,nx)
     for i = 1:nx
-        thx = inputs.WIDTH * x[i]
+        thx = width_parameter * x[i]
         sign_theta = ifelse(thx>=0, 1.0, -1.0)
 
         loops = Int(floor(abs(thx/(2π))))
@@ -224,9 +207,9 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
         m1 = lastIndex - 1
         m2 = lastIndex
 
-        dkxky1 = sign_theta*loops*S_prime[ms]
+        dkxky1 = sign_theta*loops*S_prime[ms+1]
         y1 = y[m1]
-        dkxky2 = sign_theta*loops*S_prime[ms]
+        dkxky2 = sign_theta*loops*S_prime[ms+1]
         y2 = y[m2]
 
         ### kxx
@@ -358,12 +341,13 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
     #*************************************************************
     # compute trapped fraction
     #*************************************************************
-    kpar= 2π/(Ly*√(2)*inputs.WIDTH)
+    ### This can be made neater for sure -DSUN
+    kpar = 2π/(Ly*√(2)*width_parameter)
     bounce_y = min(Ly, π*inputs.THETA_TRAPPED/kpar)
 
     B_bounce = Bmax
     if(bounce_y<Ly)
-        index = 2
+        index = 1
         for i = 2:nb_grid+1
             index = i
             if(delta_y[i]>bounce_y) break end
@@ -373,7 +357,6 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
     ft = √(1.0 - Bmin/B_bounce)
     modB_min = abs(Bmin)
     modB_test = 0.5*(Bmax + Bmin)/Bmin
-    
     fts = Vector{Float64}(undef, ns)
     for is = ns0:ns
         fts[is] = max(ft,0.01)
@@ -382,28 +365,82 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
     xnu_model_in = inputs.XNU_MODEL
     wdia_trapped_in = inputs.WDIA_TRAPPED
     if(xnu_model_in==3 && wdia_trapped_in>0.0) 
-        error("NOT IMPLEMENTED YET -DSUN")
-    #     for is=ns0,ns
-    #     wdia = abs(ky*rlns_in(is))/vs(is)
-    # !      write(*,*)is,"wdia = ",wdia
-    #     kpar= pi_2/(Ly*sqrt_two*width_in)
-    #     ft0 = SQRT(1.0 - Bmin/Bmax)
-    #     cdt = wdia_trapped_in*3.0*(1.0-ft0*ft0)
-    #     kpar = kpar/MAX(theta_trapped_in,0.0001) + wdia*cdt
-    #     bounce_y = MIN(Ly,pi/kpar)
-    #     B_bounce = Bmax
-    #     if(bounce_y<Ly)then
-    #         do i=1,nb_grid
-    #         if(delta_y(i)>bounce_y)exit
-    #         enddo
-    #         B_bounce = By(i-1)+(By(i)-By(i-1))* &
-    #         (bounce_y-delta_y(i-1))/(delta_y(i)-delta_y(i-1))
-    #     endif
-    #     fts(is) = MAX(SQRT(1.0 - Bmin/B_bounce),ft_min)
-    #     enddo
+        theta_trapped_in = inputs.THETA_TRAPPED
+        for is = ns0:ns
+            taus = inputs.SPECIES[is].TAUS
+            mass = inputs.SPECIES[is].MASS
+            rlns = inputs.SPECIES[is].RLNS
+            vs = √(taus/mass)
+
+            wdia = abs(ky*rlns)/vs
+            kpar = 2π/(Ly*√(2)*width_parameter)
+            ft0 = √(1.0 - Bmin/Bmax)
+            cdt = 3*wdia_trapped_in*(1-ft0^2)
+            kpar = kpar/max(theta_trapped_in,0.0001) + wdia*cdt
+            bounce_y = min(Ly,π/kpar)
+            B_bounce = Bmax
+            if(bounce_y<Ly)
+                index = 1
+                for i = 2:nb_grid+1
+                    index = i
+                    if(delta_y[i]>bounce_y) break end
+                end
+                B_bounce = By[index-1] + (By[index] - By[index-1])*(bounce_y-delta_y[index-1])/(delta_y[index]-delta_y[index-1])
+            end
+            fts[is] = max(√(1 - Bmin/B_bounce),0.01)
+        end
     end
 
-    outputGeo = OutputGeometry(fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
+    return OutputGeometry{Float64}(fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
+
+end
+
+
+
+
+
+
+
+
+#### LINES 220-326, 478 in tglf_geometry.f90
+function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+    #******************************************************************************#************************
+    # PURPOSE: compute the geometric coefficients on the x-grid
+    #******************************************************************************#************************
+    
+    ### different for different geometries!!!
+    rmaj_s = inputs.RMAJ_LOC
+    rmin_s = inputs.RMIN_LOC
+    q_s = inputs.Q_LOC
+
+    
+    sat_rule_in = inputs.SAT_RULE
+    units_in = inputs.UNITS
+    sign_Bt_in = inputs.SIGN_BT
+    ns = inputs.NS
+    ns0 = 1
+    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    nx = 2*inputs.NXGRID - 1
+
+    s_p, Bp, b_geo, pk_geo, qrat_geo, sintheta_geo, costheta_geo, costheta_p_geo, Bt0_out, B_unit_out, grad_r_out, ds, t_s, f, R, B, S_prime, kx_factor = mercier_luc(inputs)
+    
+
+    #*************************************************************
+    # find length along magnetic field y
+    #*************************************************************
+    y = zeros(Float64,ms+1)
+    y[1]=0.0
+    for m in 2:ms+1
+        y[m] = y[m-1]+s_p[m]*ds*4.0/(pk_geo[m]+pk_geo[m-1])
+    end
+    # set the global units
+    Ly = y[ms+1]
+    R_unit = rmaj_s*b_geo[1]/(qrat_geo[1]*costheta_geo[1])
+    q_unit = Ly/(2π*R_unit)
+
+    # # # save f for output
+    # # RBt_ave_out = f/B_unit
+
 
     #*************************************************************
     #  compute flux surface averages
@@ -460,13 +497,11 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
     theta_out = t_s  # theta grid over which everything is calculated.
     Bt_out = B  # total magnetic field matching theta_out grid.
 
-    satParams = SaturationParameters(SAT_geo0_out,SAT_geo1_out,SAT_geo2_out,
-                                    R_unit,q_unit,
-                                    Bt0_out,B_geo0_out,
+    return SaturationParameters{Float64}(SAT_geo0_out,SAT_geo1_out,SAT_geo2_out,
+                                    R_unit,B_unit_out[end],q_unit,
+                                    Bt_out,Bt0_out,B_geo0_out,
                                     grad_r_out,grad_r0_out,
-                                    theta_out,Bt_out,B_unit_out)
-    
-    return outputGeo, satParams
+                                    theta_out)
 
 end
 

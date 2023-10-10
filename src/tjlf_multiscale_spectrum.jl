@@ -17,7 +17,7 @@ include("intensity_sat_rules.jl")
 #     finds the maximum of gamma/ky spectrum at low-k values by going through the ky_mix
 #     array, then after finding the max, interpolate the value to improve accuracy
 #   
-function get_zonal_mixing(inputs::InputTJLF, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
+function get_zonal_mixing(inputs::InputTJLF{T}, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
 
 
     sat_rule_in = inputs.SAT_RULE
@@ -200,7 +200,7 @@ end
 
 ######### DSUN thoughts of splitting intensity_sat into 3 functions to help with readability?
 ######### abandoned for now, but can be seen in the intensity.jl file
-function intensity_sat(inputs::InputTJLF, ky_spect::Vector{T}, gp::Array{T}, QL_data::Array{T}, expsub::T=2.0, return_phi_params::Bool=false) where T<: Real
+function intensity_sat(inputs::InputTJLF{T}, ky_spect::Vector{T}, gp::Array{T}, QL_data::Array{T}, expsub::T=2.0, return_phi_params::Bool=false) where T<: Real
     if inputs.SAT_RULE == 1
         return intensity_sat1(inputs, ky_spect, gp, QL_data)
     elseif inputs.SAT_RULE == 2
@@ -232,7 +232,7 @@ end
 #     called get_multiscale_spectrum in the Fortran
 # 
 function intensity_sat(
-    inputs::InputTJLF,
+    inputs::InputTJLF{T},
     ky_spect::Vector{T},
     gp::Array{T},
     QL_data::Array{T}, ### taken from the output file
@@ -818,7 +818,7 @@ end
 # 
 
 function sum_ky_spectrum(
-    inputs::InputTJLF,
+    inputs::InputTJLF{T},
     ky_spect::Vector{T},
     gp::Array{T},
     ave_p0::Vector{T},

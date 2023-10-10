@@ -9,19 +9,36 @@ include("tjlf_matrix.jl")
 #  for a single ky
 #
 #***********************************************************************
-function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::OutputHermite, ky::T, vexb_shear_s::T) where T <: Real
+function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, 
+    ky::T) where T <: Real
+    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
+    width_in = inputs.WIDTH
+    iflux_in = inputs.IFLUX
+    ibranch_in = inputs.IBRANCH
+    use_bper_in = inputs.USE_BPER
+    use_bpar_in = inputs.USE_BPAR
+    vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
+    return tjlf_LS(inputs,satParams,outputHermite,
+                    ky, nbasis,
+                    width_in,iflux_in,ibranch_in,use_bper_in,use_bpar_in,vexb_shear_s)
+end
+function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, 
+            ky::T, 
+            nbasis::Int, width_parameter::T,iflux_parameter::Bool,ibranch_parameter::Int,
+            use_bper_parameter::Bool,use_bpar_parameter::Bool,
+            vexb_shear_s::T) where T <: Real
 
     small = 1.0e-13
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
     ns = inputs.NS
-    nbasis = inputs.NBASIS_MAX ### double check this
-    width_in = inputs.WIDTH
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     alpha_quench_in = inputs.ALPHA_QUENCH
-    iflux_in = inputs.IFLUX
     new_eikonal_in = inputs.NEW_EIKONAL
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    
+
+    R_unit = satParams.R_unit
+    q_unit = satParams.q_unit
 
     new_geometry = true ###### hardcoded for now
     # check co-dependencies
@@ -62,6 +79,7 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
         if(new_width)
             # trace_path[6]=1
             # get_xgrid_functions() ############### have to create this ###############
+            outputGeo = xgrid_functions_geo(inputs, outputHermite, ky, width_parameter)
             R_unit, q_unit = get_sat_params(:rq_units,inputs) ### no work if igeo is 0
         end
     end  #new_eikonal_in
@@ -73,11 +91,11 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
     new_matrix = true ####### hard code for now
     if(new_matrix)
         # trace_path[7]=1
-        ave,aveH,aveW,aveK = get_matrix(inputs, outputGeo, outputHermite, ky) ############### have to create this ###############
+        ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG = get_matrix(inputs, outputGeo, outputHermite, ky, width_parameter) ############### have to create this ###############
     end
 
     #  solver for linear eigenmodes of tglf equations
-    amat, bmat, alpha, beta, rr, ri = tjlf_eigensolver(inputs)
+    amat, bmat, alpha, beta, rr, ri = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,ky,width_parameter)
     # println(rr)
     # println(ri)
     # println(alpha)
@@ -86,7 +104,7 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
     # println(bmat)
 
     #  initalize output to zero
-    maxmodes = 16 #### no idea what maxmodes is
+    maxmodes = 16 #### from tglf_modules
     jmax = zeros(Int, maxmodes)
     gamma_out = zeros(Float64, maxmodes)
     freq_out = zeros(Float64, maxmodes)
@@ -117,7 +135,7 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
     Ns_Ts_phase_out = zeros(Float64, maxmodes, ns)
 
 
-    if(inputs.IBRANCH==0)
+    if(ibranch_parameter==0)
         di = zeros(Int, iur)
         de = zeros(Int, iur)
         nmodes_out = nmodes_in
@@ -163,7 +181,7 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
         end
 
 
-    elseif(inputs.IBRANCH==-1)
+    elseif(ibranch_parameter==-1)
         # find the top nmodes most unstable modes
         ### put the unstable modes in ascending order by growthrate
         sortperm
@@ -185,7 +203,7 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
     # apply quench rule
     if(alpha_quench_in!=0.0)
         for j1 = 1:nmodes_in
-            gamma_out[j1] = get_gamma_net(inputs, gamma_out[j1])
+            gamma_out[j1] = get_gamma_net(inputs, gamma_out[j1],vexb_shear_s)
         end
         
     # use spectral shift model for second pass
@@ -199,7 +217,7 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
     # get the fluxes for the most unstable modes
     v = zeros(ComplexF64, iur)
     zmat = Matrix{ComplexF64}(undef, iur, iur)
-    if(iflux_in)
+    if(iflux_parameter)
         wd_bar_out = Vector{Float64}(undef, nmodes_out)
         b0_bar_out = Vector{Float64}(undef, nmodes_out)
         modB_bar_out = Vector{Float64}(undef, nmodes_out)
@@ -251,7 +269,7 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
                 a_par_QL_out[imax] = a_par_weight
                 b_par_QL_out[imax] = b_par_weight
                 kx_bar_out[imax] = kx_bar
-                kpar_bar_out[imax] = kpar_bar/(R_unit*q_unit*width_in)
+                kpar_bar_out[imax] = kpar_bar/(R_unit*q_unit*width_parameter)
 
                 for i = 1:nbasis
                     for j = 1:3
@@ -280,7 +298,7 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
                     v_bar_out[imax] = 0.0
                     phi2_bar = 0.0
                 else
-                    v_bar_out[imax] = get_intensity(inputs, R_unit, kyi,gamma_out[imax]) ############### can use some cleaning
+                    v_bar_out[imax] = get_intensity(inputs, ave, R_unit, kyi,gamma_out[imax]) ############### can use some cleaning
                     phi2_bar = v_bar_out[imax]/v_QL_out[imax]
                 end
 
@@ -310,47 +328,56 @@ function tjlf_LS(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::Ou
         ft_test = ft_test/modB_min
     end
 
+    return nmodes_out, gamma_out, freq_out,
+    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
 
-    return  gamma_out, 
-            freq_out, 
-            v_QL_out, 
-            a_par_QL_out,
-            b_par_QL_out,
-            phi_bar_out,
-            a_par_bar_out,
-            b_par_bar_out,
-            v_bar_out,
-            ne_te_phase_out,
-            field_weight_out,
-            particle_QL_out,
-            energy_QL_out,
-            stress_par_QL_out,
-            stress_tor_QL_out,
-            exchange_QL_out,
-            N_QL_out,
-            T_QL_out,
-            U_QL_out,
-            Q_QL_out,
-            N_bar_out,
-            T_bar_out,
-            U_bar_out,
-            Q_bar_out,
-            Ns_Ts_phase_out
+    # return  gamma_out, 
+    #         freq_out, 
+    #         v_QL_out, 
+    #         a_par_QL_out,
+    #         b_par_QL_out,
+    #         phi_bar_out,
+    #         a_par_bar_out,
+    #         b_par_bar_out,
+    #         v_bar_out,
+    #         ne_te_phase_out,
+    #         field_weight_out,
+    #         particle_QL_out,
+    #         energy_QL_out,
+    #         stress_par_QL_out,
+    #         stress_tor_QL_out,
+    #         exchange_QL_out,
+    #         N_QL_out,
+    #         T_QL_out,
+    #         U_QL_out,
+    #         Q_QL_out,
+    #         N_bar_out,
+    #         T_bar_out,
+    #         U_bar_out,
+    #         Q_bar_out,
+    #         Ns_Ts_phase_out
 
 end
 
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+#--------------------------------------------------------------
+#--------------------------------------------------------------
 
 
-
-function get_intensity(inputs::InputTJLF, R_unit::T, kp::T, gp::T) where T<:Real
+function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, R_unit::T, kp::T, gp::T) where T<:Real
 
     nmodes_in = inputs.NMODES
     sat_rule_in = inputs.SAT_RULE
     etg_factor_in = inputs.ETG_FACTOR
     alpha_quench_in = inputs.ALPHA_QUENCH
 
-    ave_p0_out = 2.5120676255603973 ################## ave_p0(1,1), but this comes from tjlf_matrix which I haven't implemented yet ##################
-    pols = (ave_p0_out/abs(inputs.SPECIES[1].AS*inputs.SPECIES[1].ZS^2))^2
+    pols = (ave.p0[1,1]/abs(inputs.SPECIES[1].AS*inputs.SPECIES[1].ZS^2))^2
     ks = kp* √(inputs.SPECIES[1].TAUS*inputs.SPECIES[2].MASS)/abs(inputs.SPECIES[1].ZS)
     measure = √(inputs.SPECIES[1].TAUS*inputs.SPECIES[2].MASS)
     
@@ -402,13 +429,12 @@ end
 
 #--------------------------------------------------------------
 
-function get_gamma_net(inputs::InputTJLF, gp::T) where T<:Real
+function get_gamma_net(inputs::InputTJLF{T}, vexb_shear_s::T, gp::T) where T<:Real
     alpha_quench_in = inputs.ALPHA_QUENCH
-    vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
     kappa_loc = inputs.KAPPA_LOC ##### only true for MILLER
-
     alpha_exb = 0.3
     igeo = 1 ####### MILLER GEOMETRY for now
+
     if(igeo==1) alpha_exb=0.3*√(kappa_loc) end
     get_gamma_net =  max(gp - abs(alpha_exb*alpha_quench_in*vexb_shear_s),0.0)
 
@@ -419,20 +445,19 @@ end
 
 #compute the quasilinear weights for a single eigenmode
 #with eigenvector v. All of the QL weights are normalized to phi_norm
-function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
-    ave_p0inv, ave_b0inv, ave_bpinv, ave_wdh, ave_b0, ave_kx, ave_c_par_par, ave_kpar, ave_c_tor_par, ave_c_tor_per, ave_hp1)
+function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, 
+    ky::T, nbasis::T,
+    use_bper_parameter::T,use_bpar_parameter::T) where T<:Real
+    # , ky, v, eigenvalue,
+    # ave_p0inv, ave_b0inv, ave_bpinv, ave_wdh, ave_b0, ave_kx, ave_c_par_par, ave_kpar, ave_c_tor_par, ave_c_tor_per, ave_hp1)
 
     epsilon1 = 1.e-12
     sat_rule_in = inputs.SAT_RULE
     ns = inputs.NS
-    nbasis = inputs.NBASIS_MAX ### this might be wrong?
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     nroot=15 ### hardcoded
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
     iur = (ns-ns0+1)*nroot*nbasis
 
-    use_bper_in = inputs.USE_BPER
-    use_bpar_in = inputs.USE_BPAR
     vpar_model_in = inputs.VPAR_MODEL
     alpha_mach_in = inputs.ALPHA_MACH
     sign_It_in = inputs.SIGN_IT
@@ -465,7 +490,6 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
                 q_par[is,i] = q_par[is,i] -v[j+nbasis*10+i]
                 q_tot[is,i] = q_tot[is,i] -v[j+nbasis*11+i]
             end
-            # println(n[is,i])
         end
     end
 
@@ -473,26 +497,24 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
     # compute vnorm
     vnorm = 0.0
     if(ns<=2)
-        for i = 1:iur
-            vnorm = vnorm + real(v[i]*conj(v[i]))
-        end
+        vnorm = norm(v)
     else #weight vnorm by equililibrium densities
         j = 1
-        as = inputs.SPECIES[j].AS
-        zs = inputs.SPECIES[j].ZS
         for i = 1:iur
             if(i>j*nbasis*nroot) j=j+1 end
+            as = inputs.SPECIES[j].AS
+            zs = inputs.SPECIES[j].ZS
             vnorm = vnorm + real(v[i]*conj(v[i]))*abs(as*zs)
         end
-        vnorm = vnorm/abs(as*zs)   #normalize to electron charge density
+        vnorm = vnorm/abs(inputs.SPECIES[1].AS*inputs.SPECIES[1].ZS)   #normalize to electron charge density
     end
     
     # compute the electromagnetic potentials
     betae_s = inputs.BETAE ##### not true for 'GENE' units
     betae_psi = 0.0
-    if(use_bper_in) betae_psi = 0.5*betae_s/(ky*ky) end
+    if(use_bper_parameter) betae_psi = 0.5*betae_s/(ky*ky) end
     betae_sig = 0.0
-    if(use_bpar_in) betae_sig = 0.5*betae_s end
+    if(use_bpar_parameter) betae_sig = 0.5*betae_s end
 
     phi = zeros(ComplexF64, nbasis)
     psi = zeros(ComplexF64, nbasis)
@@ -507,6 +529,8 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
         U0 = U0 + as*vpar_s*zs^2/taus
     end
 
+
+    ### there must be some lienar algebra to clean this up
     for i = 1:nbasis
         for is = ns0:ns
             taus = inputs.SPECIES[is].TAUS
@@ -515,85 +539,50 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
             zs = inputs.SPECIES[is].ZS
             vs = √(taus/mass)
 
-            for j = 1:nbasis
-                phi[i] = phi[i] +ave_p0inv[i,j]*n[is,j]*as*zs
-            end
+            phi[i] += (ave.p0inv[i,:].*(as*zs))*transpose(n[is,:])
 
-            if(use_bper_in)
-                for j = 1:nbasis
-                    psi[i] = psi[i] + betae_psi*ave_b0inv[i,j]*u_par[is,j]* as*zs*vs
-                end
+            if(use_bper_parameter)
+                psi[i] +=( ave.b0inv[i,:].*(as*vs*zs*betae_psi))*transpose(u_par[is,:])
                 
                 if(vpar_model_in==0)
-                    for j = 1:nbasis
-                        phi[i] = phi[i] + U0*betae_psi*ave_bpinv[i,j]*u_par[is,j]* as*zs*vs
-                        psi[i] = psi[i] - U0*betae_psi*ave_bpinv[i,j]*n[is,j]* as*zs
-                    end
+                    phi[i] += (ave.bpinv[i,:].*(U0*betae_psi*as*zs*vs)) *transpose(u_par[is,:])
+                    psi[i] -= (ave.bpinv[i,:].*(U0*betae_psi*as*zs))    *transpose(n[is,:])
                 end
             end
           
-            if(use_bpar_in)
+            if(use_bpar_parameter)
                 bsig[i] = bsig[i] - betae_sig* as * taus * (1.5*p_tot[is,i]-0.5*p_par[is,i])
             end
         end
     end
-    # println(phi)
 
     # add the adiabatic terms to the total moments
     for is = ns0:ns
         zs = inputs.SPECIES[is].ZS
         taus = inputs.SPECIES[is].TAUS
-        for i = 1:nbasis
-            n[is,i] = n[is,i] - phi[i]*zs/taus
-            p_par[is,i] = p_par[is,i] - phi[i]*zs/taus
-            p_tot[is,i] = p_tot[is,i] - phi[i]*zs/taus
-        end
+        n[is,:] .= n[is,:] .- (phi.*(zs/taus))
+        p_par[is,:] .= p_par[is,:] .- (phi.*(zs/taus))
+        p_tot[is,:] .= p_tot[is,:] .- (phi.*(zs/taus))
     end
 
     # compute phi_norm, psi_norm, sig_norm
-    phi_norm = 0.0
-    psi_norm = 0.0
-    bsig_norm = 0.0
-    for i = 1:nbasis
-        phi_norm = phi_norm + real(phi[i]*conj(phi[i]))
-        psi_norm = psi_norm + real(psi[i]*conj(psi[i]))
-        bsig_norm = bsig_norm + real(bsig[i]*conj(bsig[i]))
-    end
+    phi_norm = norm(phi)
+    psi_norm = norm(psi)
+    bsig_norm = norm(bsig)
     if(phi_norm<epsilon1) phi_norm = epsilon1 end
 
     #save the field weights
     field_weight_QL_out = Matrix{ComplexF64}(undef, 3,nbasis)
-    for i = 1:nbasis
-        field_weight_QL_out[1,i] = im*phi[i]/√(phi_norm)
-        field_weight_QL_out[2,i] = im*psi[i]/√(phi_norm)
-        field_weight_QL_out[3,i] = im*bsig[i]/√(phi_norm)
-    end
+    field_weight_QL_out[1,:] .= phi .* (im/√(phi_norm))
+    field_weight_QL_out[2,:] .= psi .* (im/√(phi_norm))
+    field_weight_QL_out[3,:] .= bsig.* (im/√(phi_norm))
 
     #compute <phi|*|phi> averages
-    phi_wd_phi = 0.0
-    phi_b0_phi = 0.0
-    phi_modB_phi = 0.0
-    phi_kx_phi = 0.0
-    phi_kpar_phi = 0.0
-    for i = 1:nbasis
-        wd_phi = 0.0
-        b0_phi = 0.0
-        modB_phi = 0.0
-        kx_phi = 0.0
-        kpar_phi = 0.0
-        for j = 1:nbasis
-            wd_phi = wd_phi + ave_wdh[i,j]*phi[j]
-            b0_phi = b0_phi + ave_b0[i,j]*phi[j]
-            modB_phi = modB_phi + ave_c_par_par[i,j]*phi[j]
-            kx_phi = kx_phi + ave_kx[i,j]*phi[j]
-            kpar_phi = kpar_phi + im*ave_kpar[i,j]*phi[j]
-        end
-        phi_wd_phi = phi_wd_phi + conj(phi[i])*wd_phi
-        phi_b0_phi = phi_b0_phi + conj(phi[i])*b0_phi
-        phi_modB_phi = phi_modB_phi + conj(phi[i])*modB_phi
-        phi_kx_phi = phi_kx_phi + conj(phi[i])*kx_phi
-        phi_kpar_phi = phi_kpar_phi + conj(phi[i])*kpar_phi
-    end
+    phi_wd_phi = conj(phi) * ave_wdh * transpose(phi)
+    phi_b0_phi = conj(phi) * ave_b0 * transpose(phi)
+    phi_modB_phi =  conj(phi) * ave_c_par_par * transpose(phi)
+    phi_kx_phi = conj(phi)* ave_kx * transpose(phi)
+    phi_kpar_phi = conj(phi) * (im.*ave_kpar) * transpose(phi)
 
     wd_bar = real(phi_wd_phi)/phi_norm
     b0_bar = real(phi_b0_phi)/phi_norm
@@ -614,16 +603,10 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
         wp = ky*ave_hp1[is,1,1]*abs(alpha_p_in*vpar_shear_in)/vs
         if(sat_rule_in==0) stress_correction = (imag(freq_QL)+2.0*wp)/(imag(freq_QL)+wp) end
 
-        for i = 1:nbasis
-            stress_par[is,i,1] = u_par[is,i]*stress_correction
-            stress_par[is,i,2] = p_par[is,i]*stress_correction
-            stress_per[is,i,1] = 0.0
-            stress_per[is,i,2] = 0.0
-            for j = 1:nbasis
-                stress_per[is,i,1] = stress_per[is,i,1] + im*ky*ave_kx[i,j]*(1.5*p_tot[is,j]-0.5*p_par[is,j]) 
-                stress_per[is,i,2] = stress_per[is,i,2] + im*ky*ave_kx[i,j]*(1.5*q_tot[is,j]-0.5*q_par[is,j]) 
-            end
-        end
+        stress_par[is,:,1] .= u_par[is,:]*stress_correction
+        stress_par[is,:,2] .= p_par[is,:]*stress_correction
+        stress_per[is,:,1] .= (im*ky) .* (1.5.*p_tot[is,:] .- 0.5.*p_par[is,:])*transpose(ave_kx) # (is,j) x (j,i)
+        stress_per[is,:,2] .= (im*ky) .* (1.5.*q_tot[is,:] .- 0.5.*q_par[is,:])*transpose(ave_kx)
     end
 
 
@@ -655,7 +638,7 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
             exchange_weight[is,1] = (exchange_weight[is,1] 
                     + zs*real(im*freq_QL*conj(phi[i])*n[is,i]))
           
-            if(use_bper_in)
+            if(use_bper_parameter)
                 particle_weight[is,2] = (particle_weight[is,2]
                     - vs*real(im*conj(psi[i])*u_par[is,i]))
                 
@@ -674,7 +657,7 @@ function get_QL_weights(inputs::InputTJLF, ky, v, eigenvalue,
                         + ave_c_tor_per[i,j]*stress_per[is,j,2])))
                 end
             end
-            if(use_bpar_in)
+            if(use_bpar_parameter)
                 particle_weight[is,3] = (particle_weight[is,3]
                     + real(im*conj(bsig[i])*(1.5*p_tot[is,i]-0.5*p_par[is,i]))
                     * taus/zs)

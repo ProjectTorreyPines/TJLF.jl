@@ -5,19 +5,24 @@ include("tjlf_modules.jl")
 include("tjlf_finiteLarmorRadius.jl")
 
 
-function get_matrix(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::OutputHermite, ky::T) where T<:Real
+function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T}, 
+                ky::T, width_parameter::T) where T<:Real
 
-    nbasis = inputs.NBASIS_MAX
+    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
     ns = inputs.NS
 
     ave = Ave{Float64}(ns, nbasis)
     aveH = AveH{Float64}(ns, nbasis)
-    aveW = AveW{Float64}(ns, nbasis)
-    aveK = AveK(ns,nbasis)
+    aveWH = AveWH{Float64}(ns, nbasis)
+    aveKH = AveKH(ns, nbasis)
+
+    aveG = AveG{Float64}(ns, nbasis)
+    aveWG = AveWG{Float64}(ns, nbasis)
+    aveKG = AveKG(ns, nbasis)
 
     ####### need gauher and gauss-hermite() functions for wx and h matrix
-    FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, ky)
-    get_ave!(inputs, outputGeo, outputHermite, ave, ky)
+    FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky)
+    get_ave!(inputs, outputGeo, outputHermite, ave, ky, width_parameter)
 
     if(inputs.VPAR_MODEL==0 && inputs.USE_BPER)
         ave.bpinv = inv(ave.bp)
@@ -49,12 +54,27 @@ function get_matrix(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite:
         if(inputs.VPAR_MODEL==0) ave_hbp!(inputs, ave, aveH) end
     end
 
-    wd_h!(inputs, ave, aveH, aveW)
-    kpar_h!(inputs, ave, aveH, aveK)
+    wd_h!(inputs, ave, aveH, aveWH)
+    kpar_h!(inputs, ave, aveH, aveKH)
        
     if(inputs.GRADB_FACTOR!=0.0) error("Haven't implemented :)") end #gradB_h() end
 
-    return ave, aveH, aveW, aveK
+
+    nroot = 15 ###### hardcoded
+    if(nroot>6)
+        g_ratios!(inputs, aveG)
+        if(inputs.LINSKER_FACTOR!=0) error("Have't implemented :)") end #grad_ave_g
+        ave_gp0!(inputs, ave, aveG)
+        if(inputs.BETAE>0.0)
+            ave_gb0!(inputs, ave, aveG)
+            if(inputs.VPAR_MODEL==0) ave_gbp!(inputs, ave, aveG) end
+        end
+        wd_g!(inputs, ave, aveG, aveWG)
+        kpar_g!(inputs, ave, aveG, aveKG)
+        if(inputs.GRADB_FACTOR!=0.0) error("Haven't implemented :)") end #gradB_g
+    end
+
+    return ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG
 end
 
 
@@ -64,85 +84,130 @@ end
 #  begin computation of the FLR integrals
 #*************************************************************
 #  compute the FLR integrals at the hermite nodes
-function FLR_xgrid!(inputs::InputTJLF, outputGeo::OutputGeometry, outputHermite::OutputHermite, aveH::AveH, ky::T) where T<:Real
+function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T}, 
+    aveH::AveH{T}, aveG::AveG{T}, ky::T) where T<:Real
 
     zero_cut = 1.e-12
     nx = 2*inputs.NXGRID - 1
     ns = inputs.NS
-    nbasis = inputs.NBASIS_MAX
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     b0x = outputGeo.b0x
     b2x = outputGeo.b2x
     wx = outputHermite.wx
     h = outputHermite.h
 
-    fth=1.0
-    hxn = Matrix{Float64}(undef, ns, nx) ### might not be floats
+    
+    hxn = Matrix{Float64}(undef, ns, nx)
+    hxp1 = Matrix{Float64}(undef, ns, nx)
+    hxp3 = Matrix{Float64}(undef, ns, nx)
+    hxr11 = Matrix{Float64}(undef, ns, nx)
+    hxr13 = Matrix{Float64}(undef, ns, nx)
+    hxr33 = Matrix{Float64}(undef, ns, nx)
+    hxw113 = Matrix{Float64}(undef, ns, nx)
+    hxw133 = Matrix{Float64}(undef, ns, nx)
+    hxw333 = Matrix{Float64}(undef, ns, nx)
+    nroot = 15 ###### hardcoded
+    if(nroot>6)
+        gxn = Matrix{Float64}(undef, ns, nx)
+        gxp1 = Matrix{Float64}(undef, ns, nx)
+        gxp3 = Matrix{Float64}(undef, ns, nx)
+        gxr11 = Matrix{Float64}(undef, ns, nx)
+        gxr13 = Matrix{Float64}(undef, ns, nx)
+        gxr33 = Matrix{Float64}(undef, ns, nx)
+        gxw113 = Matrix{Float64}(undef, ns, nx)
+        gxw133 = Matrix{Float64}(undef, ns, nx)
+        gxw333 = Matrix{Float64}(undef, ns, nx)
+    end
+
+    fth = 1.0
     for i = 1:nx
-        for is =ns0:ns
+        for is = ns0:ns
             taus = inputs.SPECIES[is].TAUS
             mass = inputs.SPECIES[is].MASS
             zs = inputs.SPECIES[is].ZS
 
-            bb = taus*mass*(ky/zs)^2 
-            b = bb*b0x[i]/b2x[i]
-            hn    = FLR_Hn(fth,b)
-            hp1   = hn
-            hp3   = FLR_dHp3(fth,b)+hn
-            hr11  = 3.0*hp1
-            hr13  = FLR_dHr13(fth,b)+(5.0/3.0)*hp1
-            hr33  = FLR_dHr33(fth,b)+(5.0/3.0)*hp3
-            hw113 = FLR_dHw113(fth,b)+(7.0/3.0)*hr11
-            hw133 = FLR_dHw133(fth,b)+(7.0/3.0)*hr13
-            hw333 = FLR_dHw333(fth,b)+(7.0/3.0)*hr33
-
             #***************************************************************
             #   compute the average h-bessel functions
             #***************************************************************
-            for x = 1:nbasis
-                for y = x:nbasis
-                    ww = wx[i]*h[x,i]*h[y,i]
-                    aveH.hn[is,x,y]   = aveH.hn[is,x,y]  + hn*ww
-                    aveH.hp1[is,x,y]  = aveH.hp1[is,x,y]  + hp1*ww
-                    aveH.hp3[is,x,y]  = aveH.hp3[is,x,y]  + hp3*ww
-                    aveH.hr11[is,x,y] = aveH.hr11[is,x,y] + hr11*ww
-                    aveH.hr13[is,x,y] = aveH.hr13[is,x,y] + hr13*ww
-                    aveH.hr33[is,x,y] = aveH.hr33[is,x,y] + hr33*ww
-                    aveH.hw113[is,x,y] = aveH.hw113[is,x,y] + hw113*ww
-                    aveH.hw133[is,x,y] = aveH.hw133[is,x,y] + hw133*ww
-                    aveH.hw333[is,x,y] = aveH.hw333[is,x,y] + hw333*ww
+            bb = taus*mass*(ky/zs)^2 
+            b = bb*b0x[i]/b2x[i]
+            hxn[is,i]    = FLR_Hn(fth,b)
+            hxp1[is,i]   = hxn[is,i]
+            hxp3[is,i]   = FLR_dHp3(fth,b) + hxn[is,i]
+            hxr11[is,i]  = 3.0 * hxp1[is,i]
+            hxr13[is,i]  = FLR_dHr13(fth,b) + (5/3)*hxp1[is,i]
+            hxr33[is,i]  = FLR_dHr33(fth,b) + (5/3)*hxp3[is,i]
+            hxw113[is,i] = FLR_dHw113(fth,b)+ (7/3)*hxr11[is,i]
+            hxw133[is,i] = FLR_dHw133(fth,b)+ (7/3)*hxr13[is,i]
+            hxw333[is,i] = FLR_dHw333(fth,b)+ (7/3)*hxr33[is,i]
+            
+            #***************************************************************
+            #   compute the average g- bessel functions
+            #***************************************************************
+            if(nroot>6)
+                fts = outputGeo.fts
+                ftx::Float64 = fts[is]
+                ft2 = ftx^2
+                gxn[is,i]    = FLR_Hn(ftx,b)
+                gxp1[is,i]   = FLR_dHp1(ftx,b)  + ft2*gxn[is,i]
+                gxp3[is,i]   = FLR_dHp3(ftx,b)  + gxn[is,i]
+                gxr11[is,i]  = FLR_dHr11(ftx,b) + 3*ft2*gxp1[is,i]
+                gxr13[is,i]  = FLR_dHr13(ftx,b) + (5/3)*gxp1[is,i]
+                gxr33[is,i]  = FLR_dHr33(ftx,b) + (5/3)*gxp3[is,i]
+                gxw113[is,i] = FLR_dHw113(ftx,b)+ (7/3)*gxr11[is,i]
+                gxw133[is,i] = FLR_dHw133(ftx,b)+ (7/3)*gxr13[is,i]
+                gxw333[is,i] = FLR_dHw333(ftx,b)+ (7/3)*gxr33[is,i]
 
-                    if(abs(aveH.hn[is,x,y])<zero_cut) aveH.hn[is,x,y]=0.0 end
-                    if(abs(aveH.hp1[is,x,y])<zero_cut) aveH.hp1[is,x,y]=0.0 end
-                    if(abs(aveH.hp3[is,x,y])<zero_cut) aveH.hp3[is,x,y]=0.0 end
-                    if(abs(aveH.hr11[is,x,y])<zero_cut) aveH.hr11[is,x,y]=0.0 end
-                    if(abs(aveH.hr13[is,x,y])<zero_cut) aveH.hr13[is,x,y]=0.0 end
-                    if(abs(aveH.hr33[is,x,y])<zero_cut) aveH.hr33[is,x,y]=0.0 end
-                    if(abs(aveH.hw113[is,x,y])<zero_cut) aveH.hw113[is,x,y]=0.0 end
-                    if(abs(aveH.hw133[is,x,y])<zero_cut) aveH.hw133[is,x,y]=0.0 end
-                    if(abs(aveH.hw333[is,x,y])<zero_cut) aveH.hw333[is,x,y]=0.0 end
-
-                    aveH.hn[is,y,x]   = aveH.hn[is,x,y] 
-                    aveH.hp1[is,y,x]  = aveH.hp1[is,x,y]
-                    aveH.hp3[is,y,x]  = aveH.hp3[is,x,y] 
-                    aveH.hr11[is,y,x] = aveH.hr11[is,x,y] 
-                    aveH.hr13[is,y,x] = aveH.hr13[is,x,y]
-                    aveH.hr33[is,y,x] = aveH.hr33[is,x,y]
-                    aveH.hw113[is,y,x] = aveH.hw113[is,x,y] 
-                    aveH.hw133[is,y,x] = aveH.hw133[is,x,y]
-                    aveH.hw333[is,y,x] = aveH.hw333[is,x,y]
-                end
             end
-
-
         end
     end
 
-    
+    for is = ns0:ns
+        aveH.hn[is,:,:]    .= h * Diagonal(hxn[is,:]   .*wx)   * transpose(h)
+        aveH.hp1[is,:,:]   .= h * Diagonal(hxp1[is,:]  .*wx)   * transpose(h)
+        aveH.hp3[is,:,:]   .= h * Diagonal(hxp3[is,:]  .*wx)   * transpose(h)
+        aveH.hr11[is,:,:]  .= h * Diagonal(hxr11[is,:] .*wx)   * transpose(h)
+        aveH.hr13[is,:,:]  .= h * Diagonal(hxr13[is,:] .*wx)   * transpose(h)
+        aveH.hr33[is,:,:]  .= h * Diagonal(hxr33[is,:] .*wx)   * transpose(h)
+        aveH.hw113[is,:,:] .= h * Diagonal(hxw113[is,:].*wx)   * transpose(h)
+        aveH.hw133[is,:,:] .= h * Diagonal(hxw133[is,:].*wx)   * transpose(h)
+        aveH.hw333[is,:,:] .= h * Diagonal(hxw333[is,:].*wx)   * transpose(h)
 
-
+        aveH.hn[abs.(aveH.hn) .< zero_cut] .= 0
+        aveH.hp1[abs.(aveH.hp1) .< zero_cut] .= 0
+        aveH.hp3[abs.(aveH.hp3) .< zero_cut] .= 0
+        aveH.hr11[abs.(aveH.hr11) .< zero_cut] .= 0
+        aveH.hr13[abs.(aveH.hr13) .< zero_cut] .= 0
+        aveH.hr33[abs.(aveH.hr33) .< zero_cut] .= 0
+        aveH.hw113[abs.(aveH.hw113) .< zero_cut] .= 0
+        aveH.hw133[abs.(aveH.hw133) .< zero_cut] .= 0
+        aveH.hw333[abs.(aveH.hw333) .< zero_cut] .= 0
+        
+        nroot = 15 ####### hardcoded
+        if(nroot>6)
+            aveG.gn[is,:,:]    .= h * Diagonal(gxn[is,:]   .*wx)   * transpose(h)
+            aveG.gp1[is,:,:]   .= h * Diagonal(gxp1[is,:]  .*wx)   * transpose(h)
+            aveG.gp3[is,:,:]   .= h * Diagonal(gxp3[is,:]  .*wx)   * transpose(h)
+            aveG.gr11[is,:,:]  .= h * Diagonal(gxr11[is,:] .*wx)   * transpose(h)
+            aveG.gr13[is,:,:]  .= h * Diagonal(gxr13[is,:] .*wx)   * transpose(h)
+            aveG.gr33[is,:,:]  .= h * Diagonal(gxr33[is,:] .*wx)   * transpose(h)
+            aveG.gw113[is,:,:] .= h * Diagonal(gxw113[is,:].*wx)   * transpose(h)
+            aveG.gw133[is,:,:] .= h * Diagonal(gxw133[is,:].*wx)   * transpose(h)
+            aveG.gw333[is,:,:] .= h * Diagonal(gxw333[is,:].*wx)   * transpose(h)
+            
+            aveG.gn[abs.(aveG.gn) .< zero_cut] .= 0
+            aveG.gp1[abs.(aveG.gp1) .< zero_cut] .= 0
+            aveG.gp3[abs.(aveG.gp3) .< zero_cut] .= 0
+            aveG.gr11[abs.(aveG.gr11) .< zero_cut] .= 0
+            aveG.gr13[abs.(aveG.gr13) .< zero_cut] .= 0
+            aveG.gr33[abs.(aveG.gr33) .< zero_cut] .= 0
+            aveG.gw113[abs.(aveG.gw113) .< zero_cut] .= 0
+            aveG.gw133[abs.(aveG.gw133) .< zero_cut] .= 0
+            aveG.gw333[abs.(aveG.gw333) .< zero_cut] .= 0
+        end
+    end
 end
 
 
@@ -151,7 +216,8 @@ end
 #***********************************************************
 #  compute  k-independent hermite basis averages
 #***********************************************************
-function get_ave!(inputs::InputTJLF,outputGeo::OutputGeometry,outputHermite::OutputHermite,ave::Ave,ky::T) where T<:Real
+function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermite::OutputHermite{T},ave::Ave{T},
+    ky::T, width_parameter::T, nbasis::T) where T<:Real
 
     zero_cut = 1.e-12
     fts = outputGeo.fts 
@@ -165,10 +231,8 @@ function get_ave!(inputs::InputTJLF,outputGeo::OutputGeometry,outputHermite::Out
     debye_s = inputs.DEBYE #### different if UNITS is GENE
     debye_factor_in = inputs.DEBYE_FACTOR
     nx = 2*inputs.NXGRID - 1
-    nbasis = inputs.NBASIS_MAX
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     b0x = outputGeo.b0x
     wdx = outputGeo.wdx
@@ -261,7 +325,7 @@ function get_ave!(inputs::InputTJLF,outputGeo::OutputGeometry,outputHermite::Out
             if(vpar_model_in==1)
                 error("NOT IMPLEMENTED YET -DSUN")
                 vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.SPECIES[is].VPAR
-                ave.kpar_eff[is,1,1] = ave.kpar_eff[is,1,1] + im*abs(alpha_mach_in*vpar_s)*ky*R_unit*q_unit*width_in*mass(is)/zs(is)
+                ave.kpar_eff[is,1,1] = ave.kpar_eff[is,1,1] + im*abs(alpha_mach_in*vpar_s)*ky*R_unit*q_unit*width_parameter*mass(is)/zs(is)
             end
         else
             for i = 1:nbasis
@@ -270,7 +334,7 @@ function get_ave!(inputs::InputTJLF,outputGeo::OutputGeometry,outputHermite::Out
                     if(vpar_model_in==1 && i==j)
                         error("too lazy rn -DSUN")
                         vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.SPECIES[is].VPAR
-                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*ky*R_unit*q_unit*width_in*mass(is)/zs(is)
+                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*ky*R_unit*q_unit*width_parameter*mass(is)/zs(is)
                     end
                 end
             end
@@ -298,9 +362,9 @@ end
 #***************************************************************
 #   compute the matricies modwdh and modwdg
 #***************************************************************
-function modwd!(inputs::InputTJLF,ave::Ave)
+function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
-    nbasis = inputs.NBASIS_MAX
+    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
     wd_zero_in = inputs.WD_ZERO
     nm = nbasis
 
@@ -325,8 +389,8 @@ function modwd!(inputs::InputTJLF,ave::Ave)
     # compute ave.modwd and recompute ave.wd with regularized eigenvalues
     # note that the DSYEV normalized eigenvectors are now in a[i,j]
     w = Diagonal(w)
-    ave.modwdh = a * abs.(w) * a
-    ave.wdh = a * w * a ### excessive
+    ave.modwdh = a * abs.(w) * transpose(a)
+    ave.wdh = a * w * transpose(a) ### excessive
 
     # find the eigenvalues of ave.wdg
     a = deepcopy(ave.wdg)
@@ -343,8 +407,8 @@ function modwd!(inputs::InputTJLF,ave::Ave)
     # compute ave.modwd and recompute ave.wd with regularized eigenvalues
     # note that the DSYEV normalized eigenvectors are now in a[i,j]
     w = Diagonal(w)
-    ave.modwdg = a * abs.(w) * a
-    ave.wdg = a * w * a ### excessive
+    ave.modwdg = a * abs.(w) * transpose(a)
+    ave.wdg = a * w * transpose(a) ### excessive
 
 end
 
@@ -354,13 +418,12 @@ end
 #***************************************************************
 #   compute the matrix mod_kpar
 #***************************************************************
-function modkpar!(inputs::InputTJLF,ave::Ave)
+function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
     vpar_model_in = inputs.VPAR_MODEL
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
-    nbasis = inputs.NBASIS_MAX
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
     nm = nbasis
 
     if(nm==1)
@@ -375,7 +438,7 @@ function modkpar!(inputs::InputTJLF,ave::Ave)
 
             w,a = syev!('V','U',a)
             w = Diagonal(w)
-            b = a * abs.(w) * conj.(a)
+            b = a * abs.(w) * transpose(conj.(a))
             ave.modkpar = real.(b)
             for is = ns0:ns
                 ave.modkpar_eff[is,:,:] .= b
@@ -385,7 +448,7 @@ function modkpar!(inputs::InputTJLF,ave::Ave)
             for is = ns0:ns
                 a = im*deepcopy(ave.kpar_eff[is,:,:])
                 w,a = syev!('V','U',a)
-                b = a * abs.(w) * conj.(a)
+                b = a * abs.(w) * transpose(conj.(a))
                 
                 ave.modkpar_eff[is,:,:] .= b
             end 
@@ -401,11 +464,10 @@ end
 #***************************************************************
 #   compute the h_ratios
 #***************************************************************
-function h_ratios!(inputs::InputTJLF, aveH::AveH)
+function h_ratios!(inputs::InputTJLF{T}, aveH::AveH{T}) where T<:Real
 
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     # compute matrix ratios
     for is = ns0:ns
         hninv = inv(aveH.hn[is,:,:])
@@ -418,9 +480,9 @@ function h_ratios!(inputs::InputTJLF, aveH::AveH)
         aveH.hu3[is,:,:] .= aveH.hr13[is,:,:] * hp1inv
         aveH.hu33[is,:,:] .= aveH.hr33[is,:,:] * hp3inv
 
-        aveH.hu3ht1[is,:,:] .= aveH.hu3[is,:,:] * aveH.ht1[is,:,:]
+        aveH.hu3ht1[is,:,:]  .= aveH.hu3[is,:,:]  * aveH.ht1[is,:,:]
         aveH.hu33ht1[is,:,:] .= aveH.hu33[is,:,:] * aveH.ht1[is,:,:]
-        aveH.hu3ht3[is,:,:] .= aveH.hu3[is,:,:] * aveH.ht3[is,:,:]
+        aveH.hu3ht3[is,:,:]  .= aveH.hu3[is,:,:]  * aveH.ht3[is,:,:]
         aveH.hu33ht3[is,:,:] .= aveH.hu33[is,:,:] * aveH.ht3[is,:,:]
     end
 
@@ -431,11 +493,10 @@ end
 #***************************************************************
 #   compute the products ave_h*ave_p0inv
 #***************************************************************
-function ave_hp0!(inputs::InputTJLF,ave::Ave,aveH::AveH)
+function ave_hp0!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T}) where T<:Real
 
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     # compute matrix products
     for is = ns0:ns
         aveH.hnp0[is,:,:]    .= aveH.hn[is,:,:]*ave.p0inv
@@ -456,11 +517,10 @@ end
 #***************************************************************
 #   compute the products ave_h*ave_b0inv
 #***************************************************************
-function ave_hb0!(inputs::InputTJLF,ave::Ave,aveH::AveH)
+function ave_hb0!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T}) where T<:Real
 
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     # compute matrix products
     for is = ns0:ns
         aveH.hnb0[is,:,:]     .= aveH.hn[is,:,:] * ave.b0inv
@@ -480,11 +540,10 @@ end
 #***************************************************************
 #   compute the products ave_h*ave_bpinv
 #***************************************************************
-function ave_hbp!(inputs::InputTJLF,ave::Ave,aveH::AveH)
+function ave_hbp!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T}) where T<:Real
 
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     for is = ns0:ns
         aveH.hnbp[is,:,:]     .= aveH.hn[is,:,:] * ave.bpinv
@@ -503,46 +562,45 @@ end
 #***************************************************************
 #   compute the products ave_wd*ave_h
 #***************************************************************
-function wd_h!(inputs::InputTJLF,ave::Ave,aveH::AveH,aveW::AveW)
+function wd_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T}) where T<:Real
 
     use_bper_in = inputs.USE_BPER
     vpar_model_in = inputs.VPAR_MODEL
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     for is = ns0:ns
 
-        aveW.wdhp1p0[is,:,:]  .= ave.wdh * aveH.hp1p0[is,:,:]
-        aveW.wdhr11p0[is,:,:] .= ave.wdh * aveH.hr11p0[is,:,:]
-        aveW.wdhr13p0[is,:,:] .= ave.wdh * aveH.hr13p0[is,:,:]
-        aveW.wdht1[is,:,:]    .= ave.wdh * aveH.ht1[is,:,:]
-        aveW.wdht3[is,:,:]    .= ave.wdh * aveH.ht3[is,:,:]
-        aveW.wdhu1[is,:,:]    .= ave.wdh * aveH.hu1[is,:,:]
-        aveW.wdhu3[is,:,:]    .= ave.wdh * aveH.hu3[is,:,:]
-        aveW.wdhu3ht1[is,:,:] .= ave.wdh * aveH.hu3ht1[is,:,:]
-        aveW.wdhu3ht3[is,:,:] .= ave.wdh * aveH.hu3ht3[is,:,:]
-        aveW.wdhu33[is,:,:]   .= ave.wdh * aveH.hu33[is,:,:]
-        aveW.wdhu33ht1[is,:,:].= ave.wdh * aveH.hu33ht1[is,:,:]
-        aveW.wdhu33ht3[is,:,:].= ave.wdh * aveH.hu33ht3[is,:,:]
-        aveW.modwdht1[is,:,:] .= ave.modwdh * aveH.ht1[is,:,:]
-        aveW.modwdht3[is,:,:] .= ave.modwdh * aveH.ht3[is,:,:]
-        aveW.modwdhu1[is,:,:] .= ave.modwdh * aveH.hu1[is,:,:]
-        aveW.modwdhu3[is,:,:] .= ave.modwdh * aveH.hu3[is,:,:]
-        aveW.modwdhu3ht1[is,:,:] .= ave.modwdh * aveH.hu3ht1[is,:,:]
-        aveW.modwdhu3ht3[is,:,:] .= ave.modwdh * aveH.hu3ht3[is,:,:]
-        aveW.modwdhu33[is,:,:]   .= ave.modwdh * aveH.hu33[is,:,:]
-        aveW.modwdhu33ht1[is,:,:].= ave.modwdh * aveH.hu33ht1[is,:,:]
-        aveW.modwdhu33ht3[is,:,:].= ave.modwdh * aveH.hu33ht3[is,:,:]
+        aveWH.wdhp1p0[is,:,:]  .= ave.wdh * aveH.hp1p0[is,:,:]
+        aveWH.wdhr11p0[is,:,:] .= ave.wdh * aveH.hr11p0[is,:,:]
+        aveWH.wdhr13p0[is,:,:] .= ave.wdh * aveH.hr13p0[is,:,:]
+        aveWH.wdht1[is,:,:]    .= ave.wdh * aveH.ht1[is,:,:]
+        aveWH.wdht3[is,:,:]    .= ave.wdh * aveH.ht3[is,:,:]
+        aveWH.wdhu1[is,:,:]    .= ave.wdh * aveH.hu1[is,:,:]
+        aveWH.wdhu3[is,:,:]    .= ave.wdh * aveH.hu3[is,:,:]
+        aveWH.wdhu3ht1[is,:,:] .= ave.wdh * aveH.hu3ht1[is,:,:]
+        aveWH.wdhu3ht3[is,:,:] .= ave.wdh * aveH.hu3ht3[is,:,:]
+        aveWH.wdhu33[is,:,:]   .= ave.wdh * aveH.hu33[is,:,:]
+        aveWH.wdhu33ht1[is,:,:].= ave.wdh * aveH.hu33ht1[is,:,:]
+        aveWH.wdhu33ht3[is,:,:].= ave.wdh * aveH.hu33ht3[is,:,:]
+        aveWH.modwdht1[is,:,:] .= ave.modwdh * aveH.ht1[is,:,:]
+        aveWH.modwdht3[is,:,:] .= ave.modwdh * aveH.ht3[is,:,:]
+        aveWH.modwdhu1[is,:,:] .= ave.modwdh * aveH.hu1[is,:,:]
+        aveWH.modwdhu3[is,:,:] .= ave.modwdh * aveH.hu3[is,:,:]
+        aveWH.modwdhu3ht1[is,:,:] .= ave.modwdh * aveH.hu3ht1[is,:,:]
+        aveWH.modwdhu3ht3[is,:,:] .= ave.modwdh * aveH.hu3ht3[is,:,:]
+        aveWH.modwdhu33[is,:,:]   .= ave.modwdh * aveH.hu33[is,:,:]
+        aveWH.modwdhu33ht1[is,:,:].= ave.modwdh * aveH.hu33ht1[is,:,:]
+        aveWH.modwdhu33ht3[is,:,:].= ave.modwdh * aveH.hu33ht3[is,:,:]
         
         if(use_bper_in)
-            aveW.wdhp1b0[is,:,:]  .= ave.wdh * aveH.hp1b0[is,:,:]
-            aveW.wdhr11b0[is,:,:] .= ave.wdh * aveH.hr11b0[is,:,:]
-            aveW.wdhr13b0[is,:,:] .= ave.wdh * aveH.hr13b0[is,:,:]
+            aveWH.wdhp1b0[is,:,:]  .= ave.wdh * aveH.hp1b0[is,:,:]
+            aveWH.wdhr11b0[is,:,:] .= ave.wdh * aveH.hr11b0[is,:,:]
+            aveWH.wdhr13b0[is,:,:] .= ave.wdh * aveH.hr13b0[is,:,:]
             if(vpar_model_in==0)
-                aveW.wdhp1bp[is,:,:]  .= ave.wdh * aveH.hp1bp[is,:,:]
-                aveW.wdhr11bp[is,:,:] .= ave.wdh * aveH.hr11bp[is,:,:]
-                aveW.wdhr13bp[is,:,:] .= ave.wdh * aveH.hr13bp[is,:,:]
+                aveWH.wdhp1bp[is,:,:]  .= ave.wdh * aveH.hp1bp[is,:,:]
+                aveWH.wdhr11bp[is,:,:] .= ave.wdh * aveH.hr11bp[is,:,:]
+                aveWH.wdhr13bp[is,:,:] .= ave.wdh * aveH.hr13bp[is,:,:]
             end
         end
     end
@@ -555,36 +613,198 @@ end
 #***************************************************************
 #   compute the products ave_kpar*ave_h and ave_modkpar*ave_h
 #***************************************************************
-function kpar_h!(inputs::InputTJLF,ave::Ave,aveH::AveH,aveK::AveK)
+function kpar_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveKH::AveKH) where T<:Real
 
     use_bper_in = inputs.USE_BPER
     vpar_model_in = inputs.VPAR_MODEL
     ns = inputs.NS
-    ns0 = 1
-    if(inputs.ADIABATIC_ELEC) ns0 = 2 end
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     for is = ns0:ns
-        aveK.kparhnp0[is,:,:]  .= aveH.hnp0[is,:,:] * ave.kpar
-        aveK.kparhp1p0[is,:,:] .= aveH.hp1p0[is,:,:] * ave.kpar
-        aveK.kparhp3p0[is,:,:] .= aveH.hp3p0[is,:,:] * ave.kpar
-        aveK.kparhu1[is,:,:]   .= aveH.hu1[is,:,:] * ave.kpar_eff[is,:,:]
-        aveK.kparhu3[is,:,:]   .= aveH.hu3[is,:,:] * ave.kpar_eff[is,:,:]
-        aveK.kparht1[is,:,:]   .= ave.kpar_eff[is,:,:] * aveH.ht1[is,:,:]
-        aveK.kparht3[is,:,:]   .= ave.kpar_eff[is,:,:] * aveH.ht3[is,:,:]
-        aveK.modkparhu1[is,:,:].= ave.modkpar_eff[is,:,:] * aveH.hu1[is,:,:]
-        aveK.modkparhu3[is,:,:].= ave.modkpar_eff[is,:,:] * aveH.hu3[is,:,:]
+        aveKH.kparhnp0[is,:,:]  .= aveH.hnp0[is,:,:] * ave.kpar
+        aveKH.kparhp1p0[is,:,:] .= aveH.hp1p0[is,:,:] * ave.kpar
+        aveKH.kparhp3p0[is,:,:] .= aveH.hp3p0[is,:,:] * ave.kpar
+        aveKH.kparhu1[is,:,:]   .= aveH.hu1[is,:,:] * ave.kpar_eff[is,:,:]
+        aveKH.kparhu3[is,:,:]   .= aveH.hu3[is,:,:] * ave.kpar_eff[is,:,:]
+        aveKH.kparht1[is,:,:]   .= ave.kpar_eff[is,:,:] * aveH.ht1[is,:,:]
+        aveKH.kparht3[is,:,:]   .= ave.kpar_eff[is,:,:] * aveH.ht3[is,:,:]
+        aveKH.modkparhu1[is,:,:].= ave.modkpar_eff[is,:,:] * aveH.hu1[is,:,:]
+        aveKH.modkparhu3[is,:,:].= ave.modkpar_eff[is,:,:] * aveH.hu3[is,:,:]
         if(use_bper_in)
-            aveK.kparhp1b0[is,:,:]  .= aveH.hp1b0[is,:,:] * ave.kpar
-            aveK.kparhr11b0[is,:,:] .= aveH.hr11b0[is,:,:] * ave.kpar
-            aveK.kparhr13b0[is,:,:] .= aveH.hr13b0[is,:,:] * ave.kpar
+            aveKH.kparhp1b0[is,:,:]  .= aveH.hp1b0[is,:,:] * ave.kpar
+            aveKH.kparhr11b0[is,:,:] .= aveH.hr11b0[is,:,:] * ave.kpar
+            aveKH.kparhr13b0[is,:,:] .= aveH.hr13b0[is,:,:] * ave.kpar
             if(vpar_model_in==0)
-                aveK.kparhnbp[is,:,:]  .= aveH.hnbp[is,:,:] * ave.kpar
-                aveK.kparhp3bp[is,:,:] .= aveH.hp3bp[is,:,:] * ave.kpar
-                aveK.kparhp1bp[is,:,:] .= aveH.hp1bp[is,:,:] * ave.kpar
-                aveK.kparhr11bp[is,:,:].= aveH.hr11bp[is,:,:] * ave.kpar
-                aveK.kparhr13bp[is,:,:].= aveH.hr13bp[is,:,:] * ave.kpar
+                aveKH.kparhnbp[is,:,:]  .= aveH.hnbp[is,:,:] * ave.kpar
+                aveKH.kparhp3bp[is,:,:] .= aveH.hp3bp[is,:,:] * ave.kpar
+                aveKH.kparhp1bp[is,:,:] .= aveH.hp1bp[is,:,:] * ave.kpar
+                aveKH.kparhr11bp[is,:,:].= aveH.hr11bp[is,:,:] * ave.kpar
+                aveKH.kparhr13bp[is,:,:].= aveH.hr13bp[is,:,:] * ave.kpar
             end
         end
     end
-       
+end
+
+
+#***************************************************************
+#   compute the g_ratios
+#***************************************************************
+function g_ratios!(inputs::InputTJLF{T}, aveG::AveG{T}) where T<:Real
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    # compute matrix ratios
+    for is = ns0:ns
+        gninv = inv(aveG.gn[is,:,:])
+        gp1inv = inv(aveG.gp1[is,:,:])
+        gp3inv = inv(aveG.gp3[is,:,:])
+    
+        aveG.gt1[is,:,:]  .= aveG.gp1[is,:,:] *gninv
+        aveG.gt3[is,:,:]  .= aveG.gp3[is,:,:] *gninv
+        aveG.gu1[is,:,:]  .= aveG.gr11[is,:,:]*gp1inv
+        aveG.gu3[is,:,:]  .= aveG.gr13[is,:,:]*gp1inv
+        aveG.gu33[is,:,:] .= aveG.gr33[is,:,:]*gp3inv
+        aveG.gu3gt1[is,:,:]  .= aveG.gu3[is,:,:]*aveG.gt1[is,:,:]
+        aveG.gu3gt3[is,:,:]  .= aveG.gu3[is,:,:]*aveG.gt3[is,:,:]
+        aveG.gu33gt1[is,:,:] .= aveG.gu33[is,:,:]*aveG.gt1[is,:,:]
+        aveG.gu33gt3[is,:,:] .= aveG.gu33[is,:,:]*aveG.gt3[is,:,:]
+    end
+
+end
+
+#***************************************************************
+#   compute the average g- bessel functions
+#***************************************************************
+function ave_gp0!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T}) where T<:Real
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    for is = ns0:ns
+        aveG.gnp0[is,:,:] .= aveG.gn[is,:,:]*ave.p0inv
+        aveG.gp1p0[is,:,:] .= aveG.gp1[is,:,:]*ave.p0inv
+        aveG.gp3p0[is,:,:] .= aveG.gp3[is,:,:]*ave.p0inv
+        aveG.gr11p0[is,:,:] .= aveG.gr11[is,:,:]*ave.p0inv
+        aveG.gr13p0[is,:,:] .= aveG.gr13[is,:,:]*ave.p0inv
+        aveG.gr33p0[is,:,:] .= aveG.gr33[is,:,:]*ave.p0inv
+
+        aveG.c_tor_par_gp1p0[is,:,:] .= ave.c_tor_par*aveG.gp1p0[is,:,:]
+        aveG.c_tor_par_gr11p0[is,:,:] .= ave.c_tor_par*aveG.gr11p0[is,:,:]        
+        aveG.c_tor_par_gr13p0[is,:,:] .= ave.c_tor_par*aveG.gr13p0[is,:,:]      
+    end
+end
+
+#***************************************************************
+#   compute the products ave_g*ave_b0inv
+#***************************************************************
+function ave_gb0!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T}) where T<:Real
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    for is = ns0:ns
+        aveG.gnb0[is,:,:]    = aveG.gn[is,:,:]  *ave.b0inv
+        aveG.gp1b0[is,:,:]   = aveG.gp1[is,:,:] *ave.b0inv
+        aveG.gp3b0[is,:,:]   = aveG.gp3[is,:,:] *ave.b0inv
+        aveG.gr11b0[is,:,:]  = aveG.gr11[is,:,:]*ave.b0inv
+        aveG.gr13b0[is,:,:]  = aveG.gr13[is,:,:]*ave.b0inv
+        aveG.gr33b0[is,:,:]  = aveG.gr33[is,:,:]*ave.b0inv
+        aveG.gw113b0[is,:,:] = aveG.gw113[is,:,:]*ave.b0inv
+        aveG.gw133b0[is,:,:] = aveG.gw133[is,:,:]*ave.b0inv
+        aveG.gw333b0[is,:,:] = aveG.gw333[is,:,:]*ave.b0inv
+    end
+end
+
+#***************************************************************
+#   compute the products ave_g*ave_bpinv
+#***************************************************************
+function ave_gbp!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T}) where T<:Real
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    for is = ns0:ns
+        aveG.gnbp[is,:,:]    = aveG.gn[is,:,:]*ave.bpinv
+        aveG.gp1bp[is,:,:]   = aveG.gp1[is,:,:]*ave.bpinv
+        aveG.gp3bp[is,:,:]   = aveG.gp3[is,:,:]*ave.bpinv
+        aveG.gr11bp[is,:,:]  = aveG.gr11[is,:,:]*ave.bpinv
+        aveG.gr13bp[is,:,:]  = aveG.gr13[is,:,:]*ave.bpinv
+        aveG.gr33bp[is,:,:]  = aveG.gr33[is,:,:]*ave.bpinv
+        aveG.gw113bp[is,:,:] = aveG.gw113[is,:,:]*ave.bpinv
+        aveG.gw133bp[is,:,:] = aveG.gw133[is,:,:]*ave.bpinv
+        aveG.gw333bp[is,:,:] = aveG.gw333[is,:,:]*ave.bpinv
+    end
+end
+
+#***************************************************************
+#   compute the products ave_wd*ave_g
+#***************************************************************
+function wd_g!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveWG::AveWG{T}) where T<:Real
+
+    use_bper_in = inputs.USE_BPER
+    vpar_model_in = inputs.VPAR_MODEL
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    for is = ns0:ns
+        aveWG.wdgp1p0[is,:,:] = ave.wdg*aveG.gp1p0[is,:,:]
+        aveWG.wdgr11p0[is,:,:] = ave.wdg*aveG.gr11p0[is,:,:]
+        aveWG.wdgr13p0[is,:,:] = ave.wdg*aveG.gr13p0[is,:,:]
+        aveWG.wdgu1[is,:,:] = ave.wdg*aveG.gu1[is,:,:]
+        aveWG.wdgu3[is,:,:] = ave.wdg*aveG.gu3[is,:,:]
+        aveWG.wdgu33[is,:,:] = ave.wdg*aveG.gu33[is,:,:]
+        aveWG.wdgt1[is,:,:]= ave.wdg*aveG.gt1[is,:,:]
+        aveWG.wdgt3[is,:,:]= ave.wdg*aveG.gt3[is,:,:]
+        aveWG.wdgu3gt1[is,:,:]= ave.wdg*aveG.gu3gt1[is,:,:]
+        aveWG.wdgu3gt3[is,:,:]= ave.wdg*aveG.gu3gt3[is,:,:]
+        aveWG.wdgu33gt1[is,:,:]= ave.wdg*aveG.gu33gt1[is,:,:]
+        aveWG.wdgu33gt3[is,:,:]= ave.wdg*aveG.gu33gt3[is,:,:]
+        aveWG.modwdgu1[is,:,:]= ave.modwdg*aveG.gu1[is,:,:]
+        aveWG.modwdgu3[is,:,:]= ave.modwdg*aveG.gu3[is,:,:]
+        aveWG.modwdgu33[is,:,:]= ave.modwdg*aveG.gu33[is,:,:]
+        aveWG.modwdgt1[is,:,:]= ave.modwdg*aveG.gt1[is,:,:]
+        aveWG.modwdgt3[is,:,:]= ave.modwdg*aveG.gt3[is,:,:]
+        aveWG.modwdgu3gt1[is,:,:]= ave.modwdg*aveG.gu3gt1[is,:,:]
+        aveWG.modwdgu3gt3[is,:,:]= ave.modwdg*aveG.gu3gt3[is,:,:]
+        aveWG.modwdgu33gt1[is,:,:]= ave.modwdg*aveG.gu33gt1[is,:,:]
+        aveWG.modwdgu33gt3[is,:,:]= ave.modwdg*aveG.gu33gt3[is,:,:]
+        if(use_bper_in)
+            aveWG.wdgp1b0[is,:,:]   =     ave.wdg*aveG.gp1b0[is,:,:]
+            aveWG.wdgr11b0[is,:,:] = ave.wdg*aveG.gr11b0[is,:,:]
+            aveWG.wdgr13b0[is,:,:] =  ave.wdg*aveG.gr13b0[is,:,:]
+            if(vpar_model_in==0)
+                aveWG.wdgp1bp[is,:,:] = ave.wdg*aveG.gp1bp[is,:,:]
+                aveWG.wdgr11bp[is,:,:] = ave.wdg*aveG.gr11bp[is,:,:]
+                aveWG.wdgr13bp[is,:,:] = ave.wdg*aveG.gr13bp[is,:,:]
+            end
+        end
+    end
+end
+
+
+#***************************************************************
+#   compute the products ave_kpar*ave_h and ave_modkpar*ave_h
+#***************************************************************
+function kpar_g!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveKG::AveKG) where T<:Real
+
+    use_bper_in = inputs.USE_BPER
+    vpar_model_in = inputs.VPAR_MODEL
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    for is = ns0:ns
+        aveKG.kpargnp0[is,:,:]  .= aveG.gnp0[is,:,:] * ave.kpar
+        aveKG.kpargp1p0[is,:,:] .= aveG.gp1p0[is,:,:] * ave.kpar
+        aveKG.kpargp3p0[is,:,:] .= aveG.gp3p0[is,:,:] * ave.kpar
+        aveKG.kpargu1[is,:,:]   .= aveG.gu1[is,:,:] * ave.kpar_eff[is,:,:]
+        aveKG.kpargu3[is,:,:]   .= aveG.gu3[is,:,:] * ave.kpar_eff[is,:,:]
+        aveKG.kpargt1[is,:,:]   .= ave.kpar_eff[is,:,:] * aveG.gt1[is,:,:]
+        aveKG.kpargt3[is,:,:]   .= ave.kpar_eff[is,:,:] * aveG.gt3[is,:,:]
+        aveKG.modkpargu1[is,:,:].= ave.modkpar_eff[is,:,:] * aveG.gu1[is,:,:]
+        aveKG.modkpargu3[is,:,:].= ave.modkpar_eff[is,:,:] * aveG.gu3[is,:,:]
+        if(use_bper_in)
+            aveKG.kpargp1b0[is,:,:]  .= aveG.gp1b0[is,:,:] * ave.kpar
+            aveKG.kpargr11b0[is,:,:] .= aveG.gr11b0[is,:,:] * ave.kpar
+            aveKG.kpargr13b0[is,:,:] .= aveG.gr13b0[is,:,:] * ave.kpar
+            if(vpar_model_in==0)
+                aveKG.kpargnbp[is,:,:]  .= aveG.gnbp[is,:,:] * ave.kpar
+                aveKG.kpargp3bp[is,:,:] .= aveG.gp3bp[is,:,:] * ave.kpar
+                aveKG.kpargp1bp[is,:,:] .= aveG.gp1bp[is,:,:] * ave.kpar
+                aveKG.kpargr11bp[is,:,:].= aveG.gr11bp[is,:,:] * ave.kpar
+                aveKG.kpargr13bp[is,:,:].= aveG.gr13bp[is,:,:] * ave.kpar
+            end
+        end
+    end
 end

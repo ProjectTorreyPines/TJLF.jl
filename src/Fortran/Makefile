@@ -111,5 +111,5 @@ tglf_run_mpi.o: tglf_run.F90
 	$(FC) $(FMATH) $(FFLAGS) $(NN_LIB) -c $<
 
 clean:
-	rm -f *.so *.o *.lst $(LLIB).a $(EXEC1) $(EXEC2)
-	rm -f ${GACODE_ROOT}/modules/tglf*.mod
+	rm -f *.mod *.so *.o *.lst $(LLIB).a $(EXEC1) $(EXEC2)
+	# rm -f ${GACODE_ROOT}/modules/tglf*.mod

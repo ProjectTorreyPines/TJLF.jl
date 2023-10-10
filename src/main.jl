@@ -2,11 +2,10 @@
 # ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
 
 # location for the input.tglf.gen file
-baseDirectory = "../../test_SAT3/"
+baseDirectory = "../../simple_test/"
 # calls the fortran code as an executable
 path = "./Fortran/tglf"
-run(`$(path) $baseDirectory`)
-
+# run(`$(path) $baseDirectory`)
 
 
 include("tjlf_modules.jl")
@@ -78,22 +77,44 @@ setfield!(inputTJLF,:SPECIES,inputSpecies)
 
 if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
     inputTJLF.UNITS = "CGYRO"
+    ####### WTF
+    inputTJLF.XNU_MODEL = 3
+    inputTJLF.WDIA_TRAPPED = 1.0
 end
+
+
 #******************************************************************************#************************
 #   start running stuff
 #******************************************************************************#************************
 
 outputHermite = gauss_hermite(inputTJLF)
 ky_spect, nky = get_ky_spectrum(inputTJLF)
-outputGeo, satParams = xgrid_functions_geo(inputTJLF,outputHermite)
-
+satParams = get_sat_params(inputTJLF)
 vexb_shear_s = 0.0
 jmax_out = 0
-include("tjlf_TRANSPORT_MODEL.jl")
-get_bilinear_spectrum(inputTJLF, outputGeo, outputHermite, 
+# include("tjlf_max.jl")
+# include("tjlf_LINEAR_SOLUTION.jl")
+get_bilinear_spectrum(inputTJLF, satParams, outputHermite, 
                         ky_spect, vexb_shear_s, jmax_out)
 
 
+run(`$(path) $baseDirectory`)
+
+include("tjlf_eigensolver.jl")
+include("tjlf_matrix.jl")
+include("tjlf_geometry.jl")
+tmax = log10(1.65)
+tmin = log10(0.3)
+nt = 5
+dt = (tmax-tmin)/(nt-1)
+tp = tmin
+width_parameter = 10.0^tp
+outputGeo = xgrid_functions_geo(inputTJLF, outputHermite, ky_spect[1], width_parameter)
+ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG = get_matrix(inputTJLF, outputGeo, outputHermite, ky_spect[1],width_parameter)
+_ = tjlf_eigensolver(inputTJLF,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,ky_spect[1],width_parameter)
+
+
+error("STOP")
 
 
 
@@ -115,7 +136,7 @@ get_bilinear_spectrum(inputTJLF, outputGeo, outputHermite,
 
 
 
-################################# Needed from Fortran output files ############################################
+# ################################# Needed from Fortran output files ############################################
 
 # Get ky spectrum
 fileDirectory = baseDirectory * "out.tglf.ky_spectrum"
