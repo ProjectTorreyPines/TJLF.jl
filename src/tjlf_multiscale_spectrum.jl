@@ -23,9 +23,9 @@ function get_zonal_mixing(inputs::InputTJLF{T}, ky_mix::AbstractVector{T}, gamma
     sat_rule_in = inputs.SAT_RULE
     alpha_zf = inputs.ALPHA_ZF
 
-    zs_2 = inputs.SPECIES[2].ZS
-    taus_2 = inputs.SPECIES[2].TAUS
-    mass_2 = inputs.SPECIES[2].MASS
+    zs_2 = inputs.ZS[2]
+    taus_2 = inputs.TAUS[2]
+    mass_2 = inputs.MASS[2]
 
     rho_ion =  √(taus_2*mass_2) / abs(zs_2)
     #
@@ -255,27 +255,23 @@ function intensity_sat(
     alpha_zf = inputs.ALPHA_ZF
     alpha_quench = inputs.ALPHA_QUENCH
 
-    zs_2 = inputs.SPECIES[2].ZS
-    taus_2 = inputs.SPECIES[2].TAUS
-    mass_2 = inputs.SPECIES[2].MASS
-    taus_1 = inputs.SPECIES[1].TAUS
+    zs_2 = inputs.ZS[2]
+    taus_2 = inputs.TAUS[2]
+    mass_2 = inputs.MASS[2]
+    taus_1 = inputs.TAUS[1]
     nmodes = inputs.NMODES
     rho_ion = √(taus_2*mass_2)/ abs(zs_2)
     small = 10^-10
     nky = length(ky_spect)
 
-    kx0_e,
-    SAT_geo0_out,
-    SAT_geo1_out,
-    SAT_geo2_out,
-    R_unit,
-    Bt0_out,
-    b_geo0_out,
-    grad_r0_out,
-    theta_out,
-    Bt_out,
-    grad_r_out,
-    B_unit_out = get_sat_params(inputs,ky_spect,gp)
+    satParams = get_sat_params(inputs)
+    SAT_geo0_out = satParams.SAT_geo0
+    SAT_geo1_out = satParams.SAT_geo1
+    SAT_geo2_out = satParams.SAT_geo2
+    Bt0_out = satParams.Bt0
+    b_geo0_out = satParams.B_geo0
+    grad_r0_out = satParams.grad_r0
+    kx0_e = xgrid_functions_geo(inputs, satParams, ky_spect,  gp)
 
 
     if length(size(gp)) > 1
@@ -293,10 +289,10 @@ function intensity_sat(
             dlnpdr = 0.0
             ptot = 0.0
             for i in 1:ns
-                ptot = ptot + inputs.SPECIES[i].AS*inputs.SPECIES[i].TAUS
+                ptot = ptot + inputs.AS[i]*inputs.TAUS[i]
                 dlnpdr = (dlnpdr + 
-                    inputs.SPECIES[i].AS*inputs.SPECIES[i].TAUS*
-                    (inputs.SPECIES[i].RLNS+inputs.SPECIES[i].RLTS))
+                    inputs.AS[i]*inputs.TAUS[i]*
+                    (inputs.RLNS[i]+inputs.RLTS[i]))
             end
             ### kwargs["RMAJ_LOC"] used for rmaj_input
             dlnpdr = rmaj_loc*dlnpdr/max(ptot,0.01)

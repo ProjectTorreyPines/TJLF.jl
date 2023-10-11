@@ -3,40 +3,6 @@
 include("tjlf_modules.jl")
 include("tjlf_multiscale_spectrum.jl")
 
-function get_sat_params(inputs::InputTJLF, ky::Vector{T}, gammas::Matrix{T}) where T<:Real
-
-    kx0_e,
-    SAT_geo0_out,
-    SAT_geo1_out,
-    SAT_geo2_out,
-    R_unit,
-    Bt0_out,
-    B_geo0_out,
-    grad_r0_out,
-    theta_out,
-    Bt_out,
-    grad_r_out,
-    B_unit_out = xgrid_functions_geo(inputs, ky, gammas)
-
-    return (
-        kx0_e, # xgrid_functions_geo
-        SAT_geo0_out, # xgrid_functions_geo
-        SAT_geo1_out, # xgrid_functions_geo
-        SAT_geo2_out, # xgrid_functions_geo
-        R_unit, # xgrid_functions_geo
-
-        Bt0_out, # mercier_luc
-        B_geo0_out, # mercier_luc
-        grad_r0_out, # mercier_luc
-
-        theta_out, # miller_geo
-        Bt_out, # miller_geo
-        grad_r_out, # miller_geo
-        B_unit_out, # miller_geo
-    )
-end
-
-
 function get_sat_params(param::Symbol, inputs::InputTJLF, ms::Int=128)
     if param == :Bt0_out
         _, _, _, _, _, _, _, _, Bt0_out, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
@@ -74,22 +40,25 @@ end
 
 
 
-function xgrid_functions_geo(inputs::InputTJLF, ky::Vector{T}, gammas::Matrix{T}) where T<:Real
+function xgrid_functions_geo(inputs::InputTJLF, satParams::SaturationParameters{T}, ky::Vector{T}, gammas::Matrix{T},
+    small::T=0.00000001) where T<:Real
     sign_IT = inputs.SIGN_IT
     vexb_shear = inputs.VEXB_SHEAR
     sat_rule_in = inputs.SAT_RULE
     alpha_quench_in = inputs.ALPHA_QUENCH
     alpha_e_in = inputs.ALPHA_E
     
-    mass_2 = inputs.SPECIES[2].MASS
-    taus_2 = inputs.SPECIES[2].TAUS
-    zs_2 = inputs.SPECIES[2].ZS
+    mass_2 = inputs.MASS[2]
+    taus_2 = inputs.TAUS[2]
+    zs_2 = inputs.ZS[2]
     units_in = inputs.UNITS
     nx = 2*inputs.NXGRID - 1
     vs_2 = √(taus_2 / mass_2)
 
-    # kx0 = kx0_loc/ky # note that kx0 is kx/ky
+    grad_r0 = satParams.grad_r0
+    B_geo0 = satParams.B_geo0
 
+    # kx0 = kx0_loc/ky # note that kx0 is kx/ky
 
     # generalized quench rule kx0 shift
     gamma_reference_kx0 = gammas[:, 1]
@@ -101,16 +70,12 @@ function xgrid_functions_geo(inputs::InputTJLF, ky::Vector{T}, gammas::Matrix{T}
         wE = zeros(Float64, length(ky))
 
         if(units_in=="GYRO")
-            kx0_factor = abs(b_geo[1]/qrat_geo[1]^2)
+            kx0_factor = abs(grad_r0^2/B_geo0)
             kx0_factor = 1.0 + 0.40*(kx0_factor-1.0)^2
-            wE .= (kx0_factor*vexb_shear_kx0) .*
-                (ifelse.(kyi.<0.3,kyi./0.3,1.0))./gamma_reference_kx0
+            wE .= (kx0_factor*vexb_shear_kx0) .* (ifelse.(kyi.<0.3,kyi./0.3,1.0))./gamma_reference_kx0
         else
             kx0_factor = 1.0
         end
-        grad_r0_out = b_geo[1]/qrat_geo[1]
-        B_geo0_out = b_geo[1]
-        kx_geo0_out= 1.0/qrat_geo[1]
 
         kx0_e = -(0.36*vexb_shear_kx0./gamma_reference_kx0
                 .+ (0.38.*wE.*tanh.((0.69.*wE).^6)))
@@ -149,10 +114,10 @@ end
 
 
 function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
-    ky::T, width_parameter::T,
+    ky::T,
     mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
 
-
+    width_in = inputs.WIDTH
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
@@ -190,7 +155,7 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
     cx_tor_per = Vector{Float64}(undef,nx)
     cx_par_par = Vector{Float64}(undef,nx)
     for i = 1:nx
-        thx = width_parameter * x[i]
+        thx = width_in * x[i]
         sign_theta = ifelse(thx>=0, 1.0, -1.0)
 
         loops = Int(floor(abs(thx/(2π))))
@@ -245,7 +210,6 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
         end
 
         ### viscous stress projection coefficients
-
         cxtorper1 = -R[m1]*Bp[m1]/b_geo[m1]
         cxtorper2 = -R[m2]*Bp[m2]/b_geo[m2]
         cx_tor_par[i] = f/b_geo[m1] + (f/b_geo[m2]-f/b_geo[m1])*(y_x-y1)/(y2-y1)
@@ -342,7 +306,7 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
     # compute trapped fraction
     #*************************************************************
     ### This can be made neater for sure -DSUN
-    kpar = 2π/(Ly*√(2)*width_parameter)
+    kpar = 2π/(Ly*√(2)*width_in)
     bounce_y = min(Ly, π*inputs.THETA_TRAPPED/kpar)
 
     B_bounce = Bmax
@@ -367,13 +331,13 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
     if(xnu_model_in==3 && wdia_trapped_in>0.0) 
         theta_trapped_in = inputs.THETA_TRAPPED
         for is = ns0:ns
-            taus = inputs.SPECIES[is].TAUS
-            mass = inputs.SPECIES[is].MASS
-            rlns = inputs.SPECIES[is].RLNS
+            taus = inputs.TAUS[is]
+            mass = inputs.MASS[is]
+            rlns = inputs.RLNS[is]
             vs = √(taus/mass)
 
             wdia = abs(ky*rlns)/vs
-            kpar = 2π/(Ly*√(2)*width_parameter)
+            kpar = 2π/(Ly*√(2)*width_in)
             ft0 = √(1.0 - Bmin/Bmax)
             cdt = 3*wdia_trapped_in*(1-ft0^2)
             kpar = kpar/max(theta_trapped_in,0.0001) + wdia*cdt
@@ -391,7 +355,7 @@ function xgrid_functions_geo(inputs::InputTJLF, outHermite::OutputHermite,
         end
     end
 
-    return OutputGeometry{Float64}(fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
+    return OutputGeometry{Float64}(0, fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
 
 end
 

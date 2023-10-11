@@ -6,8 +6,6 @@ include("../src/tjlf_modules.jl")
 include("../src/tjlf_multiscale_spectrum.jl")
 include("../src/tjlf_geometry.jl")
 include("../src/tjlf_kygrid.jl")
-# include("../src/tjlf_transport_model.jl")
-
 
 
 # saturation rule test
@@ -128,23 +126,27 @@ for dir_name in tests
     width::Integer = round(length(split(lines[1]))/4)
     fluxes = transpose(reshape(parse.(Float64,split(lines[1])), (width,4)))
 
-
-
-
+    #******************************************************************************#************************
     # Read input.tglf
+    #******************************************************************************#************************
     fileDirectory = baseDirectory * "input.tglf"
     lines = readlines(fileDirectory)
-    # struct attempt
     inputTJLF = InputTJLF{Float64}()
 
     for line in lines[1:length(lines)]
         line = split(line, "\n")
         line = split(line[1],"=")
         if line[1] == "NS"
-            global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
-            for i in 1:length(inputSpecies)
-                inputSpecies[i] = Species{Float64}()
-            end
+            inputTJLF.ZS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.AS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.MASS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.TAUS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.RLNS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.RLTS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VPAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VPAR_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VNS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VTS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
         end
     end
 
@@ -158,12 +160,12 @@ for dir_name in tests
             temp = split(line[1],"_")
             speciesField = Symbol(replace(line[1], r"_\d"=>""))
             speciesIndex = check.match[2:end]
-            if parse(Int,speciesIndex) > length(inputSpecies) continue end
-            setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
-        
-            # if not for the species vector
-        else
+            if parse(Int,speciesIndex) > length(inputTJLF.ZS) continue end
+            getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
+            # setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
+        else # if not for the species vector
             field = Symbol(line[1])
+            
             # string
             if line[2][1] == '\''
                 val = string(strip(line[2], ['\'']))
@@ -187,23 +189,27 @@ for dir_name in tests
         end
         
     end
-    setfield!(inputTJLF,:SPECIES,inputSpecies)
+    # setfield!(inputTJLF,:SPECIES,inputSpecies)
 
     if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
         inputTJLF.UNITS = "CGYRO"
+        ####### WTF
+        inputTJLF.XNU_MODEL = 3
+        inputTJLF.WDIA_TRAPPED = 1.0
     end
 
-    kx0epy, satgeo0, satgeo1, satgeo2, runit, bt0, bgeo0, gradr0, _, _, _, _ = get_sat_params(inputTJLF, ky_spect, Matrix(gammas))
+    satParams = get_sat_params(inputTJLF)
+    kx0epy = xgrid_functions_geo(inputTJLF, satParams, ky_spect,  Matrix(gammas))
     @assert isapprox(kx0epy, kx0_e, rtol=1e-3)
-    @assert isapprox(inputComparison["SAT_geo0_out"], satgeo0, rtol=1e-6)
-    @assert isapprox(inputComparison["SAT_geo1_out"], satgeo1, rtol=1e-6)
-    @assert isapprox(inputComparison["SAT_geo2_out"], satgeo2, rtol=1e-6)
-    @assert isapprox(R_unit[1, 1], runit,  rtol=1e-6)
-    @assert isapprox(inputComparison["Bt0_out"], bt0, rtol=1e-6)
-    @assert isapprox(inputComparison["grad_r0_out"], gradr0, rtol=1e-6)
+    @assert isapprox(inputComparison["SAT_geo0_out"], satParams.SAT_geo0, rtol=1e-6)
+    @assert isapprox(inputComparison["SAT_geo1_out"], satParams.SAT_geo1, rtol=1e-6)
+    @assert isapprox(inputComparison["SAT_geo2_out"], satParams.SAT_geo2, rtol=1e-6)
+    @assert isapprox(R_unit[1, 1], satParams.R_unit,  rtol=1e-6)
+    @assert isapprox(inputComparison["Bt0_out"], satParams.Bt0, rtol=1e-6)
+    @assert isapprox(inputComparison["grad_r0_out"], satParams.grad_r0, rtol=1e-6)
 
     if inputTJLF.VEXB_SHEAR != 0.0
-        @assert isapprox(inputComparison["B_geo0_out"], bgeo0, rtol=1e-6)
+        @assert isapprox(inputComparison["B_geo0_out"], satParams.B_geo0, rtol=1e-6)
     end
 
 
@@ -211,7 +217,6 @@ for dir_name in tests
     julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
     expected_sat1 = fluxes[2,:]
     @assert isapprox(julia_sat1, expected_sat1, rtol=1e-3)
-
 end
 
 
@@ -242,20 +247,27 @@ for dir_name in tests
         push!(ky_spect,parse(Float64, line))
     end
 
+    #******************************************************************************#************************
     # Read input.tglf
+    #******************************************************************************#************************
     fileDirectory = baseDirectory * "input.tglf"
     lines = readlines(fileDirectory)
-    # struct attempt
     inputTJLF = InputTJLF{Float64}()
 
     for line in lines[1:length(lines)]
         line = split(line, "\n")
         line = split(line[1],"=")
         if line[1] == "NS"
-            global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
-            for i in 1:length(inputSpecies)
-                inputSpecies[i] = Species{Float64}()
-            end
+            inputTJLF.ZS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.AS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.MASS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.TAUS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.RLNS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.RLTS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VPAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VPAR_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VNS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VTS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
         end
     end
 
@@ -269,90 +281,10 @@ for dir_name in tests
             temp = split(line[1],"_")
             speciesField = Symbol(replace(line[1], r"_\d"=>""))
             speciesIndex = check.match[2:end]
-            if parse(Int,speciesIndex) > length(inputSpecies) continue end
-            setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
-        
-            # if not for the species vector
-        else
-            field = Symbol(line[1])
-            # string
-            if line[2][1] == '\''
-                val = string(strip(line[2], ['\'']))
-            # bool
-            elseif line[2][1] == '.'
-                val = strip(line[2], ['\'','.']) == "true"
-            # int
-            elseif !contains(line[2],'.')
-                val = parse(Int, strip(line[2], ['\'','.',' ']))
-            # float
-            else
-                val = parse(Float64,strip(line[2], ['\'','.',' ']))
-            end
-
-            try
-                setfield!(inputTJLF,field,val)
-            catch
-                throw(error(field))
-            end
-
-        end
-        
-    end
-    setfield!(inputTJLF,:SPECIES,inputSpecies)
-
-    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
-        inputTJLF.UNITS = "CGYRO"
-    end
-    ## maybe check the nky value?
-    Julia_ky_spect, Julia_nky = get_ky_spectrum(inputTJLF)
-    @assert isapprox(Julia_ky_spect, ky_spect, rtol=1e-6)
-    @assert isapprox(Julia_nky, nky)
-
-end
-
-
-
-
-
-
-satRuleDirectory = "../outputs/test_TM/"
-tests = readdir(satRuleDirectory)
-# for dir_name in tests
-#     if dir_name == ".DS_Store" continue end
-    baseDirectory = satRuleDirectory*"test1/"
-
-    # Read input.tglf
-    fileDirectory = baseDirectory * "input.tglf"
-    lines = readlines(fileDirectory)
-    # struct attempt
-    inputTJLF = InputTJLF{Float64}()
-
-    for line in lines[1:length(lines)]
-        line = split(line, "\n")
-        line = split(line[1],"=")
-        if line[1] == "NS"
-            global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
-            for i in 1:length(inputSpecies)
-                inputSpecies[i] = Species{Float64}()
-            end
-        end
-    end
-
-    for line in lines[1:length(lines)]
-        line = split(line, "\n")
-        line = split(line[1],"=")
-
-        #### for the species vector
-        check = match(r"_\d",line[1])
-        if check !== nothing
-            temp = split(line[1],"_")
-            speciesField = Symbol(replace(line[1], r"_\d"=>""))
-            speciesIndex = check.match[2:end]
-            if parse(Int,speciesIndex) > length(inputSpecies) continue end
-            setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
-        
-            # if not for the species vector
-        else
+            if parse(Int,speciesIndex) > length(inputTJLF.ZS) continue end
+            getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
+            # setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
+        else # if not for the species vector
             field = Symbol(line[1])
             
             # string
@@ -378,28 +310,20 @@ tests = readdir(satRuleDirectory)
         end
         
     end
-    setfield!(inputTJLF,:SPECIES,inputSpecies)
+    # setfield!(inputTJLF,:SPECIES,inputSpecies)
 
     if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
         inputTJLF.UNITS = "CGYRO"
+        ####### WTF
+        inputTJLF.XNU_MODEL = 3
+        inputTJLF.WDIA_TRAPPED = 1.0
     end
+    ## maybe check the nky value?
+    Julia_ky_spect, Julia_nky = get_ky_spectrum(inputTJLF)
+    @assert isapprox(Julia_ky_spect, ky_spect, rtol=1e-6)
+    @assert isapprox(Julia_nky, nky)
 
-    # save_vexb_shear = vexb_shear_s
-    # save_find_width = find_width_in
-    # save_iflux = iflux_in
-    vexb_shear_s = 0.0
-    jmax_out = 0
+end
 
-    # include("../src/tjlf_TM.jl")
-    # get_bilinear_spectrum(inputTJLF, vexb_shear_s, jmax_out)
-
-    # eigenvalue_first_pass(:,:,:) = eigenvalue_spectrum_out(:,:,:)
-    # vexb_shear_s = save_vexb_shear
-    # find_width_in = .FALSE.
-    # iflux_in = save_iflux
-    # if(sat_rule_in.eq.0)jmax_out = 1
-    # CALL get_bilinear_spectrum
-
-# end
 
 println("SUCCESS")
