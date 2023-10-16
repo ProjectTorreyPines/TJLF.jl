@@ -13,23 +13,29 @@ include("tjlf_hermite.jl")
 include("tjlf_kygrid.jl")
 include("tjlf_geometry.jl")
 include("tjlf_TRANSPORT_MODEL.jl")
+include("tjlf_LINEAR_SOLUTION.jl")
 
-#******************************************************************************#************************
+#******************************************************************************************************
 # Read input.tglf
-#******************************************************************************#************************
+#******************************************************************************************************
 fileDirectory = baseDirectory * "input.tglf"
 lines = readlines(fileDirectory)
-# struct attempt
 inputTJLF = InputTJLF{Float64}()
 
 for line in lines[1:length(lines)]
     line = split(line, "\n")
     line = split(line[1],"=")
     if line[1] == "NS"
-        global inputSpecies = Vector{Species{Float64}}(undef, parse(Int, strip(line[2])))
-        for i in 1:length(inputSpecies)
-            inputSpecies[i] = Species{Float64}()
-        end
+        inputTJLF.ZS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.AS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.MASS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.TAUS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.RLNS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.RLTS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.VPAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.VPAR_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.VNS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        inputTJLF.VTS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
     end
 end
 
@@ -43,11 +49,10 @@ for line in lines[1:length(lines)]
         temp = split(line[1],"_")
         speciesField = Symbol(replace(line[1], r"_\d"=>""))
         speciesIndex = check.match[2:end]
-        if parse(Int,speciesIndex) > length(inputSpecies) continue end
-        setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
-    
-        # if not for the species vector
-    else
+        if parse(Int,speciesIndex) > length(inputTJLF.ZS) continue end
+        getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
+        # setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
+    else # if not for the species vector
         field = Symbol(line[1])
         
         # string
@@ -70,10 +75,8 @@ for line in lines[1:length(lines)]
             throw(error(field))
         end
 
-    end
-    
+    end 
 end
-setfield!(inputTJLF,:SPECIES,inputSpecies)
 
 if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
     inputTJLF.UNITS = "CGYRO"
@@ -90,15 +93,17 @@ end
 outputHermite = gauss_hermite(inputTJLF)
 ky_spect, nky = get_ky_spectrum(inputTJLF)
 satParams = get_sat_params(inputTJLF)
-vexb_shear_s = 0.0
-jmax_out = 0
-# include("tjlf_max.jl")
-# include("tjlf_LINEAR_SOLUTION.jl")
-get_bilinear_spectrum(inputTJLF, satParams, outputHermite, 
-                        ky_spect, vexb_shear_s, jmax_out)
+tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
+# tjlf_LS(inputs, satParams, outputHermite, 0.7000000000000001, 2, vexb_shear_s)
+
+error("STOP")
 
 run(`$(path) $baseDirectory`)
+
+
+
+
 
 include("tjlf_eigensolver.jl")
 include("tjlf_matrix.jl")

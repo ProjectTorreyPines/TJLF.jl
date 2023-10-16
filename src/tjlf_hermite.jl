@@ -7,7 +7,7 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     maxit=100
 
     # set up the hermite basis x-grid
-    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
+    nbasis = inputs.NBASIS_MAX
     nx = 2*inputs.NXGRID -1
     h0 = 1.0/π^0.25
     m = Int((nx+1)/2) ### NXGRID

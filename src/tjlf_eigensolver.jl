@@ -1,11 +1,12 @@
-# import LinearAlgebra.LAPACK.ggev!
+import LinearAlgebra.LAPACK.ggev!
+using Printf
 include("tjlf_modules.jl")
 include("tjlf_get_uv.jl")
 
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
-                        ky::T, width_parameter::T, nbasis::T) where T<:Real
+                        nbasis::Int, ky::T) where T<:Real
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -19,15 +20,21 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     nroot = 15 #### hardcoded
     iur = (ns-ns0+1)*nroot*nbasis
 
-    mass2 = inputs.SPECIES[2].MASS
-    taus2 = inputs.SPECIES[2].TAUS
+    vpar = inputs.VPAR
+    taus = inputs.TAUS
+    zs = inputs.ZS
+    as = inputs.AS
+
+    mass2 = inputs.MASS[2]
+    taus2 = inputs.TAUS[2]
     vs2 = √(taus2 / mass2)
-    rlns1 = inputs.SPECIES[1].RLNS
-    mass1 = inputs.SPECIES[1].MASS
-    taus1 = inputs.SPECIES[1].TAUS
+    rlns1 = inputs.RLNS[1]
+    mass1 = inputs.MASS[1]
+    taus1 = inputs.TAUS[1]
     vs1 = √(taus1 / mass1)
 
     filter_in = inputs.FILTER
+    width_in = inputs.WIDTH
     use_bpar_in = inputs.USE_BPAR
     use_bper_in = inputs.USE_BPER
     vpar_model_in = inputs.VPAR_MODEL
@@ -39,7 +46,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     rmaj_input = inputs.RMAJ_LOC #### might be different for different geometries
     alpha_p_in = inputs.ALPHA_P
     alpha_mach_in = inputs.ALPHA_MACH
-    sign_It_in = inputs.SIGN_IT
+    sign_it_in = inputs.SIGN_IT
     xnu_factor_in = inputs.XNU_FACTOR
     wdia_trapped_in = inputs.WDIA_TRAPPED
     gradB_factor_in = inputs.GRADB_FACTOR
@@ -51,21 +58,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     B_unit = satParams.B_unit
     q_unit = satParams.q_unit
 
-    U0 = 0.0 ### defined in startup.f90
-    for is = 1:ns
-        vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.SPECIES[is].VPAR
-        taus = inputs.SPECIES[is].TAUS
-        as = inputs.SPECIES[is].AS
-        zs = inputs.SPECIES[is].ZS
-        
-        U0 = U0 + as*vpar_s*zs^2/taus
-    end
+    U0 = sum((alpha_mach_in*sign_it_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
 
     #*************************************************************
     # START
     #*************************************************************
 
-    k_par0 = park_in/(R_unit*q_unit*width_parameter)
+    k_par0 = park_in/(R_unit*q_unit*width_in)
     w_d0 = ky/R_unit
     w_cd = -gchat_in*w_d0
     w_s = -ky/B_unit
@@ -153,10 +152,10 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
     max_freq = 2*abs(ave.wdh[1,1])/R_unit
     for is = ns0:ns
-        rlts = inputs.SPECIES[is].RLTS
-        rlns = inputs.SPECIES[is].RLNS
-        as = inputs.SPECIES[is].AS
-        zs = inputs.SPECIES[is].ZS
+        rlts = inputs.RLTS[is]
+        rlns = inputs.RLNS[is]
+        as = inputs.AS[is]
+        zs = inputs.ZS[is]
 
         test = abs(as*zs*(aveH.hp3p0[is,1,1]*rlns + 1.5*(aveH.hr13p0[is,1,1] - aveH.hp3p0[is,1,1])*rlts))
         max_freq = max(max_freq,test)
@@ -168,7 +167,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     damp_psi = 0.0 ##### this is just never assigned a different value....
     if(use_bper_in)
         if(nbasis==2)
-            betae_psi = 0.5*betae_s/(ky^2+(damp_psi_in*vs2/(q_unit*width_parameter))^2)
+            betae_psi = 0.5*betae_s/(ky^2+(damp_psi_in*vs2/(q_unit*width_in))^2)
         else
             betae_psi = 0.5*betae_s/ky^2
         end
@@ -177,7 +176,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     damp_sig = 0.0 ##### this is just never assigned a different value....
     if(use_bpar_in)
         if(nbasis==2)
-            betae_sig = 0.5*betae_s/(ky^2 + (damp_sig_in*vs2/(q_unit*width_parameter))^2)
+            betae_sig = 0.5*betae_s/(ky^2 + (damp_sig_in*vs2/(q_unit*width_in))^2)
         else
             betae_sig = 0.5*betae_s/(ky^2)
         end
@@ -259,11 +258,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     vpar_shear = Vector{Float64}(undef, ns)
     vpar = Vector{Float64}(undef, ns)
     for is = 1:ns
-        vpar_shear_in = inputs.SPECIES[is].VPAR_SHEAR
-        vpar_in = inputs.SPECIES[is].VPAR
+        vpar_shear_in = inputs.VPAR_SHEAR[is]
+        vpar_in = inputs.VPAR[is]
 
-        vpar_shear[is] = vpar_shear_in          *(alpha_p_in   *sign_It_in *ave.c_tor_par[1,1]/rmaj_input)
-        if(vpar_model_in==0) vpar[is] = (vpar_in*alpha_mach_in*sign_It_in) *ave.c_tor_par[1,1]/rmaj_input end
+        vpar_shear[is] = vpar_shear_in          *(alpha_p_in   *sign_it_in *ave.c_tor_par[1,1]/rmaj_input)
+        if(vpar_model_in==0) vpar[is] = (vpar_in*alpha_mach_in*sign_it_in) *ave.c_tor_par[1,1]/rmaj_input end
     end
 
     #*************************************************************
@@ -309,10 +308,10 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         ki = 0.0
         charge_tot = 0.0
         for is = 2:ns
-            taus = inputs.SPECIES[is].TAUS
-            mass = inputs.SPECIES[is].MASS
-            as = inputs.SPECIES[is].AS
-            zs = inputs.SPECIES[is].ZS
+            taus = inputs.TAUS[is]
+            mass = inputs.MASS[is]
+            as = inputs.AS[is]
+            zs = inputs.ZS[is]
 
             ki = ki + taus*mass*as*zs
             charge_tot = charge_tot + as*zs
@@ -490,13 +489,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     for is = ns0:ns
-        rlnsIS = inputs.SPECIES[is].RLNS
-        rltsIS = inputs.SPECIES[is].RLTS
-        tausIS = inputs.SPECIES[is].TAUS
-        massIS = inputs.SPECIES[is].MASS
+        rlnsIS = inputs.RLNS[is]
+        rltsIS = inputs.RLTS[is]
+        tausIS = inputs.TAUS[is]
+        massIS = inputs.MASS[is]
         vsIS = √(tausIS / massIS)
-        zsIS = inputs.SPECIES[is].ZS
-        asIS = inputs.SPECIES[is].AS
+        zsIS = inputs.ZS[is]
+        asIS = inputs.AS[is]
 
         ### i hate it here
         ft = outputGeo.fts[is]
@@ -576,11 +575,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         # start of loop over basis ib,jb for amat
         #*************************************************************
         for js = ns0:ns
-            tausJS = inputs.SPECIES[js].TAUS
-            massJS = inputs.SPECIES[js].MASS
+            tausJS = inputs.TAUS[js]
+            massJS = inputs.MASS[js]
             vsJS = √(tausJS / massJS)
-            zsJS = inputs.SPECIES[js].ZS
-            asJS = inputs.SPECIES[js].AS
+            zsJS = inputs.ZS[js]
+            asJS = inputs.AS[js]
 
             for ib = 1:nbasis
                 for jb = 1:nbasis
@@ -2696,7 +2695,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
 
     # println(amat)
-    (alpha, beta, vl, vr) = ggev!('N','N',amat,bmat)
+    (alpha, beta, vl, vr) = ggev!('N','N',copy(amat),copy(bmat))
 
     zomega = zeros(ComplexF64, iur)
     rr = zeros(Float64, iur)

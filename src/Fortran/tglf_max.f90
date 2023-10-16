@@ -96,6 +96,10 @@
        width_in = 10.0**tp
 !       write(*,*)"width_in = ",width_in
        new_width = .TRUE.
+    !    if(ky_s.ge.0.65.and.ky_s.le.0.75)then
+    !     write(*,*) width_max
+    !     write(*,*) width_in
+    !   endif !DSUN
        write(*,*) "this is I"
        call tglf_LS
 !       write(*,*)i,width_in,gamma_out(1),freq_out(1),ft
@@ -142,8 +146,12 @@
            tp = (t2+t1)/2.0    
            width_in = 10.0**tp
            new_width = .TRUE.
-           write(*,*) "this is III"
+           write(*,*) "this is III"    
            call tglf_LS
+        !    if(ky_s.ge.0.65.and.ky_s.le.0.75)then
+        !     write(*,*) width_in
+        !     STOP 'plz stop'
+        !   endif
            gm = gamma_out(1)
            tm = tp
          else

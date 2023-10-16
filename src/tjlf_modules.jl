@@ -33,9 +33,17 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     VPAR_SHEAR_MODEL::Union{Int,Missing} = missing
 
 
-
-    SPECIES::Vector{Species{T}} = Vector{Species{T}}()
-
+    # SPECIES::Vector{Species{T}} = Vector{Species{T}}()
+    ZS::Union{Vector{T},Missing} = missing
+    MASS::Union{Vector{T},Missing} = missing
+    RLNS::Union{Vector{T},Missing} = missing
+    RLTS::Union{Vector{T},Missing} = missing
+    TAUS::Union{Vector{T},Missing} = missing
+    AS::Union{Vector{T},Missing} = missing
+    VPAR::Union{Vector{T},Missing} = missing
+    VPAR_SHEAR::Union{Vector{T},Missing} = missing
+    VNS_SHEAR::Union{Vector{T},Missing} = missing
+    VTS_SHEAR::Union{Vector{T},Missing} = missing
 
 
     SIGN_BT::Union{T,Missing} = missing
@@ -134,6 +142,8 @@ end
 ##########################################################
 
 mutable struct OutputGeometry{T<:Real}
+
+    kx0_e::T
 
     fts::Vector{T}
 

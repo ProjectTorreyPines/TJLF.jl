@@ -22,18 +22,19 @@
       REAL,PARAMETER :: epsilon1 = 1.E-12
       LOGICAL :: NO_TRAPPED = .false.
       INTEGER :: j1, j, i, jmax(maxmodes), iroot
-      INTEGER :: imax,is
+      INTEGER :: imax,is,js
       INTEGER :: mi,me
       REAL :: zgamax
       REAL :: phi2_bar,kyi
       REAL :: sum_v_bar, sum_modB_bar
       REAL :: get_intensity, get_gamma_net
+      REAL :: sum
 !  ZGESV storage
       REAL :: small = 1.0E-13
       INTEGER :: info
       INTEGER,ALLOCATABLE,DIMENSION(:) :: di,de
       INTEGER,ALLOCATABLE,DIMENSION(:) :: ipiv
-      COMPLEX,ALLOCATABLE,DIMENSION(:,:) :: zmat
+      COMPLEX,ALLOCATABLE,DIMENSION(:,:) :: zmat, zt
 ! 
 !      cputime0=MPI_WTIME()
 !
@@ -125,6 +126,7 @@ if(new_matrix)then
       ALLOCATE(de(iur))
       ALLOCATE(ipiv(iur))
       ALLOCATE(zmat(iur,iur))
+      ALLOCATE(zt(iur,iur))
 !   tglf_eigen module
       ALLOCATE(fv1(iur))
       ALLOCATE(fv2(iur))
@@ -145,14 +147,13 @@ if(new_matrix)then
 !  solver for linear eigenmodes of tglf equations
 !
       call tglf_eigensolver
-
-    !   open(unit=33,file='temp',status='OLD',position='APPEND', action='WRITE')
-    !   write(*,*) rr !DSUN
-    !   close(33)
-    !   write(*,*) beta!DSUN
-    !   write(*,*) amat!DSUN
-    !   write(*,*) bmat!DSUN
-    !   STOP 'plz stop'
+    !   if(ky.ge.0.65.and.ky.le.0.75)then
+    !     write(*,*) rr !DSUN
+    ! !   close(33)
+    ! !   write(*,*) beta!DSUN
+    ! !   write(*,*) amat!DSUN
+    ! !   write(*,*) bmat!DSUN
+    !   endif
 !      write(*,*)"eigensolver done"
 !
 !      initalize output to zero
@@ -279,11 +280,33 @@ if(new_matrix)then
                          (small +alpha(jmax(imax)))*bmat(i,j)
             enddo
           enddo
+        !   OPEN(unit=33,file="matrixA",status='replace')
+        !     write(33,*)"iur = ",iur
+        !     do is=1,iur
+        !         write(33,*)"i = ",is
+        !         do js=1,iur
+        !             write(33,*)"j = ",js
+        !             write(33,*) zmat(is,js)
+        !         enddo  ! j
+        !     enddo  ! i
+        !     close(33)
+        !   do i = 1,iur
+        !     write(*,*) v(i)
+        !   enddo
+        !   write(*,*) "DSUN"
+
           call zgesv(iur,1,zmat,iur,ipiv,v,iur,info)
+        !   do i=1,iur
+        !     sum = 0.0
+        !     do j=1,iur
+        !         sum = sum + zt(i,j)*v(j)
+        !     enddo
+        !     write(*,*) sum
+        !   enddo
+        ! stop "DSUN"
         !   do i=1,iur
         !     write(*,*) v(i)
         !   enddo
-
           ! Check for clean exit from ZGESV
 
           if (info /= 0)CALL tglf_error(1,"ZGESV failed in tglf_LS")
@@ -293,6 +316,9 @@ if(new_matrix)then
 !          write(*,*)"eigenvalue=",eigenvalue,imax
           call get_QL_weights
 !
+          !DSUN
+        !   write(*,*) "particle_weight ", particle_weight
+        !   write(*,*) "particle_weight ", particle_weight
           wd_bar_out(imax)=wd_bar
           b0_bar_out(imax)=b0_bar
           modB_bar_out(imax)=modB_bar
@@ -671,7 +697,7 @@ if(new_matrix)then
         enddo
         vnorm = vnorm/ABS(as(1)*zs(1))   ! normalize to electron charge density
       endif
-!      write(*,*)"vnorm =",vnorm
+    !  write(*,*)"vnorm =",vnorm !DSUN
 !
 !  compute the electromagnetic potentials
 !
@@ -688,7 +714,7 @@ if(new_matrix)then
             phi(i) = phi(i) +ave_p0inv(i,j)*as(is)*zs(is)*n(is,j)  
             ! write(*,*) ave_p0inv(i,j)
           enddo
-        !   write(*,*) phi(i)
+          
           if(use_bper_in)then
             do j=1,nbasis
               psi(i) = psi(i) + &
@@ -709,7 +735,7 @@ if(new_matrix)then
       enddo
     !   do i=1,nbasis
     !     write(*,*) phi(i)
-    !   enddo
+    !   enddo !DSUN
 ! 
 !  add the adiabatic terms to the total moments
 !    
@@ -732,14 +758,14 @@ if(new_matrix)then
         bsig_norm = bsig_norm + REAL(bsig(i)*CONJG(bsig(i)))
       enddo
       if(phi_norm.lt.epsilon1)phi_norm = epsilon1
-!      write(*,*)"phi_norm =",phi_norm
+    !  write(*,*)"phi_norm =",phi_norm !DSUN
 !
 ! save the field weights
       do i=1,nbasis
         field_weight_QL_out(1,i) = xi*phi(i)/SQRT(phi_norm)
         field_weight_QL_out(2,i) = xi*psi(i)/SQRT(phi_norm)
         field_weight_QL_out(3,i) = xi*bsig(i)/SQRT(phi_norm)
-!        write(*,*)i,"field_weight=",field_weight_QL_out(1,i),field_weight_QL_out(2,i),field_weight_QL_out(3,i)
+    !    write(*,*)i,"field_weight=",field_weight_QL_out(1,i),field_weight_QL_out(2,i),field_weight_QL_out(3,i) !DSUN
        enddo
 !
 ! compute <phi|*|phi> averages
@@ -772,11 +798,11 @@ if(new_matrix)then
       modB_bar = ABS(REAL(phi_modB_phi)/phi_norm)
       kx_bar = REAL(phi_kx_phi)/phi_norm
       kpar_bar = REAL(phi_kpar_phi)/phi_norm
-!      write(*,*)"wd_bar = ",wd_bar
-!      write(*,*)"b0_bar = ",b0_bar
-!       write(*,*)"modB_bar = ",modB_bar
-!      write(*,*)"kx_bar = ",kx_bar
-!      write(*,*)"kpar_bar = ",kpar_bar
+    !  write(*,*)"wd_bar = ",wd_bar
+    !  write(*,*)"b0_bar = ",b0_bar
+    !   write(*,*)"modB_bar = ",modB_bar
+    !  write(*,*)"kx_bar = ",kx_bar
+    !  write(*,*)"kpar_bar = ",kpar_bar
 !
 ! fill the stress moments
 !

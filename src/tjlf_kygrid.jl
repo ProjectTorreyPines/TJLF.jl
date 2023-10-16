@@ -21,8 +21,8 @@ function get_ky_spectrum(inputs::InputTJLF{T})::Tuple{Vector{T}, Int} where T<:R
     units_in = inputs.UNITS
     nky_in = inputs.NKY
     spectrum_type = inputs.KYGRID_MODEL
-    rho_e = √(inputs.SPECIES[1].TAUS*inputs.SPECIES[1].MASS)/ abs(inputs.SPECIES[1].ZS)
-    rho_ion = √(inputs.SPECIES[2].TAUS*inputs.SPECIES[2].MASS)/ abs(inputs.SPECIES[2].ZS)
+    rho_e = √(inputs.TAUS[1]*inputs.MASS[1])/ abs(inputs.ZS[1])
+    rho_ion = √(inputs.TAUS[2]*inputs.MASS[2])/ abs(inputs.ZS[2])
    
     ### value from modules
     ky_min = 0.05
@@ -42,7 +42,7 @@ function get_ky_spectrum(inputs::InputTJLF{T})::Tuple{Vector{T}, Int} where T<:R
     ky1 = ky_max
     ### have no idea why this is hard coded like this -DSUN
     nk_zones = 3
-    if(nk_zones>=2) ky1 = ky_max/√(inputs.SPECIES[1].MASS) end
+    if(nk_zones>=2) ky1 = ky_max/√(inputs.MASS[1]) end
 
 
     if(spectrum_type == 0)

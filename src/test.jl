@@ -55,3 +55,73 @@ function scope()
 end
 
 scope()
+
+matrixZ = Vector{ComplexF64}(undef, 120*120)
+matrixV = Vector{ComplexF64}(undef, 120)
+
+zmatDirectory = "../../zmat"
+zmat = readlines(zmatDirectory)
+vDirectory = "../../v"
+v = readlines(vDirectory)
+index = 1
+for i in eachindex(zmat)
+    if contains(zmat[i], "=") continue end
+    zLine = split(strip(zmat[i], ['(', ')',' ']),",")
+    zLineR = parse(Float64, zLine[1])
+    zLineI = parse(Float64, zLine[2])
+    matrixZ[index] = zLineR + im*zLineI
+    index+=1
+end
+matrixZ = Matrix(reshape(matrixZ,(120,120))')
+index = 1
+for i in eachindex(v)
+    if contains(v[i], "=") continue end
+    vLine = split(strip(v[i], ['(', ')',' ']),",")
+    vLineR = parse(Float64, vLine[1])
+    vLineI = parse(Float64, vLine[2])
+    matrixV[index] = vLineR + im*vLineI
+    index+=1
+end
+v = zeros(ComplexF64, 120)
+v .= 1.0e-13
+gesv!(matrixZ,v)
+v = matrixZ \ v
+norm(v)^2
+cond(matrixZ)
+matrixZ * v
+matrixZ * matrixV
+
+
+
+
+zmatDirectory = "../../zmat"
+zmat = readlines(zmatDirectory)
+zmatDirectory2 = "../../zmat2"
+zmat2 = readlines(zmatDirectory2)
+for i in eachindex(zmat)
+    if contains(zmat[i], "=") continue end
+    zLine = split(strip(zmat[i], ['(', ')',' ']),",")
+    zLineR = parse(Float64, zLine[1])
+    zLineI = parse(Float64, zLine[2])
+
+    try
+        zLine2 = parse(ComplexF64, strip(zmat2[i], [' ','[',']']))
+        zLineR2 = real(zLine2)
+        zLineI2 = imag(zLine2)
+        if !isapprox(zLineR,zLineR2,atol=10^-12)
+            println(i)
+            println(zLineR)
+            println(zLineR2)
+        end
+        if !isapprox(zLineI,zLineI2,atol=10^-12)
+            println(i)
+            println(zLineI)
+            println(zLineI2)
+        end
+    catch
+        println(i)
+        error("FAIL")
+    end
+
+
+end

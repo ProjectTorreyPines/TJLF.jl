@@ -1,17 +1,110 @@
+using Revise
 include("tjlf_modules.jl")
 include("tjlf_max.jl")
 
 
-function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
-            ky_spect::Vector{T}, vexb_shear_s::T, jmax_out::Int) where T<:Real
+#  Main transport model subroutine.
+#  Calls linear TGLF over a spectrum of ky's and computes spectral integrals of 
+#  field, intensity and fluxes.
+function tjlf_TM(inputs::InputTJLF{T},
+                satParams::SaturationParameters{T},
+                outputHermite::OutputHermite{T},
+                ky_spect::Vector{T}) where T<:Real
+
+    sat_rule_in = inputs.SAT_RULE
+    alpha_quench_in = inputs.ALPHA_QUENCH
+    vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
+
+    nmodes = inputs.NMODES
+    nky = length(ky_spect)
+
+    ## initialize fluxes
+    # particle_flux_out(is,j) = 0.0
+    # energy_flux_out(is,j) = 0.0
+    # stress_par_out(is,j) = 0.0
+    # stress_tor_out(is,j) = 0.0
+    # exchange_out(is,j) = 0.0
+    # pflux0(is,j) = 0.0
+    # eflux0(is,j) = 0.0
+    # stress_par0(is,j) = 0.0
+    # stress_tor0(is,j) = 0.0
+    # exch0(is,j) = 0.0
+    # n_bar_sum_out(is) = 0.0
+    # t_bar_sum_out(is) = 0.0
+    # q_low_out(is) = 0.0
+    # nsum0(is) = 0.0
+    # tsum0(is) = 0.0
+ 
+    firstPass_width = Vector{Float64}(undef, nky)
+    firstPass_eigenvalue = Array{Float64}(undef, 2, nky, nmodes)
+    firstPass_width .= inputs.WIDTH # needed for spectral shift model double pass
+
+    # compute the flux spectrum
+    if(alpha_quench_in==0.0 && vexb_shear_s != 0.0)
+        #  spectral shift model double pass
+        original_vexb_shear = vexb_shear_s
+        original_find_width = inputs.FIND_WIDTH
+        original_iflux = inputs.IFLUX
+        inputs.IFLUX = false      # do not compute eigenvectors on first pass #### THIS IS USELESS BC IT IS OVERWRITTEN IMMEDIATELY IN BILINEAR() -DSUN
+        vexb_shear_s = 0.0   # do not use spectral shift on first pass
+        println("this is a")
+        width_out, eigenvalue_spectrum_out = get_bilinear_spectrum(
+                                inputTJLF, satParams, outputHermite, 
+                                ky_spect, vexb_shear_s)
+        firstPass_width .= width_out
+        firstPass_eigenvalue .= eigenvalue_spectrum_out
+        vexb_shear_s = original_vexb_shear
+        inputs.FIND_WIDTH = false
+        inputs.IFLUX = original_iflux
+
+
+        println("this is b")
+        _,_ = get_bilinear_spectrum(inputTJLF, satParams, outputHermite, 
+                    ky_spect, vexb_shear_s,
+                    false,
+                    firstPass_width,
+                    firstPass_eigenvalue)
+
+        #  reset eigenvalues to the values with vexb_shear=0.
+        #  note ql weights are with vexb_shear
+        eigenvalue_spectrum_out .= firstPass_eigenvalue # not useful
+        inputs.FIND_WIDTH = original_find_width
+    else
+        error("NOT IMPLEMENTED YET")
+        jmax_out = 0
+        print("this is c")
+        get_bilinear_spectrum()
+    end
+
+    # sum_ky_spectrum(inputs, ky_spect, eigenvalue_spectrum_out[1,:,:],
+    #             ave_p0,potential,
+    #             particle_QL,
+    #             energy_QL,
+    #             toroidal_stress_QL,
+    #             parallel_stress_QL,
+    #             exchange_QL)
+
+
+
+end
+
+
+
+
+
+
 #
 # computes the bilinear fluctuation moments 
 # and saves them in flux_spectrum_out, intensity_spectrum_out
 # and field_spectrum_out
 #
-    ### DELETE THIS EVENTUALLY
-    R_unit, q_unit= get_sat_params(:rq_units, inputs)
+function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
+            ky_spect::Vector{T}, vexb_shear_s::T, 
+            firstPass::Bool = true,
+            firstPass_width::Union{Vector{T},Missing} = missing,
+            firstPass_eigenvalue::Union{Array{T},Missing} = missing) where T<:Real
 
+    
     sat_rule_in = inputs.SAT_RULE
     nmodes = inputs.NMODES
     ns = inputs.NS
@@ -21,32 +114,31 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
     nbasis_min_in = inputs.NBASIS_MIN
     nxgrid_in = inputs.NXGRID
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
-
     nx = 2*nxgrid_in - 1
     nky = length(ky_spect)
+
+    R_unit = satParams.R_unit
+    q_unit = satParams.q_unit
 
     # initialize output arrays
     spectral_shift_out = zeros(Float64, nky)
     ave_p0_spectrum_out = zeros(Float64, nky)
     eigenvalue_spectrum_out = zeros(Float64, 2, nky, nmodes)
     field_spectrum_out = zeros(Float64, 4, nky, nmodes)
-    ### apparently dimension 2(labeled ns) may not be zero at 1
-    ### if adiabatic_electron_in in inputs is true
     intensity_spectrum_out = zeros(Float64, 4, ns, nky, nmodes)
     flux_spectrum_out = zeros(Float64, 5, ns, 3, nky, nmodes)
     nsts_phase_spectrum_out = zeros(Float64, ns, nky, nmodes)
     ne_te_phase_spectrum_out = zeros(Float64, nky, nmodes)
 
-    # save maximum width
-    ##### this is in tjlf_max.f90 but its too much to decipher rn COME BACK!!!!!!
-    width_parameter = 10^10
-    save_width = width_parameter
+    ### save values!!!
+    original_width = inputs.WIDTH
+    original_iflux = inputs.IFLUX
+    ### change values
+    inputs.IFLUX = true 
 
-    iflux_in = true 
     gmax = 0.0
     fmax = 0.0
     mask_save::Vector{Int} = zeros(Int, nky)
-
     QL_field_spectrum_out::Array{Float64}    = Array{Float64, 3}(undef, 4, nky, nmodes)
     field_spectrum_out::Array{Float64}       = Array{Float64, 3}(undef, 4, nky, nmodes)
     eigenvalue_spectrum_out::Array{Float64}  = Array{Float64, 3}(undef, 2, nky, nmodes)
@@ -54,17 +146,22 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
     intensity_spectrum_out::Array{Float64}   = Array{Float64, 4}(undef, 4, ns, nky, nmodes)
     QL_flux_spectrum_out::Array{Float64}     = Array{Float64, 5}(undef, 5, ns, 3, nky, nmodes)
     flux_spectrum_out::Array{Float64}        = Array{Float64, 5}(undef, 5, ns, 3, nky, nmodes)
+
+    if(firstPass)
+        firstPass_width = Vector{Float64}(undef,nky)
+    end
+
     for i = 1:nky
         ky_s = ky_spect[i]
         new_width = true
 
         if(new_eikonal_in)
-            if(jmax_out == 0) ################ first pass? ###############
+            if(firstPass) ### first pass
                 if(find_width_in)
                     println("this is 1")
                     nmodes_out, gamma_nb_min_out, 
                     gamma_out, freq_out,
-                    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky_s, vexb_shear_s) ############### have to create this ###############
+                    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky_s, vexb_shear_s)
                 else
                     nbasis = nbasis_max_in
                     new_width = true
@@ -72,14 +169,25 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
                     tjlf_LS() ############### have to create this ###############
                     gamma_nb_min_out = gamma_out[1]
                 end
-            else   # second pass
-                gamma_reference_kx0 .= eigenvalue_first_pass[1,i,:]
-                freq_reference_kx0 .= eigenvalue_first_pass[2,i,:]
-                width_in = width_out[i]
+                firstPass_width[i] = inputs.WIDTH
+            else   ### second pass
+                maxmodes = 16 #### from tglf_modules
+                gamma_reference_kx0 = Vector{Float64}(undef, maxmodes)
+                freq_reference_kx0 = Vector{Float64}(undef, maxmodes)
+                gamma_reference_kx0 .= firstPass_eigenvalue[1,i,:]
+                freq_reference_kx0 .= firstPass_eigenvalue[2,i,:]
+                inputs.WIDTH = firstPass_width[i]
                 nbasis = nbasis_max_in
                 new_width = true
                 println("this is 3")
-                tjlf_LS() ############### have to create this ###############
+
+                nmodes_out, gamma_out, freq_out,
+                particle_QL_out, 
+                energy_QL_out, 
+                stress_tor_QL_out, 
+                stress_par_QL_out, 
+                exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s, gamma_reference_kx0, freq_reference_kx0) 
+                    
                 gamma_nb_min_out = gamma_out[1]
             end
             
@@ -88,7 +196,7 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
             if(gamma_out[1] == 0.0) mask_save[i] = 0 end
             #### not used yet
             # gamma_nb_min_save[i] = gamma_nb_min_out
-            # width_save[i] = width_in
+            # width_save[i] = inputs.WIDTH
             # ft_save[i] = ft
             # R_unit_save[i] = R_unit
             # q_unit_save[i] = q_unit
@@ -106,7 +214,7 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
             ############### need these values from the function calls earlier probably
             error("NOT IMPLEMENTED YET -DSUN")
             gamma_nb_min_out = gamma_nb_min_save[i]
-            width_in = width_save[i]
+            inputs.WIDTH = width_save[i]
             ft = ft_save[i]
             R_unit = R_unit_save[i]
             q_unit = q_unit_save[i]
@@ -140,17 +248,18 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
                 reduce = (gamma_nb_min_out/gamma_cutoff)^rexp
             end
         end
-        if(sat_rule_in > 1) reduce = 1.0 end
+        if(sat_rule_in >= 1) reduce = 1.0 end
 
-
-        # width_out[i] = width_in
         if(unstable)
+            println("DSUN")
             # # save the spectral shift of the radial wavenumber due to VEXB_SHEAR
             # spectral_shift_out[i] = kx0_e
             # ave_p0_spectrum_out[i] = ave_p0_out
             # # save field_spectrum_out and eigenvalue_spectrum_out
 
             ##### COME BACK
+            eigenvalue_spectrum_out[1,i,1:nmodes_out] .= gamma_out[1:nmodes_out]
+            eigenvalue_spectrum_out[2,i,1:nmodes_out] .=  freq_out[1:nmodes_out]
             # for imax = 1:nmodes_out
             #     QL_field_spectrum_out[1,i,imax] = v_QL_out[imax]
             #     QL_field_spectrum_out[2,i,imax] = 1.0
@@ -160,9 +269,6 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
             #     field_spectrum_out[2,i,imax] = reduce*phi_bar_out[imax]
             #     field_spectrum_out[3,i,imax] = reduce*a_par_bar_out[imax]
             #     field_spectrum_out[4,i,imax] = reduce*b_par_bar_out[imax]
-            #     eigenvalue_spectrum_out[1,i,imax]=gamma_out[imax]
-            #     eigenvalue_spectrum_out[2,i,imax]=freq_out[imax]
-
             #     if(ky_s <= 1.0 && gamma_out[imax] > gmax)
             #         gmax=gamma_out[imax]
             #         fmax=freq_out[imax]
@@ -201,7 +307,7 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
                         # flux_spectrum_out[3,is,j,i,imax] = phi_bar*stress_tor1
                         # flux_spectrum_out[4,is,j,i,imax] = phi_bar*stress_par1
                         # flux_spectrum_out[5,is,j,i,imax] = phi_bar*exch1
-                        println(pflux1)
+                        # println(pflux1) #DSUN
                     end #imax
                 end # j
             end  # is 
@@ -219,36 +325,33 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
             # end    # is
         end #unstable .T.
 
-        error("STOP")
-
         # reset width to maximum if used tjlf_max
-        if(find_width_in) width_in=save_width end
+        if(find_width_in) inputs.WIDTH = original_width end
 
     end  # i 
 
     # recompute spectrum using non-local in ky multiscale model
     # if(sat_rule_in >= 1) get_multiscale_spectrum(inputs) end
-
     # if(new_eikonal_in) eikonal_unsaved = false end
     # gamma_out[1] = gmax
     # freq_out[1] = fmax
     # inputs.NEW_EIKONAL = true  # reset default for next call to tjlf_TM
 
 
-    # for is=ns0:ns
-    # for j=1:3
-    # for m=1:nmodes
-    # for i=1:nky
-    # for k=1:5
-    #        print(QL_flux_spectrum_out[k,is,j,i,m])
-    #        print(" ")
-    # end
-    # println()
-    # end
-    # end
-    # end
-    # end
+    for is=ns0:ns
+    for j=1:3
+    for m=1:nmodes
+    for i=1:nky
+    for k=1:5
+           print(QL_flux_spectrum_out[k,is,j,i,m])
+           print(" ")
+    end
+    println()
+    end
+    end
+    end
+    end
 
-    return eigenvalue_spectrum_out
+    return firstPass_width, eigenvalue_spectrum_out
       
 end

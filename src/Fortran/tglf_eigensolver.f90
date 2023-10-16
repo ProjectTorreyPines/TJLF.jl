@@ -1155,6 +1155,11 @@
       if(vpar_model_in.eq.0)then
         phi_A = phi_A + N_j*E_i*kpar_hnp0*vpar(is)
       endif
+    !   if (ia.eq.1)then
+    !     write(*,'(F0.52)') hn
+    !     write(*,'(F0.52)') hp3
+    !     write(*,'(F0.52)') phi_A
+    !   endif !DSUN
       phi_B = -hn*E_i*N_j
       sig_A = 0.0
       sig_B = 0.0
@@ -2887,8 +2892,8 @@
     !            write(33,*) bmat(is,js)
     !     enddo  ! j
     !  enddo  ! i
-    ! !
-    !   CLOSE(33)
+    !
+      CLOSE(33)
 
       call zggev("N",rightvectors,iur,at,iur,bt,iur,    &
                   alpha,beta,vleft,iur,vright,iur,work,lwork,rwork,info)

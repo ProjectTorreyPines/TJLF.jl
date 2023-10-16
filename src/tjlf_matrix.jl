@@ -6,9 +6,9 @@ include("tjlf_finiteLarmorRadius.jl")
 
 
 function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T}, 
-                ky::T, width_parameter::T) where T<:Real
+                    ky::T, 
+                    nbasis::Int) where T<:Real
 
-    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
     ns = inputs.NS
 
     ave = Ave{Float64}(ns, nbasis)
@@ -20,9 +20,8 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     aveWG = AveWG{Float64}(ns, nbasis)
     aveKG = AveKG(ns, nbasis)
 
-    ####### need gauher and gauss-hermite() functions for wx and h matrix
-    FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky)
-    get_ave!(inputs, outputGeo, outputHermite, ave, ky, width_parameter)
+    FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky, nbasis)
+    get_ave!(inputs, outputGeo, outputHermite, ave, nbasis, ky)
 
     if(inputs.VPAR_MODEL==0 && inputs.USE_BPER)
         ave.bpinv = inv(ave.bp)
@@ -85,18 +84,17 @@ end
 #*************************************************************
 #  compute the FLR integrals at the hermite nodes
 function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T}, 
-    aveH::AveH{T}, aveG::AveG{T}, ky::T) where T<:Real
+    aveH::AveH{T}, aveG::AveG{T}, ky::T, nbasis::Int) where T<:Real
 
     zero_cut = 1.e-12
     nx = 2*inputs.NXGRID - 1
     ns = inputs.NS
-    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     b0x = outputGeo.b0x
     b2x = outputGeo.b2x
     wx = outputHermite.wx
-    h = outputHermite.h
+    h = outputHermite.h[1:nbasis,:]
 
     
     hxn = Matrix{Float64}(undef, ns, nx)
@@ -124,9 +122,9 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     fth = 1.0
     for i = 1:nx
         for is = ns0:ns
-            taus = inputs.SPECIES[is].TAUS
-            mass = inputs.SPECIES[is].MASS
-            zs = inputs.SPECIES[is].ZS
+            taus = inputs.TAUS[is]
+            mass = inputs.MASS[is]
+            zs = inputs.ZS[is]
 
             #***************************************************************
             #   compute the average h-bessel functions
@@ -165,15 +163,15 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     end
 
     for is = ns0:ns
-        aveH.hn[is,:,:]    .= h * Diagonal(hxn[is,:]   .*wx)   * transpose(h)
-        aveH.hp1[is,:,:]   .= h * Diagonal(hxp1[is,:]  .*wx)   * transpose(h)
-        aveH.hp3[is,:,:]   .= h * Diagonal(hxp3[is,:]  .*wx)   * transpose(h)
-        aveH.hr11[is,:,:]  .= h * Diagonal(hxr11[is,:] .*wx)   * transpose(h)
-        aveH.hr13[is,:,:]  .= h * Diagonal(hxr13[is,:] .*wx)   * transpose(h)
-        aveH.hr33[is,:,:]  .= h * Diagonal(hxr33[is,:] .*wx)   * transpose(h)
-        aveH.hw113[is,:,:] .= h * Diagonal(hxw113[is,:].*wx)   * transpose(h)
-        aveH.hw133[is,:,:] .= h * Diagonal(hxw133[is,:].*wx)   * transpose(h)
-        aveH.hw333[is,:,:] .= h * Diagonal(hxw333[is,:].*wx)   * transpose(h)
+        aveH.hn[is,:,:]    .= h[1:nbasis,:] * Diagonal(hxn[is,:]   .*wx)   * h'
+        aveH.hp1[is,:,:]   .= h[1:nbasis,:] * Diagonal(hxp1[is,:]  .*wx)   * h'
+        aveH.hp3[is,:,:]   .= h[1:nbasis,:] * Diagonal(hxp3[is,:]  .*wx)   * h'
+        aveH.hr11[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr11[is,:] .*wx)   * h'
+        aveH.hr13[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr13[is,:] .*wx)   * h'
+        aveH.hr33[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr33[is,:] .*wx)   * h'
+        aveH.hw113[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw113[is,:].*wx)   * h'
+        aveH.hw133[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw133[is,:].*wx)   * h'
+        aveH.hw333[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw333[is,:].*wx)   * h'
 
         aveH.hn[abs.(aveH.hn) .< zero_cut] .= 0
         aveH.hp1[abs.(aveH.hp1) .< zero_cut] .= 0
@@ -187,15 +185,15 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
         
         nroot = 15 ####### hardcoded
         if(nroot>6)
-            aveG.gn[is,:,:]    .= h * Diagonal(gxn[is,:]   .*wx)   * transpose(h)
-            aveG.gp1[is,:,:]   .= h * Diagonal(gxp1[is,:]  .*wx)   * transpose(h)
-            aveG.gp3[is,:,:]   .= h * Diagonal(gxp3[is,:]  .*wx)   * transpose(h)
-            aveG.gr11[is,:,:]  .= h * Diagonal(gxr11[is,:] .*wx)   * transpose(h)
-            aveG.gr13[is,:,:]  .= h * Diagonal(gxr13[is,:] .*wx)   * transpose(h)
-            aveG.gr33[is,:,:]  .= h * Diagonal(gxr33[is,:] .*wx)   * transpose(h)
-            aveG.gw113[is,:,:] .= h * Diagonal(gxw113[is,:].*wx)   * transpose(h)
-            aveG.gw133[is,:,:] .= h * Diagonal(gxw133[is,:].*wx)   * transpose(h)
-            aveG.gw333[is,:,:] .= h * Diagonal(gxw333[is,:].*wx)   * transpose(h)
+            aveG.gn[is,:,:]    .= h * Diagonal(gxn[is,:]   .*wx)   * h'
+            aveG.gp1[is,:,:]   .= h * Diagonal(gxp1[is,:]  .*wx)   * h'
+            aveG.gp3[is,:,:]   .= h * Diagonal(gxp3[is,:]  .*wx)   * h'
+            aveG.gr11[is,:,:]  .= h * Diagonal(gxr11[is,:] .*wx)   * h'
+            aveG.gr13[is,:,:]  .= h * Diagonal(gxr13[is,:] .*wx)   * h'
+            aveG.gr33[is,:,:]  .= h * Diagonal(gxr33[is,:] .*wx)   * h'
+            aveG.gw113[is,:,:] .= h * Diagonal(gxw113[is,:].*wx)   * h'
+            aveG.gw133[is,:,:] .= h * Diagonal(gxw133[is,:].*wx)   * h'
+            aveG.gw333[is,:,:] .= h * Diagonal(gxw333[is,:].*wx)   * h'
             
             aveG.gn[abs.(aveG.gn) .< zero_cut] .= 0
             aveG.gp1[abs.(aveG.gp1) .< zero_cut] .= 0
@@ -216,15 +214,18 @@ end
 #***********************************************************
 #  compute  k-independent hermite basis averages
 #***********************************************************
-function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermite::OutputHermite{T},ave::Ave{T},
-    ky::T, width_parameter::T, nbasis::T) where T<:Real
+function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermite::OutputHermite{T},ave::Ave{T}, 
+    nbasis::Int, ky::T) where T<:Real
 
     zero_cut = 1.e-12
     fts = outputGeo.fts 
     ft2 = fts[1]^2
 
+    width_in = inputs.WIDTH
+
     vpar_model_in = inputs.VPAR_MODEL
     alpha_mach_in = inputs.ALPHA_MACH
+    sign_it_in = inputs.SIGN_IT
     use_bper_in = inputs.USE_BPER
 
     betae_s = inputs.BETAE ##### not true for 'GENE' units
@@ -234,6 +235,11 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
+    taus = inputs.TAUS
+    vpar = inputs.VPAR
+    zs = inputs.ZS
+    as = inputs.AS
+
     b0x = outputGeo.b0x
     wdx = outputGeo.wdx
     wdpx = outputGeo.wdpx
@@ -242,26 +248,13 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
     cx_tor_per = outputGeo.cx_tor_per
     cx_par_par = outputGeo.cx_par_par
     wx = outputHermite.wx
-    h = outputHermite.h
+    h = outputHermite.h[1:nbasis,:]
 
     # fill the Poisson equation phi multiplier px0 x-grid array
     # note that pol is set in get_species
     pol = 0.0 ##### defined in  tglf_startup.f90
-    for is = 1:ns
-        taus = inputs.SPECIES[is].TAUS
-        zs = inputs.SPECIES[is].ZS
-        as = inputs.SPECIES[is].AS
-        pol = pol +  zs^2*as/taus
-    end
-    U0 = 0.0 ### defined in startup.f90
-    for is = 1:ns
-        vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.SPECIES[is].VPAR
-        taus = inputs.SPECIES[is].TAUS
-        as = inputs.SPECIES[is].AS
-        zs = inputs.SPECIES[is].ZS
-        
-        U0 = U0 + as*vpar_s*zs^2/taus
-    end
+    pol = sum(zs.^2 .* as./taus)
+    U0 = sum((alpha_mach_in*sign_it_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
 
 
     p0x = Vector{Float64}(undef, nx)
@@ -324,8 +317,8 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
             ave.kpar_eff[is,1,1] = -im/√(2)
             if(vpar_model_in==1)
                 error("NOT IMPLEMENTED YET -DSUN")
-                vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.SPECIES[is].VPAR
-                ave.kpar_eff[is,1,1] = ave.kpar_eff[is,1,1] + im*abs(alpha_mach_in*vpar_s)*ky*R_unit*q_unit*width_parameter*mass(is)/zs(is)
+                vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.VPAR[is]
+                ave.kpar_eff[is,1,1] = ave.kpar_eff[is,1,1] + im*abs(alpha_mach_in*vpar_s)*ky*R_unit*q_unit*width_in*mass(is)/zs(is)
             end
         else
             for i = 1:nbasis
@@ -333,8 +326,8 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
                     ave.kpar_eff[is,i,j] = ave.kpar[i,j]     
                     if(vpar_model_in==1 && i==j)
                         error("too lazy rn -DSUN")
-                        vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.SPECIES[is].VPAR
-                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*ky*R_unit*q_unit*width_parameter*mass(is)/zs(is)
+                        vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.VPAR[is]
+                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*ky*R_unit*q_unit*width_in*mass(is)/zs(is)
                     end
                 end
             end
@@ -364,11 +357,9 @@ end
 #***************************************************************
 function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
-    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
     wd_zero_in = inputs.WD_ZERO
-    nm = nbasis
 
-    if(nm==1)
+    if(size(ave.modwdh)[2]==1)
         ave.modwdh[1,1] = abs(ave.wdh[1,1])
         ave.modwdg[1,1] = abs(ave.wdg[1,1])
         return
@@ -377,7 +368,7 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     # find the eigenvalues of ave.wdh
     a = deepcopy(ave.wdh)
     w,a = syev!('V','U',a)
-    for k = 1:nm
+    for k = 1:size(ave.modwdh)[2]
         if(abs(w[k])<wd_zero_in)
             if(w[k]>=0.0)
                 w[k] = wd_zero_in
@@ -395,7 +386,7 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     # find the eigenvalues of ave.wdg
     a = deepcopy(ave.wdg)
     w,a = syev!('V','U',a)
-    for k = 1:nm
+    for k = 1:size(ave.modwdh)[2]
         if(abs(w[k])<wd_zero_in)
             if(w[k]>=0.0)
                 w[k] = wd_zero_in
@@ -423,15 +414,12 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     vpar_model_in = inputs.VPAR_MODEL
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
-    nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
-    nm = nbasis
 
-    if(nm==1)
+    if(size(ave.modkpar_eff)[2]==1)
         for is = ns0:ns
             ave.modkpar_eff[is,1,1] = im*ave.kpar_eff[is,1,1]
         end
     else
-
     # find the eigenvalues and eigenvectors
         if(vpar_model_in!=1)   
             a = im*deepcopy(ave.kpar)
