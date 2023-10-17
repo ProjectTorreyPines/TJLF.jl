@@ -48,7 +48,7 @@ function tjlf_TM(inputs::InputTJLF{T},
         inputs.IFLUX = false      # do not compute eigenvectors on first pass #### THIS IS USELESS BC IT IS OVERWRITTEN IMMEDIATELY IN BILINEAR() -DSUN
         vexb_shear_s = 0.0   # do not use spectral shift on first pass
         println("this is a")
-        width_out, eigenvalue_spectrum_out = get_bilinear_spectrum(
+        width_out, eigenvalue_spectrum_out, _ = get_bilinear_spectrum(
                                 inputTJLF, satParams, outputHermite, 
                                 ky_spect, vexb_shear_s)
         firstPass_width .= width_out
@@ -59,7 +59,7 @@ function tjlf_TM(inputs::InputTJLF{T},
 
 
         println("this is b")
-        _,_ = get_bilinear_spectrum(inputTJLF, satParams, outputHermite, 
+        _,_,fluxes = get_bilinear_spectrum(inputTJLF, satParams, outputHermite, 
                     ky_spect, vexb_shear_s,
                     false,
                     firstPass_width,
@@ -84,7 +84,7 @@ function tjlf_TM(inputs::InputTJLF{T},
     #             parallel_stress_QL,
     #             exchange_QL)
 
-
+    return fluxes, eigenvalue_spectrum_out
 
 end
 
@@ -352,6 +352,6 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
     end
     end
 
-    return firstPass_width, eigenvalue_spectrum_out
+    return firstPass_width, eigenvalue_spectrum_out, QL_flux_spectrum_out
       
 end

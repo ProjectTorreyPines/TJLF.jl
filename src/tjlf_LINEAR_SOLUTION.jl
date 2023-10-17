@@ -80,8 +80,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     if(new_matrix)
         # trace_path[7]=1
         ave, aveH, aveWH, aveKH, 
-        aveG, aveWG, aveKG = get_matrix(inputs, outputGeo, outputHermite, ky, 
-                    nbasis)
+        aveG, aveWG, aveKG = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis)
     end
 
     #  solver for linear eigenmodes of tglf equations
@@ -168,7 +167,6 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     elseif(inputs.IBRANCH==-1)
         # find the top nmodes most unstable modes
         ### put the unstable modes in ascending order by growthrate
-        sortperm
         jmax = sortperm(rr) #### sort_eigenvalues(nmodes_in,jmax), i believe this does the same thing
         jmax .= ifelse.(rr[jmax].>epsilon1, jmax, 0)
         reverse!(jmax)
@@ -212,7 +210,11 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 v .= small
                 for i = 1:iur
                     for j = 1:iur
-                        zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (small +alpha[jmax[imax]])*bmat[i,j])
+                        # zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (small + alpha[jmax[imax]])*bmat[i,j])
+                        zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (alpha[jmax[imax]])*bmat[i,j])
+                        if i==j
+                            zmat[i,j] -= small
+                        end
                     end
                 end
                 ### gesv!(A,B) solves Ax = B, A becomes LU factor, and B becomes solution
