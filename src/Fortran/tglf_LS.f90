@@ -35,6 +35,8 @@
       INTEGER,ALLOCATABLE,DIMENSION(:) :: di,de
       INTEGER,ALLOCATABLE,DIMENSION(:) :: ipiv
       COMPLEX,ALLOCATABLE,DIMENSION(:,:) :: zmat, zt
+
+    !   small =  2.0E-18 +  xi*2.0E-18
 ! 
 !      cputime0=MPI_WTIME()
 !
@@ -655,7 +657,7 @@ if(new_matrix)then
 !      xi=(0.0,1.0)
       epsilon1 = 1.E-12
       freq_QL = eigenvalue
-!      write(*,*)"freq_QL = ",freq_QL
+
 !
 !  fill the density and total pressure vectors
 !
@@ -667,7 +669,7 @@ if(new_matrix)then
           u_par(is,i) = v(j+nbasis+i)
           p_par(is,i) = v(j+nbasis*2+i)
           p_tot(is,i) = v(j+nbasis*3+i)
-          q_par(is,i) = v(j+nbasis*4+1)
+          q_par(is,i) = v(j+nbasis*4+i)
           q_tot(is,i) = v(j+nbasis*5+i)
           if(nroot.gt.6)then
             n(is,i) = n(is,i) -v(j+nbasis*6+i)+v(j+nbasis*12+i)
@@ -697,7 +699,8 @@ if(new_matrix)then
         enddo
         vnorm = vnorm/ABS(as(1)*zs(1))   ! normalize to electron charge density
       endif
-    !  write(*,*)"vnorm =",vnorm !DSUN
+     write(*,*)"vnorm =",vnorm !DSUN
+    !  stop "LS 702"
 !
 !  compute the electromagnetic potentials
 !
@@ -733,9 +736,6 @@ if(new_matrix)then
           endif
         enddo
       enddo
-    !   do i=1,nbasis
-    !     write(*,*) phi(i)
-    !   enddo !DSUN
 ! 
 !  add the adiabatic terms to the total moments
 !    
@@ -758,6 +758,7 @@ if(new_matrix)then
         bsig_norm = bsig_norm + REAL(bsig(i)*CONJG(bsig(i)))
       enddo
       if(phi_norm.lt.epsilon1)phi_norm = epsilon1
+
     !  write(*,*)"phi_norm =",phi_norm !DSUN
 !
 ! save the field weights
@@ -830,6 +831,15 @@ if(new_matrix)then
           enddo
         enddo
       enddo
+    !   write(*,*) stress_par(1,1,2)
+    !   write(*,*) stress_par(2,1,2)
+    !   write(*,*) stress_par(1,2,2)
+    !   write(*,*) stress_par(2,2,2)
+    !   write(*,*) stress_par(1,3,2)
+    !   write(*,*) stress_par(2,3,2)
+    !   write(*,*) stress_par(1,4,2)
+    !   write(*,*) stress_par(2,4,2)
+    !   write(*,*) stress_per
 !
 !  compute the quasilinear weights for the fluxes
 !
@@ -890,6 +900,7 @@ if(new_matrix)then
           exchange_weight(is,j) = as(is)*exchange_weight(is,j)/phi_norm
         enddo
       enddo
+
 !
 !   add the vpar shifts to the total  moments
 !

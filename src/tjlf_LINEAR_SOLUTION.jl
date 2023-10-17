@@ -28,6 +28,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     alpha_quench_in = inputs.ALPHA_QUENCH
     new_eikonal_in = inputs.NEW_EIKONAL
+    filter_in = inputs.FILTER
     
     R_unit = satParams.R_unit
     q_unit = satParams.q_unit
@@ -84,7 +85,28 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     #  solver for linear eigenmodes of tglf equations
-    amat, bmat, alpha, beta, rr, ri = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
+    solution = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
+
+    eigenvalues = solution.values
+    rr = real.(solution.values)
+    ri = imag.(solution.values)
+    v = solution.vectors
+
+    # filter out numerical instabilities that sometimes occur with high mode frequency
+    if filter_in>0.0
+        max_freq = 2*abs(ave.wdh[1,1])/R_unit
+        for is = ns0:ns
+            rlts = inputs.RLTS[is]
+            rlns = inputs.RLNS[is]
+            as = inputs.AS[is]
+            zs = inputs.ZS[is]
+            test = abs(as*zs*(aveH.hp3p0[is,1,1]*rlns + 1.5*(aveH.hr13p0[is,1,1] - aveH.hp3p0[is,1,1])*rlts))
+            max_freq = max(max_freq,test)
+        end
+        max_freq *= filter_in*abs(ky)
+
+        rr .*= ifelse.((rr.>0.0)  .&  (abs.(ri).>max_freq), -1 , 1)
+    end
 
     #  initalize output to zero
     maxmodes = 16 #### from tglf_modules
@@ -143,7 +165,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         if(me>0)
             zgamax = 0.0
             for iroot = 1:me
-                if(rr[de[iroot]]>zgamax)then
+                if(rr[de[iroot]]>zgamax)
                     zgamax = rr[de[iroot]]
                     jmax[1] = de[iroot]
                 end
@@ -194,8 +216,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
     
     # get the fluxes for the most unstable modes
-    v = zeros(ComplexF64, iur)
-    zmat = Matrix{ComplexF64}(undef, iur, iur)
+    # v = zeros(ComplexF64, iur)
+    # zmat = Matrix{ComplexF64}(undef, iur, iur)
     if(inputs.IFLUX)
         wd_bar_out = Vector{Float64}(undef, nmodes_out)
         b0_bar_out = Vector{Float64}(undef, nmodes_out)
@@ -207,21 +229,21 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         kpar_bar_out = Vector{Float64}(undef, nmodes_out)
         for imax = 1:nmodes_out
             if(jmax[imax]>0)
-                v .= small
-                for i = 1:iur
-                    for j = 1:iur
-                        # zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (small + alpha[jmax[imax]])*bmat[i,j])
-                        zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (alpha[jmax[imax]])*bmat[i,j])
-                        if i==j
-                            zmat[i,j] -= small
-                        end
-                    end
-                end
-                ### gesv!(A,B) solves Ax = B, A becomes LU factor, and B becomes solution
-                # gesv!(zmat,v)
-                v = zmat \ v
+                # v .= small
+                # for i = 1:iur
+                #     for j = 1:iur
+                #         # zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (small + alpha[jmax[imax]])*bmat[i,j])
+                #         zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (alpha[jmax[imax]])*bmat[i,j])
+                #         if i==j
+                #             zmat[i,j] -= small
+                #         end
+                #     end
+                # end
+                # ### gesv!(A,B) solves Ax = B, A becomes LU factor, and B becomes solution
+                # # gesv!(zmat,v)
+                # v = zmat \ v
 
-                eigenvalue = im*alpha[jmax[imax]]/beta[jmax[imax]]
+                # eigenvalue = im*alpha[jmax[imax]]/beta[jmax[imax]]
                 
                 Ns_Ts_phase,
                 Ne_Te_phase,
@@ -242,7 +264,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 energy_weight, 
                 stress_par_weight, 
                 stress_tor_weight, 
-                exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalue, v)
+                exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalues[jmax[imax]], v[:,jmax[imax]])
                 #### probably outputs
                 wd_bar_out[imax] = wd_bar
                 b0_bar_out[imax] = b0_bar
@@ -430,6 +452,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     nroot=15 ### hardcoded
     iur = (ns-ns0+1)*nroot*nbasis
 
+
     taus = inputs.TAUS
     mass = inputs.MASS
     as = inputs.AS
@@ -442,7 +465,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     alpha_mach_in = inputs.ALPHA_MACH
     sign_It_in = inputs.SIGN_IT
     alpha_p_in = inputs.ALPHA_P
-    freq_QL = eigenvalue
+    freq_QL = im*eigenvalue
 
     n = Matrix{ComplexF64}(undef, ns,nbasis)
     u_par = Matrix{ComplexF64}(undef, ns,nbasis)
@@ -499,22 +522,22 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     bsig = zeros(ComplexF64, nbasis)
     U0 = sum((alpha_mach_in*sign_It_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
 
-    phi .= sum(ave.p0inv * (Diagonal((as.*zs)[ns0:ns]) * n[ns0:ns,:])', dims=2)
+    phi .= sum(ave.p0inv * transpose(Diagonal((as.*zs)[ns0:ns]) * n[ns0:ns,:]), dims=2)
     if(inputs.USE_BPER)
-        psi .= (betae_psi .*     sum(ave.b0inv * (Diagonal((as.*zs.*vs)[ns0:ns])*u_par[ns0:ns,:])', dims=2))
+        psi .= (betae_psi .*     sum(ave.b0inv * transpose(Diagonal((as.*zs.*vs)[ns0:ns])*u_par[ns0:ns,:]), dims=2))
         if(vpar_model_in==0)
-            phi .= phi .+   (U0*betae_psi)  .*sum(ave.bpinv * (Diagonal((as.*zs.*vs)[ns0:ns])*u_par[ns0:ns,:])', dims=2)
-            psi .= psi .-   (U0*betae_psi)  .*sum(ave.bpinv * (Diagonal((as.*zs)[ns0:ns]) * n[ns0:ns,:])', dims=2)
+            phi .= phi .+   (U0*betae_psi)  .*sum(ave.bpinv * transpose(Diagonal((as.*zs.*vs)[ns0:ns])*u_par[ns0:ns,:]), dims=2)
+            psi .= psi .-   (U0*betae_psi)  .*sum(ave.bpinv * transpose(Diagonal((as.*zs)[ns0:ns]) * n[ns0:ns,:]), dims=2)
         end
     end
     if(inputs.USE_BPAR)
-        bsig .=  ((-betae_sig).*(as.*taus)[ns0:ns])' * (1.5.*p_tot[ns0:ns,:] .- 0.5.*p_par[ns0:ns,:])
+        bsig .=  transpose((-betae_sig).*(as.*taus)[ns0:ns]) * (1.5.*p_tot[ns0:ns,:] .- 0.5.*p_par[ns0:ns,:])
     end
 
     # add the adiabatic terms to the total moments
-    n[ns0:ns,:] .= n[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* phi') #### outer product to make matrix, idk why its this order tbh -DSUN
-    p_par[ns0:ns,:] .= p_par[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* phi')
-    p_tot[ns0:ns,:] .= p_tot[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* phi')
+    n[ns0:ns,:] .= n[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* transpose(phi)) #### outer product to make matrix, idk why its this order tbh -DSUN
+    p_par[ns0:ns,:] .= p_par[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* transpose(phi))
+    p_tot[ns0:ns,:] .= p_tot[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* transpose(phi))
 
     # compute phi_norm, psi_norm, sig_norm
     phi_norm = real(adjoint(phi) * phi)
@@ -552,6 +575,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
         stress_correction = (imag(freq_QL).+2.0.*wp)./(imag(freq_QL).+wp)
     end
 
+    ### ITS WRONGNNGNNGNSFKDSF
     stress_par[ns0:ns,:,1] .= u_par[ns0:ns,:].*stress_correction
     stress_par[ns0:ns,:,2] .= p_par[ns0:ns,:].*stress_correction
     stress_per[ns0:ns,:,1] .= (im*ky) .* (1.5 .*p_tot[ns0:ns,:] .- 0.5 .*p_par[ns0:ns,:]) * (ave.kx)' # (is,j) x (j,i)
@@ -598,12 +622,12 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     #  add the vpar shifts to the total  moments
     if(vpar_model_in==0)
         vpar_s = (alpha_mach_in*sign_It_in).*vpar
-        n[ns0:ns,:] = (vpar_s.*zs./taus)[ns0:ns] .* psi' ### outer product is slightly weird
-        u_par[ns0:ns,:] = (-(vpar_s./vs).*(zs./taus))[ns0:ns] .* phi'
-        p_par[ns0:ns,:] = (vpar_s.*(zs./taus))[ns0:ns] .* psi'
-        p_tot[ns0:ns,:] = (vpar_s.*(zs./taus))[ns0:ns] .* psi'
-        q_par[ns0:ns,:] = (-3 .*(vpar_s./vs).*(zs./taus))[ns0:ns] .* phi'
-        q_tot[ns0:ns,:] = (-(5/3).*(vpar_s./vs).*(zs./taus))[ns0:ns] .* phi'
+        n[ns0:ns,:] = (vpar_s.*zs./taus)[ns0:ns] .* transpose(psi) ### outer product is slightly weird
+        u_par[ns0:ns,:] = (-(vpar_s./vs).*(zs./taus))[ns0:ns] .* transpose(phi)
+        p_par[ns0:ns,:] = (vpar_s.*(zs./taus))[ns0:ns] .* transpose(psi)
+        p_tot[ns0:ns,:] = (vpar_s.*(zs./taus))[ns0:ns] .* transpose(psi)
+        q_par[ns0:ns,:] = (-3 .*(vpar_s./vs).*(zs./taus))[ns0:ns] .* transpose(phi)
+        q_tot[ns0:ns,:] = (-(5/3).*(vpar_s./vs).*(zs./taus))[ns0:ns] .* transpose(phi)
     end
 
 

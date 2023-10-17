@@ -1,5 +1,4 @@
-import LinearAlgebra.LAPACK.ggev!
-using Printf
+# import LinearAlgebra.LAPACK.ggev!
 include("tjlf_modules.jl")
 include("tjlf_get_uv.jl")
 
@@ -33,7 +32,6 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     taus1 = inputs.TAUS[1]
     vs1 = √(taus1 / mass1)
 
-    filter_in = inputs.FILTER
     width_in = inputs.WIDTH
     use_bpar_in = inputs.USE_BPAR
     use_bper_in = inputs.USE_BPER
@@ -149,19 +147,6 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         kpar_gr11bp = 0.0
         kpar_gr13bp = 0.0
     end
-
-    max_freq = 2*abs(ave.wdh[1,1])/R_unit
-    for is = ns0:ns
-        rlts = inputs.RLTS[is]
-        rlns = inputs.RLNS[is]
-        as = inputs.AS[is]
-        zs = inputs.ZS[is]
-
-        test = abs(as*zs*(aveH.hp3p0[is,1,1]*rlns + 1.5*(aveH.hr13p0[is,1,1] - aveH.hp3p0[is,1,1])*rlts))
-        max_freq = max(max_freq,test)
-    end
-    max_freq = filter_in*abs(ky)*max_freq
-
 
     betae_psi = 0.0
     damp_psi = 0.0 ##### this is just never assigned a different value....
@@ -2695,38 +2680,40 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
 
     # println(amat)
-    (alpha, beta, vl, vr) = ggev!('N','N',copy(amat),copy(bmat))
+    # (alpha, beta, vl, vr) = ggev!('N','N',copy(amat),copy(bmat))
 
-    zomega = zeros(ComplexF64, iur)
-    rr = zeros(Float64, iur)
-    ri = zeros(Float64, iur)
-    #### not sure what vr and vi are for
-    vr = zeros(iur, iur)
-    vi = zeros(iur, iur)
-    for j1 = 1:iur
+
+    # zomega = zeros(ComplexF64, iur)
+    # rr = zeros(Float64, iur)
+    # ri = zeros(Float64, iur)
+    # #### not sure what vr and vi are for
+    # vr = zeros(iur, iur)
+    # vi = zeros(iur, iur)
+    # for j1 = 1:iur
         
-        beta2 = real(conj(beta[j1])*beta[j1])
-        if(beta2!=0.0)
-            zomega[j1] = alpha[j1]*conj(beta[j1])/beta2
-        else
-            zomega[j1]=0.0
-        end
+    #     beta2 = real(conj(beta[j1])*beta[j1])
+    #     if(beta2!=0.0)
+    #         zomega[j1] = alpha[j1]*conj(beta[j1])/beta2
+    #     else
+    #         zomega[j1]=0.0
+    #     end
 
-        rr[j1] = real(zomega[j1])
-        ri[j1] = imag(zomega[j1])
-        # filter out numerical instabilities that sometimes occur 
-        # with high mode frequency
-        if(inputs.FILTER>0.0)
-            if(rr[j1]>0.0 && abs(ri[j1])>max_freq)
-                rr[j1]=-rr[j1]
-            end
-        end
-        #### not sure what this is used for
-        for j2 = 1:iur
-            vr[j1,j2] = 0.0
-            vi[j1,j2] = 0.0
-        end
-    end
+    #     rr[j1] = real(zomega[j1])
+    #     ri[j1] = imag(zomega[j1])
+    #     # filter out numerical instabilities that sometimes occur 
+    #     # with high mode frequency
+    #     if(inputs.FILTER>0.0)
+            # if(rr[j1]>0.0 && abs(ri[j1])>max_freq)
+            #     rr[j1]=-rr[j1]
+            # end
+    #     end
+    #     #### not sure what this is used for
+    #     for j2 = 1:iur
+    #         vr[j1,j2] = 0.0
+    #         vi[j1,j2] = 0.0
+    #     end
+    # end
 
-    return amat, bmat, alpha, beta, rr, ri
+    return eigen(amat, bmat)
+    
 end

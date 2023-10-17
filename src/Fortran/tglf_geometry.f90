@@ -333,7 +333,6 @@ SUBROUTINE xgrid_functions_geo
   ! thx is the ballooning angle = 2 pi y/Ly
   ! x is the argument of the Hermite basis functions = thx/width_in
   !
-!   write(*,*) "RUNNNNNNNNN" !DSUN
 
   do i=1,nx
      thx = width_in*x(i)
@@ -404,7 +403,8 @@ SUBROUTINE xgrid_functions_geo
           *qrat_geo(m1)**2
      b2 = (1.0+(kx_factor(m2)*(S_prime(m2)+dkxky2)-kx0*b_geo(m2)/qrat_geo(m2)**2)**2) &
           *qrat_geo(m2)**2
-     ! write(*,*)"b1,b2,b3,b4=",b1,b2,b3,b4
+    !  write(*,*)"b2,b1=",b2,b1
+    !  write(*,*)"y2,y1,y_x",y2,y1,y_x !DSUN
      b0x(i) =  b1 +(b2-b1)*(y_x-y1)/(y2-y1)
      if(b0x(i).lt.0.0)then
         write(*,*)"interpolation error b0x < 0",i,b0x(i),b1,b2

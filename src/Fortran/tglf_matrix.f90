@@ -141,6 +141,11 @@
 !
       endif
       !!!! DSUNNN
+    !   write(*,*) ave_kx(1,1)
+    !   write(*,*) ave_kx(2,1)
+    !   write(*,*) ave_kx(1,2)
+    !   write(*,*) ave_kx(2,2)
+    !   stop "STOP matrix 148"
     ! write(*,*) "modwdgt3 ", ave_modwdgt3
     ! write(*,*) "modwdgu3gt3 ", ave_modwdgu3gt3
     ! write(*,*) "gu3gt3: ", ave_gu3gt3
@@ -2239,6 +2244,13 @@
           endif
         enddo
       enddo
+    !   write(*,*) b0x
+    !   do i=1,63
+    !     do is=1,2
+    !         write(*,*) hxn(is,i)
+    !     enddo
+    ! enddo
+    ! stop "STOP matrix.f90 2253"
 !
       CONTAINS
 !
