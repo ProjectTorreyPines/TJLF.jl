@@ -172,6 +172,7 @@ mutable struct SaturationParameters{T<:Real}
     Bt::Vector{T}
     Bt0::T
     B_geo0::T
+    minB_geo::T
     grad_r::T
     grad_r0::T
     theta::Vector{T}

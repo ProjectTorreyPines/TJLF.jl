@@ -2,10 +2,10 @@
 include("tjlf_modules.jl")
 include("tjlf_get_uv.jl")
 
-function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
+function tjlf_eigensolver{K}(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
-                        nbasis::Int, ky::T) where T<:Real
+                        nbasis::Int, ky::T)::Tuple{Vector{K},Array{K}} where T<:Real
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2713,7 +2713,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     #         vi[j1,j2] = 0.0
     #     end
     # end
-
-    return eigen(amat, bmat)
+    solution = eigen(amat, bmat)
+    return solution.values, solution.vectors
     
 end

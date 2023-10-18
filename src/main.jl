@@ -93,8 +93,8 @@ end
 #******************************************************************************#************************
 
 outputHermite = gauss_hermite(inputTJLF)
-ky_spect, nky = get_ky_spectrum(inputTJLF)
 satParams = get_sat_params(inputTJLF)
+ky_spect, nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
 fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
 # gamma = eigenvalue[1,:,:]
@@ -136,7 +136,7 @@ plot!(ky_spect, fluxes[5,1,1,:,1], label="Julia", title="exchange flux")
 plot(ky_spect, toroidal_stress_QL[:,1,1,1], label="Fortran toroidal", title="Stresses")
 plot!(ky_spect, fluxes[3,1,1,:,1], label="Julia toroidal", title="Stresses",linestyle=:dash)
 plot!(ky_spect, parallel_stress_QL[:,1,1,1], label="Fortran parallel", title="Stresses")
-plot!(ky_spect, fluxes[4,1,1,:,1], label="Julia", title="Stresses",linestyle=:dash)
+plot!(ky_spect, fluxes[4,1,1,:,1], label="Julia parallel", title="Stresses",linestyle=:dash)
 
 
 
