@@ -565,7 +565,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     kpar_bar = real(phi_kpar_phi)/phi_norm
 
     
-
+    # fill the stress moments
     stress_par = Array{ComplexF64, 3}(undef, ns,nbasis,3)
     stress_per = Array{ComplexF64, 3}(undef, ns,nbasis,3)
 
@@ -575,7 +575,6 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
         stress_correction = (imag(freq_QL).+2.0.*wp)./(imag(freq_QL).+wp)
     end
 
-    ### ITS WRONGNNGNNGNSFKDSF
     stress_par[ns0:ns,:,1] .= u_par[ns0:ns,:].*stress_correction
     stress_par[ns0:ns,:,2] .= p_par[ns0:ns,:].*stress_correction
     stress_per[ns0:ns,:,1] .= (im*ky) .* (1.5 .*p_tot[ns0:ns,:] .- 0.5 .*p_par[ns0:ns,:]) * (ave.kx)' # (is,j) x (j,i)

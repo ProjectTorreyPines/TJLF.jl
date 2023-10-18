@@ -11,7 +11,6 @@ function tjlf_TM(inputs::InputTJLF{T},
                 outputHermite::OutputHermite{T},
                 ky_spect::Vector{T}) where T<:Real
 
-    sat_rule_in = inputs.SAT_RULE
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
 
@@ -163,10 +162,11 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
                     gamma_out, freq_out,
                     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky_s, vexb_shear_s)
                 else
+                    error("not implemented yet")
                     nbasis = nbasis_max_in
                     new_width = true
                     println("this is 2")
-                    tjlf_LS() ############### have to create this ###############
+                    tjlf_LS()
                     gamma_nb_min_out = gamma_out[1]
                 end
                 firstPass_width[i] = inputs.WIDTH
@@ -336,21 +336,6 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
     # gamma_out[1] = gmax
     # freq_out[1] = fmax
     # inputs.NEW_EIKONAL = true  # reset default for next call to tjlf_TM
-
-
-    for is=ns0:ns
-    for j=1:3
-    for m=1:nmodes
-    for i=1:nky
-    for k=1:5
-           print(QL_flux_spectrum_out[k,is,j,i,m])
-           print(" ")
-    end
-    println()
-    end
-    end
-    end
-    end
 
     return firstPass_width, eigenvalue_spectrum_out, QL_flux_spectrum_out
       

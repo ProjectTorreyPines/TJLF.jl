@@ -123,16 +123,20 @@ toroidal_stress_QL = QL_data[:, :, :, :, 3]
 parallel_stress_QL = QL_data[:, :, :, :, 4]
 exchange_QL = QL_data[:, :, :, :, 5]
 
-plot(ky_spect, exchange_QL[:,1,1,1], label="Fortran", title="exchange flux")
+plot(ky_spect, particle_QL[:,1,1,1], label="Fortran")
+plot!(ky_spect, fluxes[1,1,1,:,1], label="Julia", title="particle flux")
+
+plot(ky_spect, energy_QL[:,1,1,1], label="Fortran")
+plot!(ky_spect, fluxes[2,1,1,:,1], label="Julia", title="energy flux")
+
+plot(ky_spect, exchange_QL[:,1,1,1], label="Fortran")
 plot!(ky_spect, fluxes[5,1,1,:,1], label="Julia", title="exchange flux")
 
 
-
-
-
-
-
-
+plot(ky_spect, toroidal_stress_QL[:,1,1,1], label="Fortran toroidal", title="Stresses")
+plot!(ky_spect, fluxes[3,1,1,:,1], label="Julia toroidal", title="Stresses",linestyle=:dash)
+plot!(ky_spect, parallel_stress_QL[:,1,1,1], label="Fortran parallel", title="Stresses")
+plot!(ky_spect, fluxes[4,1,1,:,1], label="Julia", title="Stresses",linestyle=:dash)
 
 
 

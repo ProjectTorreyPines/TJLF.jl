@@ -831,15 +831,6 @@ if(new_matrix)then
           enddo
         enddo
       enddo
-    !   write(*,*) stress_par(1,1,2)
-    !   write(*,*) stress_par(2,1,2)
-    !   write(*,*) stress_par(1,2,2)
-    !   write(*,*) stress_par(2,2,2)
-    !   write(*,*) stress_par(1,3,2)
-    !   write(*,*) stress_par(2,3,2)
-    !   write(*,*) stress_par(1,4,2)
-    !   write(*,*) stress_par(2,4,2)
-    !   write(*,*) stress_per
 !
 !  compute the quasilinear weights for the fluxes
 !
@@ -900,7 +891,9 @@ if(new_matrix)then
           exchange_weight(is,j) = as(is)*exchange_weight(is,j)/phi_norm
         enddo
       enddo
-
+      write(*,*) particle_weight
+      write(*,*) stress_par_weight
+      stop "LS 895"
 !
 !   add the vpar shifts to the total  moments
 !
