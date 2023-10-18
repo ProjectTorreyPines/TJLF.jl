@@ -215,7 +215,7 @@ for dir_name in tests
     @assert isapprox(inputComparison["grad_r0_out"], satParams.grad_r0, rtol=1e-6)
 
     if inputTJLF.VEXB_SHEAR != 0.0
-        @assert isapprox(inputComparison["B_geo0_out"], satParams.B_geo0, rtol=1e-6)
+        @assert isapprox(inputComparison["B_geo0_out"], satParams.B_geo[1], rtol=1e-6)
     end
 
 

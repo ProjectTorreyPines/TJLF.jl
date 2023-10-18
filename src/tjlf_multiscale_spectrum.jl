@@ -268,7 +268,7 @@ function intensity_sat(
     SAT_geo1_out = satParams.SAT_geo1
     SAT_geo2_out = satParams.SAT_geo2
     Bt0_out = satParams.Bt0
-    b_geo0_out = satParams.B_geo0
+    b_geo0_out = satParams.B_geo[1]
     grad_r0_out = satParams.grad_r0
     kx0_e = xgrid_functions_geo(inputs, satParams, ky_spect,  gp)
 

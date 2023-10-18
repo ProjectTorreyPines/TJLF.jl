@@ -67,6 +67,7 @@ function tjlf_TM(inputs::InputTJLF{T},
         #  reset eigenvalues to the values with vexb_shear=0.
         #  note ql weights are with vexb_shear
         eigenvalue_spectrum_out .= firstPass_eigenvalue # not useful
+        inputs.IFLUX = original_iflux
         inputs.FIND_WIDTH = original_find_width
     else
         error("NOT IMPLEMENTED YET")
@@ -131,7 +132,6 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
 
     ### save values!!!
     original_width = inputs.WIDTH
-    original_iflux = inputs.IFLUX
     ### change values
     inputs.IFLUX = true 
 

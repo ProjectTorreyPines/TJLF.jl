@@ -166,15 +166,29 @@ mutable struct SaturationParameters{T<:Real}
     SAT_geo0::T
     SAT_geo1::T
     SAT_geo2::T
+
+    y::Vector{T}
     R_unit::T
     B_unit::T
     q_unit::T
+
+    R::Vector{T}
+    Bp::Vector{T}
     Bt::Vector{T}
+
     Bt0::T
-    B_geo0::T
-    minB_geo::T
-    grad_r::T
     grad_r0::T
+
+    S_prime::Vector{T}
+    kx_factor::Vector{T}
+
+    B_geo::Vector{T}
+    qrat_geo::Vector{T}
+
+    sintheta_geo::Vector{T}
+    costheta_geo::Vector{T}
+    costheta_p_geo::Vector{T}
+
     theta::Vector{T}
     
 end

@@ -71,7 +71,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         #  load the x-grid eikonal functions v_QL_out,b0x
         if(new_width)
             # trace_path[6]=1
-            outputGeo = xgrid_functions_geo(inputs, outputHermite, ky)
+            outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky)
             R_unit = satParams.R_unit
             q_unit = satParams.q_unit
         end
@@ -318,7 +318,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             sum_v_bar = sum_v_bar + v_bar_out[i]
         end
         if(sum_v_bar>epsilon1) ft_test = sum_modB_bar/sum_v_bar end
-        modB_min = abs(satParams.minB_geo)
+        modB_min = abs(minimum(satParams.B_geo))
         ft_test = ft_test/modB_min
     end
 

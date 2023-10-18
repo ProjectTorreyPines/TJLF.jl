@@ -7,9 +7,6 @@ baseDirectory = "../outputs/test_TM/simple_test/"
 path = "./Fortran/tglf"
 # run(`$(path) $baseDirectory`)
 
-using Plots
-
-
 include("tjlf_modules.jl")
 include("tjlf_hermite.jl")
 include("tjlf_kygrid.jl")
@@ -99,6 +96,16 @@ fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
 
 
+
+
+
+
+
+
+
+
+using Plots
+
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
 (ntype, nspecies, nfield, nky, nmodes) = parse.(Int32, split(lines[4]))
@@ -150,11 +157,6 @@ for k in 1:nmodes
     push!(freq, lines[2k:2*nmodes:end])
 end
 
-for i in eachindex(gamma)
-if !isapprox(gammaJulia[i],gamma[i],atol=1e-3)
-    println("ASD")
-end
-end
 gammaJulia = eigenvalue[1,:,1]
 freqJulia = eigenvalue[2,:,1]
 

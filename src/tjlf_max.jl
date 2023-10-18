@@ -14,7 +14,6 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     use_bisection_in = inputs.USE_BISECTION
     sat_rule_in = inputs.SAT_RULE
     width_min_in = inputs.WIDTH_MIN
-    nbasis_min_in = inputs.NBASIS_MIN
     nwidth_in = inputs.NWIDTH
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
@@ -26,7 +25,6 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     #### organize this better
     original_iflux = inputs.IFLUX
     original_ibranch = inputs.IBRANCH
-    original_nbasis = inputs.NBASIS_MAX
     original_bper = inputs.USE_BPER
     original_bpar = inputs.USE_BPAR
     original_width = inputs.WIDTH
