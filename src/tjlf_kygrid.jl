@@ -31,7 +31,6 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Tuple{Vector{T}, Int
     if(units_in == "GYRO")
         ky_factor = 1.0
     else
-        ### might use a output struct for this
         ky_factor = grad_r0
     end
 

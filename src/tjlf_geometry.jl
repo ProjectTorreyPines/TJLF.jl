@@ -50,7 +50,7 @@ function xgrid_functions_geo(inputs::InputTJLF, satParams::SaturationParameters{
                     (0.25.*wE.*tanh.((0.69.*wE).^6)))
         elseif(sat_rule_in==2 || sat_rule_in==3)
             a0=1.6
-            vzf_out, kymax_out, _ = get_zonal_mixing(inputs, ky, gamma_reference_kx0)
+            vzf_out, kymax_out, _ = get_zonal_mixing(inputs, satParams, ky, gamma_reference_kx0)
             if(abs(kymax_out*vzf_out*vexb_shear_kx0) > small)
                 kx0_e = -(0.32*vexb_shear_kx0).*((ky./kymax_out).^0.3)./(ky.*vzf_out)
             else
