@@ -2,7 +2,7 @@
 # ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
 
 # location for the input.tglf.gen file
-baseDirectory = "../../simple_test/"
+baseDirectory = "../outputs/test_TM/simple_test/"
 # calls the fortran code as an executable
 path = "./Fortran/tglf"
 # run(`$(path) $baseDirectory`)
@@ -97,9 +97,6 @@ satParams = get_sat_params(inputTJLF)
 ky_spect, nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
 fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
-# gamma = eigenvalue[1,:,:]
-# freq = eigenvalue[2,:,:]
-
 
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
@@ -139,82 +136,29 @@ plot!(ky_spect, parallel_stress_QL[:,1,1,1], label="Fortran parallel", title="St
 plot!(ky_spect, fluxes[4,1,1,:,1], label="Julia parallel", title="Stresses",linestyle=:dash)
 
 
+# Get eigenvalue spectrum
+nmodes = inputTJLF.NMODES
+fileDirectory = baseDirectory * "out.tglf.eigenvalue_spectrum"
+lines = readlines(fileDirectory)
+lines = split(join(lines[3:length(lines)]))
+lines = [parse(Float64, l) for l in lines]
 
+gamma = []
+freq = []
+for k in 1:nmodes
+    push!(gamma, lines[2k-1:2*nmodes:end])
+    push!(freq, lines[2k:2*nmodes:end])
+end
 
+for i in eachindex(gamma)
+if !isapprox(gammaJulia[i],gamma[i],atol=1e-3)
+    println("ASD")
+end
+end
+gammaJulia = eigenvalue[1,:,1]
+freqJulia = eigenvalue[2,:,1]
 
-
-
-
-
-
-
-
-# ################################# Needed from Fortran output files ############################################
-
-# Get ky spectrum
-# fileDirectory = baseDirectory * "out.tglf.ky_spectrum"
-# lines = readlines(fileDirectory)
-# ky_spect = Array{Float64}(undef, 0)
-# for line in lines[3:length(lines)]
-#         push!(ky_spect,parse(Float64, line))
-# end
-# # Get eigenvalue spectrum
-# fileDirectory = baseDirectory * "out.tglf.eigenvalue_spectrum"
-# lines = readlines(fileDirectory)
-# lines = split(join(lines[3:length(lines)]))
-# lines = [parse(Float64, l) for l in lines]
-
-# gamma = []
-# freq = []
-# for k in 1:nmodes
-#     push!(gamma, lines[2k-1:2*nmodes:end])
-#     push!(freq, lines[2k-1:2*nmodes:end])
-# end
-# gammas = hcat(gamma...)
-
-# fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
-# lines = readlines(fileDirectory)
-# (ntype, nspecies, nfield, nky, nmodes) = parse.(Int32, split(lines[4]))
-# ql = Vector{Float64}()
-# for line in lines[7:length(lines)]
-#     line = split(line)
-#     if any(occursin.(["m","s"],string(line))) continue end
-
-#     for x in line
-#         push!(ql,parse(Float64, string(x)))
-#     end
-
-# end
-# QLw = reshape(ql, (ntype, nky, nmodes, nfield, nspecies))
-# QL_data = permutedims(QLw,(2,3,5,4,1))
-# particle_QL = QL_data[:, :, :, :, 1]
-# energy_QL = QL_data[:, :, :, :, 2]
-# toroidal_stress_QL = QL_data[:, :, :, :, 3]
-# parallel_stress_QL = QL_data[:, :, :, :, 4]
-# exchange_QL = QL_data[:, :, :, :, 5]
-# #Read ave_p0 (only needed for SAT0)
-# fileDirectory = baseDirectory * "out.tglf.ave_p0_spectrum"
-# lines = readlines(fileDirectory)
-# ave_p0 = Vector{Float64}()
-# for line in lines[4:length(lines)]
-#         push!(ave_p0,parse(Float64, line))
-# end
-# # Get potential spectrum
-# fileDirectory = baseDirectory * "out.tglf.field_spectrum"
-# lines = readlines(fileDirectory)
-
-# columns = split.(lines[2],",")
-# nc = length(columns)
-
-# lines = split(join(lines[6:length(lines)]))
-
-# tmpdict = Dict()
-# for (ik, k) in enumerate(columns)
-#     tmp = []
-#     for nm in 1:nmodes
-#         push!(tmp, parse.(Float64,lines[ik - 3 + nm * nc:nc*nmodes:end]))
-#     end
-#     tmpdict[k] = tmp
-# end
-# potentialTmp = tmpdict[columns[length(columns)]]
-# potential = hcat(potentialTmp...)
+plot(ky_spect, freq, label="Fortran")
+plot!(ky_spect, freqJulia, label="Julia", title="Frequency",linestyle=:dash)
+plot(ky_spect, gamma, label="Fortran")
+plot!(ky_spect, gammaJulia, label="Julia", title="Growth Rate",linestyle=:dash)

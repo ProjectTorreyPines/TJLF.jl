@@ -2,10 +2,10 @@
 include("tjlf_modules.jl")
 include("tjlf_get_uv.jl")
 
-function tjlf_eigensolver{K}(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
+function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
-                        nbasis::Int, ky::T)::Tuple{Vector{K},Array{K}} where T<:Real
+                        nbasis::Int, ky::T)::Tuple{Vector{ComplexF64},Array{ComplexF64}} where T<:Real
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2

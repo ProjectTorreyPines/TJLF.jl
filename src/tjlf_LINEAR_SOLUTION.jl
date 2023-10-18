@@ -85,7 +85,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v = tjlf_eigensolver{ComplexF64}(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
 
@@ -457,7 +457,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     vs = .√(taus./mass)
     vpar = inputs.VPAR
     vpar_shear = inputs.VPAR_SHEAR
-
+    
     vpar_model_in = inputs.VPAR_MODEL
     alpha_mach_in = inputs.ALPHA_MACH
     sign_It_in = inputs.SIGN_IT
@@ -500,9 +500,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
         j = 1
         for i = 1:iur
             if(i>j*nbasis*nroot) j=j+1 end
-            as = inputs.AS[j]
-            zs = inputs.ZS[j]
-            vnorm = vnorm + real(v[i]*conj(v[i]))*abs(as*zs)
+            vnorm = vnorm + real((adjoint(v) * v))*abs(inputs.AS[j]*inputs.ZS[j])
         end
         vnorm = vnorm/abs(inputs.AS[1]*inputs.ZS[1])   #normalize to electron charge density
     end
@@ -518,7 +516,6 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     psi = zeros(ComplexF64, nbasis)
     bsig = zeros(ComplexF64, nbasis)
     U0 = sum((alpha_mach_in*sign_It_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
-
     phi .= sum(ave.p0inv * transpose(Diagonal((as.*zs)[ns0:ns]) * n[ns0:ns,:]), dims=2)
     if(inputs.USE_BPER)
         psi .= (betae_psi .*     sum(ave.b0inv * transpose(Diagonal((as.*zs.*vs)[ns0:ns])*u_par[ns0:ns,:]), dims=2))

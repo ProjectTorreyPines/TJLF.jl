@@ -6,6 +6,12 @@ include("../src/tjlf_modules.jl")
 include("../src/tjlf_multiscale_spectrum.jl")
 include("../src/tjlf_geometry.jl")
 include("../src/tjlf_kygrid.jl")
+include("../src/tjlf_hermite.jl")
+include("../src/tjlf_kygrid.jl")
+include("../src/tjlf_TRANSPORT_MODEL.jl")
+include("../src/tjlf_max.jl")
+include("../src/tjlf_LINEAR_SOLUTION.jl")
+include("../src/tjlf_eigensolver.jl")
 
 
 # saturation rule test
@@ -325,6 +331,156 @@ for dir_name in tests
     @assert isapprox(Julia_nky, nky)
 
 end
+
+
+
+
+
+
+
+
+
+
+
+
+testTMDirectory = "../outputs/test_TM/"
+tests = readdir(testTMDirectory)
+for dir_name in tests
+    if dir_name == ".DS_Store" continue end
+    baseDirectory = testTMDirectory*dir_name*"/"
+
+
+    # get particle, energy, exchange fluxes
+    fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
+    lines = readlines(fileDirectory)
+    (ntype, nspecies, nfield, nky, nmodes) = parse.(Int32, split(lines[4]))
+    ql = Vector{Float64}()
+    for line in lines[7:length(lines)]
+        line = split(line)
+        if any(occursin.(["m","s"],string(line))) continue end
+    
+        for x in line
+            push!(ql,parse(Float64, string(x)))
+        end
+    
+    end
+    QLw = reshape(ql, (ntype, nky, nmodes, nfield, nspecies))
+    QL_data = permutedims(QLw,(2,3,5,4,1))
+    particle_QL = QL_data[:, :, :, :, 1]
+    energy_QL = QL_data[:, :, :, :, 2]
+    exchange_QL = QL_data[:, :, :, :, 5]
+
+    # Get eigenvalue spectrum
+    fileDirectory = baseDirectory * "out.tglf.eigenvalue_spectrum"
+    lines = readlines(fileDirectory)
+    lines = split(join(lines[3:length(lines)]))
+    lines = [parse(Float64, l) for l in lines]
+
+    gamma = []
+    freq = []
+    for k in 1:nmodes
+        push!(gamma, lines[2k-1:2*nmodes:end])
+        push!(freq, lines[2k:2*nmodes:end])
+    end
+
+    #******************************************************************************************************
+    # Read input.tglf
+    #******************************************************************************************************
+    fileDirectory = baseDirectory * "input.tglf"
+    lines = readlines(fileDirectory)
+    inputTJLF = InputTJLF{Float64}()
+
+    for line in lines[1:length(lines)]
+        line = split(line, "\n")
+        line = split(line[1],"=")
+        if line[1] == "NS"
+            inputTJLF.ZS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.AS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.MASS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.TAUS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.RLNS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.RLTS = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VPAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VPAR_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VNS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+            inputTJLF.VTS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
+        end
+    end
+
+    for line in lines[1:length(lines)]
+        line = split(line, "\n")
+        line = split(line[1],"=")
+
+        #### for the species vector
+        check = match(r"_\d",line[1])
+        if check !== nothing
+            temp = split(line[1],"_")
+            speciesField = Symbol(replace(line[1], r"_\d"=>""))
+            speciesIndex = check.match[2:end]
+            if parse(Int,speciesIndex) > length(inputTJLF.ZS) continue end
+            getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
+            # setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
+        else # if not for the species vector
+            field = Symbol(line[1])
+            
+            # string
+            if line[2][1] == '\''
+                val = string(strip(line[2], ['\'']))
+            # bool
+            elseif line[2][1] == '.'
+                val = strip(line[2], ['\'','.']) == "true"
+            # int
+            elseif !contains(line[2],'.')
+                val = parse(Int, strip(line[2], ['\'','.',' ']))
+            # float
+            else
+                val = parse(Float64,strip(line[2], ['\'','.',' ']))
+            end
+
+            try
+                setfield!(inputTJLF,field,val)
+            catch
+                throw(error(field))
+            end
+
+        end 
+    end
+
+    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+        inputTJLF.UNITS = "CGYRO"
+        ####### WTF
+        inputTJLF.XNU_MODEL = 3
+        inputTJLF.WDIA_TRAPPED = 1.0
+    end
+
+    outputHermite = gauss_hermite(inputTJLF)
+    satParams = get_sat_params(inputTJLF)
+    ky_spect, nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
+
+    fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+    gammaJulia = eigenvalue[1,:,1]
+    freqJulia = eigenvalue[2,:,1]
+
+    for i in eachindex(fluxes[1,1,1,:,1])
+        if particle_QL[i,1,1,1] != 0.0
+            @assert isapprox(particle_QL[i,1,1,1], fluxes[1,1,1,i,1], atol=1e-3)
+        end
+        if energy_QL[i,1,1,1] != 0.0
+            @assert isapprox(energy_QL[i,1,1,1], fluxes[2,1,1,i,1], atol=1e-2)
+        end
+        if exchange_QL[i,1,1,1] != 0.0
+            @assert isapprox(exchange_QL[i,1,1,1], fluxes[5,1,1,i,1], atol=1e-3)
+        end
+    end
+    for i in eachindex(gammaJulia)
+        @assert isapprox(gamma[1][i],gammaJulia[i], atol=1e-6)
+    end
+    for i in eachindex(freqJulia)
+        @assert isapprox(freq[1][i],freqJulia[i], atol=1e-6)
+    end
+
+end
+
 
 
 println("SUCCESS")

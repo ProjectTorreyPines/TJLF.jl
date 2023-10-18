@@ -48,7 +48,7 @@ function tjlf_TM(inputs::InputTJLF{T},
         vexb_shear_s = 0.0   # do not use spectral shift on first pass
         println("this is a")
         width_out, eigenvalue_spectrum_out, _ = get_bilinear_spectrum(
-                                inputTJLF, satParams, outputHermite, 
+                                inputs, satParams, outputHermite, 
                                 ky_spect, vexb_shear_s)
         firstPass_width .= width_out
         firstPass_eigenvalue .= eigenvalue_spectrum_out
@@ -58,7 +58,7 @@ function tjlf_TM(inputs::InputTJLF{T},
 
 
         println("this is b")
-        _,_,fluxes = get_bilinear_spectrum(inputTJLF, satParams, outputHermite, 
+        _,_,fluxes = get_bilinear_spectrum(inputs, satParams, outputHermite, 
                     ky_spect, vexb_shear_s,
                     false,
                     firstPass_width,
