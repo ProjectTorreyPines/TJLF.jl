@@ -13,10 +13,8 @@ include("tjlf_geometry.jl")
 #     and this function creates it accordingly
 # 
 
-function get_ky_spectrum(inputs::InputTJLF{T})::Tuple{Vector{T}, Int} where T<:Real
+function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Tuple{Vector{T}, Int} where T<:Real
     
-    ### global variable
-    new_kyspectrum = false
     ### values from input
     units_in = inputs.UNITS
     nky_in = inputs.NKY
@@ -24,7 +22,7 @@ function get_ky_spectrum(inputs::InputTJLF{T})::Tuple{Vector{T}, Int} where T<:R
     rho_e = √(inputs.TAUS[1]*inputs.MASS[1])/ abs(inputs.ZS[1])
     rho_ion = √(inputs.TAUS[2]*inputs.MASS[2])/ abs(inputs.ZS[2])
    
-    ### value from modules
+    ### value from modules.f90
     ky_min = 0.05
     ky_max = 0.7
     ky_in = 0.3
@@ -34,8 +32,7 @@ function get_ky_spectrum(inputs::InputTJLF{T})::Tuple{Vector{T}, Int} where T<:R
         ky_factor = 1.0
     else
         ### might use a output struct for this
-        grad_r0_out = get_sat_params(:grad_r0,inputs)
-        ky_factor = grad_r0_out
+        ky_factor = grad_r0
     end
 
     ky0 = ky_min

@@ -213,7 +213,7 @@ for dir_name in tests
     end
 
 
-    sat_1 = sum_ky_spectrum(inputTJLF, ky_spect, gammas, ave_p0, potential, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL)
+    sat_1 = sum_ky_spectrum(inputTJLF, satParams, ky_spect, gammas, ave_p0, potential, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL)
     julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
     expected_sat1 = fluxes[2,:]
     @assert isapprox(julia_sat1, expected_sat1, rtol=1e-3)
@@ -319,7 +319,8 @@ for dir_name in tests
         inputTJLF.WDIA_TRAPPED = 1.0
     end
     ## maybe check the nky value?
-    Julia_ky_spect, Julia_nky = get_ky_spectrum(inputTJLF)
+    satParams = get_sat_params(inputTJLF)
+    Julia_ky_spect, Julia_nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
     @assert isapprox(Julia_ky_spect, ky_spect, rtol=1e-6)
     @assert isapprox(Julia_nky, nky)
 

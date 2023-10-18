@@ -1,44 +1,7 @@
-# export get_sat_params, xgrid_functions_geo, mercier_luc, miller_geo
+# export xgrid_functions_geo, get_sat_params, mercier_luc, miller_geo
 
 include("tjlf_modules.jl")
 include("tjlf_multiscale_spectrum.jl")
-
-function get_sat_params(param::Symbol, inputs::InputTJLF, ms::Int=128)
-    if param == :Bt0_out
-        _, _, _, _, _, _, _, _, Bt0_out, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
-        return Bt0_out
-    elseif param == :B_geo0
-        _, _, b_geo, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
-        return b_geo[1]
-    elseif param == :minB
-        _, _, b_geo, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = mercier_luc(inputs)
-        return findmin(b_geo)[1]
-    elseif param == :grad_r0
-        _, _, b_geo, _, qrat_geo, _, _, _, Bt0_out, _, _, _, _, _, _, _, _, _  = mercier_luc(inputs)
-        return b_geo[1]/qrat_geo[1]
-    elseif param ==:rq_units ### for tjlf_max
-        s_p, _, b_geo, pk_geo, qrat_geo, _, costheta_geo, _, _, _, _, ds, _, _, _, _, _, _ = mercier_luc(inputs)
-        rmaj_s = inputs.RMAJ_LOC ### different for different geometries
-        y = zeros(Float64,ms+1)
-        y[1]=0.0
-        for m in 2:ms+1
-            y[m] = y[m-1]+s_p[m]*ds*4.0/(pk_geo[m]+pk_geo[m-1])
-        end
-        Ly=y[ms+1]
-        R_unit = rmaj_s*b_geo[1]/(qrat_geo[1]*costheta_geo[1])
-        q_unit = Ly/(2π*R_unit)
-
-        return R_unit, q_unit
-    end
-end
-
-
-
-
-
-
-
-
 
 function xgrid_functions_geo(inputs::InputTJLF, satParams::SaturationParameters{T}, ky::Vector{T}, gammas::Matrix{T},
     small::T=0.00000001) where T<:Real
@@ -452,6 +415,7 @@ function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.0
     ### line 276-277
     grad_r0_out = b_geo[1]/qrat_geo[1]
     B_geo0_out = b_geo[1]
+    minB_geo = minimum(b_geo)
     ### so this value is defined in mercier_luc
     Bt0_out = Bt0_out
     B_unit_out = B_unit_out
@@ -463,7 +427,7 @@ function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.0
 
     return SaturationParameters{Float64}(SAT_geo0_out,SAT_geo1_out,SAT_geo2_out,
                                     R_unit,B_unit_out[end],q_unit,
-                                    Bt_out,Bt0_out,B_geo0_out,
+                                    Bt_out,Bt0_out,B_geo0_out, minB_geo,
                                     grad_r_out,grad_r0_out,
                                     theta_out)
 

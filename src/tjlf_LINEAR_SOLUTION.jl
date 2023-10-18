@@ -85,12 +85,9 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     #  solver for linear eigenmodes of tglf equations
-    solution = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
-
-    eigenvalues = solution.values
-    rr = real.(solution.values)
-    ri = imag.(solution.values)
-    v = solution.vectors
+    eigenvalues, v = tjlf_eigensolver{ComplexF64}(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
+    rr = real.(eigenvalues)
+    ri = imag.(eigenvalues)
 
     # filter out numerical instabilities that sometimes occur with high mode frequency
     if filter_in>0.0
@@ -321,7 +318,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             sum_v_bar = sum_v_bar + v_bar_out[i]
         end
         if(sum_v_bar>epsilon1) ft_test = sum_modB_bar/sum_v_bar end
-        modB_min = get_sat_params(:minB, inputs) ####### temporary value for now
+        modB_min = abs(satParams.minB_geo)
         ft_test = ft_test/modB_min
     end
 

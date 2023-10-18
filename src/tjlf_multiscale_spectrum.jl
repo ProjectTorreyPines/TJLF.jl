@@ -17,7 +17,7 @@ include("intensity_sat_rules.jl")
 #     finds the maximum of gamma/ky spectrum at low-k values by going through the ky_mix
 #     array, then after finding the max, interpolate the value to improve accuracy
 #   
-function get_zonal_mixing(inputs::InputTJLF{T}, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
+function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
 
 
     sat_rule_in = inputs.SAT_RULE
@@ -28,9 +28,8 @@ function get_zonal_mixing(inputs::InputTJLF{T}, ky_mix::AbstractVector{T}, gamma
     mass_2 = inputs.MASS[2]
 
     rho_ion =  √(taus_2*mass_2) / abs(zs_2)
-    #
+
     # find the local maximum of gamma_mix/ky_mix with the largest gamma_mix/ky_mix^2
-    #
     kycut = 0.8/rho_ion
     kymin = 0.0  
 
@@ -40,7 +39,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, ky_mix::AbstractVector{T}, gamma
     if(alpha_zf < 0.0) kymin = 0.173 * √(2.0) / rho_ion end
     # saturation rules
     if sat_rule_in==2 || sat_rule_in==3
-        grad_r0 = get_sat_params(:grad_r0,inputs)
+        grad_r0 = satParams.grad_r0
         kycut = grad_r0 * kycut
         kymin = grad_r0 * kymin
     end
@@ -200,15 +199,15 @@ end
 
 ######### DSUN thoughts of splitting intensity_sat into 3 functions to help with readability?
 ######### abandoned for now, but can be seen in the intensity.jl file
-function intensity_sat(inputs::InputTJLF{T}, ky_spect::Vector{T}, gp::Array{T}, QL_data::Array{T}, expsub::T=2.0, return_phi_params::Bool=false) where T<: Real
-    if inputs.SAT_RULE == 1
-        return intensity_sat1(inputs, ky_spect, gp, QL_data)
-    elseif inputs.SAT_RULE == 2
-        return intensity_sat2(inputs, ky_spect, gp, QL_data)
-    elseif inputs.SAT_RULE == 3
-        return intensity_sat3(inputs, ky_spect, gp, QL_data)
-    end
-end
+# function intensity_sat(inputs::InputTJLF{T}, ky_spect::Vector{T}, gp::Array{T}, QL_data::Array{T}, expsub::T=2.0, return_phi_params::Bool=false) where T<: Real
+#     if inputs.SAT_RULE == 1
+#         return intensity_sat1(inputs, ky_spect, gp, QL_data)
+#     elseif inputs.SAT_RULE == 2
+#         return intensity_sat2(inputs, ky_spect, gp, QL_data)
+#     elseif inputs.SAT_RULE == 3
+#         return intensity_sat3(inputs, ky_spect, gp, QL_data)
+#     end
+# end
 
 
 #
@@ -233,6 +232,7 @@ end
 # 
 function intensity_sat(
     inputs::InputTJLF{T},
+    satParams::SaturationParameters{T},
     ky_spect::Vector{T},
     gp::Array{T},
     QL_data::Array{T}, ### taken from the output file
@@ -264,7 +264,6 @@ function intensity_sat(
     small = 10^-10
     nky = length(ky_spect)
 
-    satParams = get_sat_params(inputs)
     SAT_geo0_out = satParams.SAT_geo0
     SAT_geo1_out = satParams.SAT_geo1
     SAT_geo2_out = satParams.SAT_geo2
@@ -280,7 +279,7 @@ function intensity_sat(
         gammas1 = gp
     end
 
-    vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gammas1)
+    vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, ky_spect, gammas1)
     
     # model fit parameters
     # Miller geometry values igeo=1
@@ -436,7 +435,7 @@ function intensity_sat(
     end
 
     if(sat_rule_in==1)
-        vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, ky_spect, gamma_net)
+        vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, ky_spect, gamma_net)
     else
         vzf_out_fp = vzf_out # used for recreation of first pass for SAT3
         vzf_out = vzf_out*gamma_net[jmax_out]/max(gammas1[jmax_out], small)
@@ -815,6 +814,7 @@ end
 
 function sum_ky_spectrum(
     inputs::InputTJLF{T},
+    satParams::SaturationParameters{T},
     ky_spect::Vector{T},
     gp::Array{T},
     ave_p0::Vector{T},
@@ -851,7 +851,7 @@ function sum_ky_spectrum(
     # Multiply QL weights with desired intensity
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
         intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(
-            inputs, ky_spect, gp, QL_data
+            inputs, satParams, ky_spect, gp, QL_data
         )
     else
         throw(error(
