@@ -9,7 +9,7 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
                     ky::T, 
                     nbasis::Int) where T<:Real
 
-    ns = inputs.NS
+    ns::Int = inputs.NS
 
     ave = Ave{Float64}(ns, nbasis)
     aveH = AveH{Float64}(ns, nbasis)

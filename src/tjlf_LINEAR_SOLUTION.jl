@@ -85,7 +85,10 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     #  solver for linear eigenmodes of tglf equations
+    # @code_warntype tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
     eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
+
+    # error("DSF")
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
 
