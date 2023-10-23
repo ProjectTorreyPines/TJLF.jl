@@ -466,10 +466,16 @@ for dir_name in tests
             @assert isapprox(particle_QL[i,1,1,1], fluxes[1,1,1,i,1], atol=1e-3)
         end
         if energy_QL[i,1,1,1] != 0.0
-            @assert isapprox(energy_QL[i,1,1,1], fluxes[2,1,1,i,1], atol=1e-2)
+            @assert isapprox(energy_QL[i,1,1,1], fluxes[2,1,1,i,1], atol=1e-3)
         end
         if exchange_QL[i,1,1,1] != 0.0
             @assert isapprox(exchange_QL[i,1,1,1], fluxes[5,1,1,i,1], atol=1e-3)
+        end
+        if exchange_QL[i,1,1,1] != 0.0
+            @assert isapprox(toroidal_stress_QL[i,1,1,1], fluxes[3,1,1,i,1], atol=1e-3)
+        end
+        if exchange_QL[i,1,1,1] != 0.0
+            @assert isapprox(parallel_stress_QL[i,1,1,1], fluxes[4,1,1,i,1], atol=1e-3)
         end
     end
     for i in eachindex(gammaJulia)
