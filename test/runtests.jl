@@ -3,6 +3,7 @@ using Base.Filesystem
 # using AxisArrays
 
 include("../src/tjlf_modules.jl")
+include("../src/tjlf_read_input.jl")
 include("../src/tjlf_multiscale_spectrum.jl")
 include("../src/tjlf_geometry.jl")
 include("../src/tjlf_kygrid.jl")
@@ -135,74 +136,13 @@ for dir_name in tests
     #******************************************************************************#************************
     # Read input.tglf
     #******************************************************************************#************************
-    fileDirectory = baseDirectory * "input.tglf"
-    lines = readlines(fileDirectory)
-    inputTJLF = InputTJLF{Float64}()
+    
+    inputTJLF = readInput(baseDirectory)
 
-    for line in lines[1:length(lines)]
-        line = split(line, "\n")
-        line = split(line[1],"=")
-        if line[1] == "NS"
-            inputTJLF.ZS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.AS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.MASS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.TAUS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.RLNS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.RLTS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VPAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VPAR_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VNS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VTS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-        end
-    end
+    #*******************************************************************************************************
+    #   start running stuff
+    #*******************************************************************************************************
 
-    for line in lines[1:length(lines)]
-        line = split(line, "\n")
-        line = split(line[1],"=")
-
-        #### for the species vector
-        check = match(r"_\d",line[1])
-        if check !== nothing
-            temp = split(line[1],"_")
-            speciesField = Symbol(replace(line[1], r"_\d"=>""))
-            speciesIndex = check.match[2:end]
-            if parse(Int,speciesIndex) > length(inputTJLF.ZS) continue end
-            getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
-            # setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
-        else # if not for the species vector
-            field = Symbol(line[1])
-            
-            # string
-            if line[2][1] == '\''
-                val = string(strip(line[2], ['\'']))
-            # bool
-            elseif line[2][1] == '.'
-                val = strip(line[2], ['\'','.']) == "true"
-            # int
-            elseif !contains(line[2],'.')
-                val = parse(Int, strip(line[2], ['\'','.',' ']))
-            # float
-            else
-                val = parse(Float64,strip(line[2], ['\'','.',' ']))
-            end
-
-            try
-                setfield!(inputTJLF,field,val)
-            catch
-                throw(error(field))
-            end
-
-        end
-        
-    end
-    # setfield!(inputTJLF,:SPECIES,inputSpecies)
-
-    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
-        inputTJLF.UNITS = "CGYRO"
-        ####### WTF
-        inputTJLF.XNU_MODEL = 3
-        inputTJLF.WDIA_TRAPPED = 1.0
-    end
 
     satParams = get_sat_params(inputTJLF)
     kx0epy = xgrid_functions_geo(inputTJLF, satParams, ky_spect,  Matrix(gammas))
@@ -256,75 +196,13 @@ for dir_name in tests
     #******************************************************************************#************************
     # Read input.tglf
     #******************************************************************************#************************
-    fileDirectory = baseDirectory * "input.tglf"
-    lines = readlines(fileDirectory)
-    inputTJLF = InputTJLF{Float64}()
 
-    for line in lines[1:length(lines)]
-        line = split(line, "\n")
-        line = split(line[1],"=")
-        if line[1] == "NS"
-            inputTJLF.ZS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.AS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.MASS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.TAUS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.RLNS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.RLTS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VPAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VPAR_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VNS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VTS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-        end
-    end
+    inputTJLF = readInput(baseDirectory)
 
-    for line in lines[1:length(lines)]
-        line = split(line, "\n")
-        line = split(line[1],"=")
-
-        #### for the species vector
-        check = match(r"_\d",line[1])
-        if check !== nothing
-            temp = split(line[1],"_")
-            speciesField = Symbol(replace(line[1], r"_\d"=>""))
-            speciesIndex = check.match[2:end]
-            if parse(Int,speciesIndex) > length(inputTJLF.ZS) continue end
-            getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
-            # setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
-        else # if not for the species vector
-            field = Symbol(line[1])
-            
-            # string
-            if line[2][1] == '\''
-                val = string(strip(line[2], ['\'']))
-            # bool
-            elseif line[2][1] == '.'
-                val = strip(line[2], ['\'','.']) == "true"
-            # int
-            elseif !contains(line[2],'.')
-                val = parse(Int, strip(line[2], ['\'','.',' ']))
-            # float
-            else
-                val = parse(Float64,strip(line[2], ['\'','.',' ']))
-            end
-
-            try
-                setfield!(inputTJLF,field,val)
-            catch
-                throw(error(field))
-            end
-
-        end
-        
-    end
-    # setfield!(inputTJLF,:SPECIES,inputSpecies)
-
-    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
-        inputTJLF.UNITS = "CGYRO"
-        ####### WTF
-        inputTJLF.XNU_MODEL = 3
-        inputTJLF.WDIA_TRAPPED = 1.0
-    end
-    ## maybe check the nky value?
+    #*******************************************************************************************************
+    #   start running stuff
+    #*******************************************************************************************************
+    
     satParams = get_sat_params(inputTJLF)
     Julia_ky_spect, Julia_nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
     @assert isapprox(Julia_ky_spect, ky_spect, rtol=1e-6)
@@ -368,6 +246,8 @@ for dir_name in tests
     QL_data = permutedims(QLw,(2,3,5,4,1))
     particle_QL = QL_data[:, :, :, :, 1]
     energy_QL = QL_data[:, :, :, :, 2]
+    toroidal_stress_QL = QL_data[:, :, :, :, 3]
+    parallel_stress_QL = QL_data[:, :, :, :, 4]
     exchange_QL = QL_data[:, :, :, :, 5]
 
     # Get eigenvalue spectrum
@@ -386,72 +266,12 @@ for dir_name in tests
     #******************************************************************************************************
     # Read input.tglf
     #******************************************************************************************************
-    fileDirectory = baseDirectory * "input.tglf"
-    lines = readlines(fileDirectory)
-    inputTJLF = InputTJLF{Float64}()
 
-    for line in lines[1:length(lines)]
-        line = split(line, "\n")
-        line = split(line[1],"=")
-        if line[1] == "NS"
-            inputTJLF.ZS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.AS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.MASS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.TAUS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.RLNS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.RLTS = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VPAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VPAR_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VNS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-            inputTJLF.VTS_SHEAR = Vector{Float64}(undef, parse(Int, strip(line[2])))
-        end
-    end
+    inputTJLF = readInput(baseDirectory)
 
-    for line in lines[1:length(lines)]
-        line = split(line, "\n")
-        line = split(line[1],"=")
-
-        #### for the species vector
-        check = match(r"_\d",line[1])
-        if check !== nothing
-            temp = split(line[1],"_")
-            speciesField = Symbol(replace(line[1], r"_\d"=>""))
-            speciesIndex = check.match[2:end]
-            if parse(Int,speciesIndex) > length(inputTJLF.ZS) continue end
-            getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
-            # setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
-        else # if not for the species vector
-            field = Symbol(line[1])
-            
-            # string
-            if line[2][1] == '\''
-                val = string(strip(line[2], ['\'']))
-            # bool
-            elseif line[2][1] == '.'
-                val = strip(line[2], ['\'','.']) == "true"
-            # int
-            elseif !contains(line[2],'.')
-                val = parse(Int, strip(line[2], ['\'','.',' ']))
-            # float
-            else
-                val = parse(Float64,strip(line[2], ['\'','.',' ']))
-            end
-
-            try
-                setfield!(inputTJLF,field,val)
-            catch
-                throw(error(field))
-            end
-
-        end 
-    end
-
-    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
-        inputTJLF.UNITS = "CGYRO"
-        ####### WTF
-        inputTJLF.XNU_MODEL = 3
-        inputTJLF.WDIA_TRAPPED = 1.0
-    end
+    #*******************************************************************************************************
+    #   start running stuff
+    #*******************************************************************************************************
 
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
@@ -463,19 +283,19 @@ for dir_name in tests
 
     for i in eachindex(fluxes[1,1,1,:,1])
         if particle_QL[i,1,1,1] != 0.0
-            @assert isapprox(particle_QL[i,1,1,1], fluxes[1,1,1,i,1], atol=1e-3)
+            @assert isapprox(particle_QL[i,1,1,1], fluxes[1,1,1,i,1], rtol=1e-6)
         end
         if energy_QL[i,1,1,1] != 0.0
-            @assert isapprox(energy_QL[i,1,1,1], fluxes[2,1,1,i,1], atol=1e-3)
+            @assert isapprox(energy_QL[i,1,1,1], fluxes[2,1,1,i,1], rtol=1e-6)
         end
         if exchange_QL[i,1,1,1] != 0.0
-            @assert isapprox(exchange_QL[i,1,1,1], fluxes[5,1,1,i,1], atol=1e-3)
+            @assert isapprox(exchange_QL[i,1,1,1], fluxes[5,1,1,i,1], rtol=1e-6)
         end
         if exchange_QL[i,1,1,1] != 0.0
-            @assert isapprox(toroidal_stress_QL[i,1,1,1], fluxes[3,1,1,i,1], atol=1e-3)
+            @assert isapprox(toroidal_stress_QL[i,1,1,1], fluxes[3,1,1,i,1], rtol=1e-6)
         end
         if exchange_QL[i,1,1,1] != 0.0
-            @assert isapprox(parallel_stress_QL[i,1,1,1], fluxes[4,1,1,i,1], atol=1e-3)
+            @assert isapprox(parallel_stress_QL[i,1,1,1], fluxes[4,1,1,i,1], rtol=1e-6)
         end
     end
     for i in eachindex(gammaJulia)

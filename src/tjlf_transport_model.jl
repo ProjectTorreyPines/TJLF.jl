@@ -154,7 +154,6 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
         gamma_reference_kx0 = Vector{Float64}(undef, maxmodes)
         freq_reference_kx0 = Vector{Float64}(undef, maxmodes)
         kx0_e = xgrid_functions_geo(inputs,satParams,ky_spect,firstPass_eigenvalue[1,:,:])
-        println(kx0_e)
     end
 
     for i = 1:nky
@@ -183,7 +182,7 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
                 inputs.WIDTH = firstPass_width[i]
                 nbasis = nbasis_max_in
                 new_width = true
-                println("this is 3")
+                # println("this is 3")
 
                 nmodes_out, gamma_out, freq_out,
                 particle_QL_out, 

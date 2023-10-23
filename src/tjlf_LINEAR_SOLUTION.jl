@@ -453,11 +453,6 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     nroot=15 ### hardcoded
     iur = (ns-ns0+1)*nroot*nbasis
 
-    if ky<.11
-        println("debug")
-    end
-
-
     taus = inputs.TAUS
     mass = inputs.MASS
     as = inputs.AS
