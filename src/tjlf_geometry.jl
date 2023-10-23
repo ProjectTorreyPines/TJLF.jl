@@ -77,17 +77,17 @@ end
 
 
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T},
-    ky::T,
+    ky::T, kx0_e::T=0.0,
     mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
 
     width_in = inputs.WIDTH
+    sat_rule_in = inputs.SAT_RULE
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
     rmin_s = inputs.RMIN_LOC
     q_s = inputs.Q_LOC
 
-    
     sign_Bt_in = inputs.SIGN_BT
     ns = inputs.NS
     ns0 = 1
@@ -110,10 +110,18 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     sintheta_geo = satParams.sintheta_geo
     costheta_geo = satParams.costheta_geo
     costheta_p_geo = satParams.costheta_p_geo
+    grad_r0_out = satParams.grad_r0
 
     f = satParams.Bt0 * inputs.RMAJ_LOC # Bt0_out = f/rmaj_input defined
 
-    kx0 = 0 ### only because there is no gammas yet
+    kx0 = inputs.KX0_LOC/ky
+    if(inputs.UNITS=="GYRO")
+        kx0 = sign_Bt_in*kx0_e 
+    else
+       if(sat_rule_in==1) kx0 = sign_Bt_in*kx0_e/(2.1) end
+       if(sat_rule_in==2 || sat_rule_in==3) kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out^2 end
+    end
+
     x = outHermite.x
     kxx = Vector{Float64}(undef,nx)
     wdx = Vector{Float64}(undef,nx)

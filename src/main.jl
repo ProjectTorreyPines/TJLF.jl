@@ -13,15 +13,12 @@ include("tjlf_LINEAR_SOLUTION.jl")
 #******************************************************************************************************
 # location for the input.tglf.gen file
 baseDirectory = "../outputs/test_TM/simple_test/"
-# calls the fortran code as an executable
-path = "./Fortran/tglf"
-# run(`$(path) $baseDirectory`)
 
 inputTJLF = readInput(baseDirectory)
 
-#******************************************************************************#************************
+#*******************************************************************************************************
 #   start running stuff
-#******************************************************************************#************************
+#*******************************************************************************************************
 
 outputHermite = gauss_hermite(inputTJLF)
 satParams = get_sat_params(inputTJLF)
@@ -29,15 +26,24 @@ ky_spect, nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
 fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
 
+@profview tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# using Profile
+# @profile tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# using BenchmarkTools
+# @btime tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
 
 
 
-
-
-
+#*******************************************************************************************************
+#   plot results
+#*******************************************************************************************************
 
 using Plots
+
+# calls the fortran code as an executable
+# path = "./Fortran/tglf"
+# run(`$(path) $baseDirectory`)
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
@@ -70,10 +76,11 @@ plot(ky_spect, exchange_QL[:,1,1,1], label="Fortran")
 plot!(ky_spect, fluxes[5,1,1,:,1], label="Julia", title="exchange flux")
 
 
-plot(ky_spect, toroidal_stress_QL[:,1,1,1], label="Fortran toroidal", title="Stresses")
-plot!(ky_spect, fluxes[3,1,1,:,1], label="Julia toroidal", title="Stresses",linestyle=:dash)
-plot!(ky_spect, parallel_stress_QL[:,1,1,1], label="Fortran parallel", title="Stresses")
-plot!(ky_spect, fluxes[4,1,1,:,1], label="Julia parallel", title="Stresses",linestyle=:dash)
+plot(ky_spect, toroidal_stress_QL[:,1,1,1], label="Fortran", title="toroidal stress")
+plot!(ky_spect, fluxes[3,1,1,:,1], label="Julia", title="toroidal stress",linestyle=:dash)
+
+plot(ky_spect, parallel_stress_QL[:,1,1,1], label="Fortran", title="parallel stress")
+plot!(ky_spect, fluxes[4,1,1,:,1], label="Julia", title="parallel stress",linestyle=:dash)
 
 
 # Get eigenvalue spectrum

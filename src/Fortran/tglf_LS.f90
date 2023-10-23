@@ -30,7 +30,7 @@
       REAL :: get_intensity, get_gamma_net
       REAL :: sum
 !  ZGESV storage
-      REAL :: small = 1.0E-13
+      REAL :: small = 1.0E-15
       INTEGER :: info
       INTEGER,ALLOCATABLE,DIMENSION(:) :: di,de
       INTEGER,ALLOCATABLE,DIMENSION(:) :: ipiv
@@ -148,6 +148,7 @@ if(new_matrix)then
 !
 !  solver for linear eigenmodes of tglf equations
 !
+    
       call tglf_eigensolver
     !   if(ky.ge.0.65.and.ky.le.0.75)then
     !     write(*,*) rr !DSUN
@@ -156,6 +157,7 @@ if(new_matrix)then
     ! !   write(*,*) amat!DSUN
     ! !   write(*,*) bmat!DSUN
     !   endif
+
 !      write(*,*)"eigensolver done"
 !
 !      initalize output to zero
@@ -661,6 +663,10 @@ if(new_matrix)then
 !
 !  fill the density and total pressure vectors
 !
+
+    !   open(unit=33,file='v values2',status='replace')
+    !     write(33,*) v
+    !   close(33)
       vnorm = 0.0
       do is = ns0,ns
         j = (is-ns0)*nroot*nbasis
@@ -699,7 +705,7 @@ if(new_matrix)then
         enddo
         vnorm = vnorm/ABS(as(1)*zs(1))   ! normalize to electron charge density
       endif
-     write(*,*)"vnorm =",vnorm !DSUN
+    !  write(*,*)"vnorm =",vnorm !DSUN
     !  stop "LS 702"
 !
 !  compute the electromagnetic potentials
@@ -891,9 +897,9 @@ if(new_matrix)then
           exchange_weight(is,j) = as(is)*exchange_weight(is,j)/phi_norm
         enddo
       enddo
-      write(*,*) particle_weight
-      write(*,*) stress_par_weight
-      stop "LS 895"
+    !   write(*,*) particle_weight
+    !   write(*,*) stress_par_weight
+    !   stop "LS 895"
 !
 !   add the vpar shifts to the total  moments
 !

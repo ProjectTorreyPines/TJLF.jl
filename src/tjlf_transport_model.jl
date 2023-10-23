@@ -46,7 +46,7 @@ function tjlf_TM(inputs::InputTJLF{T},
         original_iflux = inputs.IFLUX
         inputs.IFLUX = false      # do not compute eigenvectors on first pass #### THIS IS USELESS BC IT IS OVERWRITTEN IMMEDIATELY IN BILINEAR() -DSUN
         vexb_shear_s = 0.0   # do not use spectral shift on first pass
-        println("this is a")
+        # println("this is a")
         width_out, eigenvalue_spectrum_out, _ = get_bilinear_spectrum(
                                 inputs, satParams, outputHermite, 
                                 ky_spect, vexb_shear_s)
@@ -57,8 +57,9 @@ function tjlf_TM(inputs::InputTJLF{T},
         inputs.IFLUX = original_iflux
 
 
-        println("this is b")
-        _,_,fluxes = get_bilinear_spectrum(inputs, satParams, outputHermite, 
+        # println("this is b")
+        _,_,fluxes = get_bilinear_spectrum(
+                    inputs, satParams, outputHermite, 
                     ky_spect, vexb_shear_s,
                     false,
                     firstPass_width,
@@ -148,6 +149,12 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
 
     if(firstPass)
         firstPass_width = Vector{Float64}(undef,nky)
+    else
+        maxmodes = 16 #### from tglf_modules
+        gamma_reference_kx0 = Vector{Float64}(undef, maxmodes)
+        freq_reference_kx0 = Vector{Float64}(undef, maxmodes)
+        kx0_e = xgrid_functions_geo(inputs,satParams,ky_spect,firstPass_eigenvalue[1,:,:])
+        println(kx0_e)
     end
 
     for i = 1:nky
@@ -157,7 +164,7 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
         if(new_eikonal_in)
             if(firstPass) ### first pass
                 if(find_width_in)
-                    println("this is 1")
+                    # println("this is 1")
                     nmodes_out, gamma_nb_min_out, 
                     gamma_out, freq_out,
                     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky_s, vexb_shear_s)
@@ -165,15 +172,12 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
                     error("not implemented yet")
                     nbasis = nbasis_max_in
                     new_width = true
-                    println("this is 2")
+                    # println("this is 2")
                     tjlf_LS()
                     gamma_nb_min_out = gamma_out[1]
                 end
                 firstPass_width[i] = inputs.WIDTH
             else   ### second pass
-                maxmodes = 16 #### from tglf_modules
-                gamma_reference_kx0 = Vector{Float64}(undef, maxmodes)
-                freq_reference_kx0 = Vector{Float64}(undef, maxmodes)
                 gamma_reference_kx0 .= firstPass_eigenvalue[1,i,:]
                 freq_reference_kx0 .= firstPass_eigenvalue[2,i,:]
                 inputs.WIDTH = firstPass_width[i]
@@ -186,7 +190,8 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
                 energy_QL_out, 
                 stress_tor_QL_out, 
                 stress_par_QL_out, 
-                exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s, gamma_reference_kx0, freq_reference_kx0) 
+                exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s, 
+                                    kx0_e[i], gamma_reference_kx0, freq_reference_kx0) 
                     
                 gamma_nb_min_out = gamma_out[1]
             end
@@ -229,7 +234,7 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
             end
 
             if(mask_save[i] == 1)
-                println("this is 4")
+                # println("this is 4")
                 tjlf_LS() ############### have to create this ###############
             else
                 gamma_out[1] = 0.0
@@ -251,7 +256,7 @@ function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParame
         if(sat_rule_in >= 1) reduce = 1.0 end
 
         if(unstable)
-            println("DSUN")
+            # println("DSUN")
             # # save the spectral shift of the radial wavenumber due to VEXB_SHEAR
             # spectral_shift_out[i] = kx0_e
             # ave_p0_spectrum_out[i] = ave_p0_out

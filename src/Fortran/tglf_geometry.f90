@@ -333,7 +333,9 @@ SUBROUTINE xgrid_functions_geo
   ! thx is the ballooning angle = 2 pi y/Ly
   ! x is the argument of the Hermite basis functions = thx/width_in
   !
-
+  if(ky<.12)then
+    write(*,*) "kx0_e", kx0_e
+  endif
   do i=1,nx
      thx = width_in*x(i)
      sign_theta=1.0

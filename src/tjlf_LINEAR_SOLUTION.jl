@@ -14,6 +14,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             ky::T, 
             nbasis::Int,
             vexb_shear_s::T,
+            kx0_e::T = 0.0,
             gamma_reference_kx0::Union{Vector{T},Missing} = missing,
             freq_reference_kx0::Union{Vector{T},Missing} = missing) where T <: Real
 
@@ -33,7 +34,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     R_unit = satParams.R_unit
     q_unit = satParams.q_unit
 
-    new_geometry = true ###### hardcoded for now
+    new_geometry = false ###### hardcoded for now
+    new_width = true ###### hardcoded for now
     # check co-dependencies
     if(new_geometry) new_width= true end 
     if(new_width) new_matrix = true end
@@ -71,7 +73,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         #  load the x-grid eikonal functions v_QL_out,b0x
         if(new_width)
             # trace_path[6]=1
-            outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky)
+            outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky, kx0_e)
             R_unit = satParams.R_unit
             q_unit = satParams.q_unit
         end
@@ -85,7 +87,6 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     #  solver for linear eigenmodes of tglf equations
-    # @code_warntype tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
     eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
 
     # error("DSF")
@@ -452,6 +453,10 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     nroot=15 ### hardcoded
     iur = (ns-ns0+1)*nroot*nbasis
 
+    if ky<.11
+        println("debug")
+    end
+
 
     taus = inputs.TAUS
     mass = inputs.MASS
@@ -484,12 +489,12 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
             q_par[is,i] = v[j+nbasis*4+i]
             q_tot[is,i] = v[j+nbasis*5+i]
             if(nroot>6)
-                n[is,i] = n[is,i] -v[j+nbasis*6+i]+v[j+nbasis*12+i]
-                u_par[is,i] = u_par[is,i] -v[j+nbasis*7+i]
-                p_par[is,i] = p_par[is,i] -v[j+nbasis*8+i]+v[j+nbasis*13+i]
-                p_tot[is,i] = p_tot[is,i] -v[j+nbasis*9+i]+v[j+nbasis*14+i]
-                q_par[is,i] = q_par[is,i] -v[j+nbasis*10+i]
-                q_tot[is,i] = q_tot[is,i] -v[j+nbasis*11+i]
+                n[is,i] = n[is,i] - v[j+nbasis*6+i] + v[j+nbasis*12+i]
+                u_par[is,i] = u_par[is,i] - v[j+nbasis*7+i]
+                p_par[is,i] = p_par[is,i] - v[j+nbasis*8+i] + v[j+nbasis*13+i]
+                p_tot[is,i] = p_tot[is,i] - v[j+nbasis*9+i] + v[j+nbasis*14+i]
+                q_par[is,i] = q_par[is,i] - v[j+nbasis*10+i]
+                q_tot[is,i] = q_tot[is,i] - v[j+nbasis*11+i]
             end
         end
     end
@@ -563,8 +568,8 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
     
     # fill the stress moments
-    stress_par = Array{ComplexF64, 3}(undef, ns,nbasis,3)
-    stress_per = Array{ComplexF64, 3}(undef, ns,nbasis,3)
+    stress_par = Array{ComplexF64, 3}(undef, ns,nbasis,2)
+    stress_per = Array{ComplexF64, 3}(undef, ns,nbasis,2)
 
     stress_correction = 1.0
     if(sat_rule_in==0) 
@@ -574,8 +579,8 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
     stress_par[ns0:ns,:,1] .= u_par[ns0:ns,:].*stress_correction
     stress_par[ns0:ns,:,2] .= p_par[ns0:ns,:].*stress_correction
-    stress_per[ns0:ns,:,1] .= (im*ky) .* (1.5 .*p_tot[ns0:ns,:] .- 0.5 .*p_par[ns0:ns,:]) * (ave.kx)' # (is,j) x (j,i)
-    stress_per[ns0:ns,:,2] .= (im*ky) .* (1.5 .*q_tot[ns0:ns,:] .- 0.5 .*q_par[ns0:ns,:]) * (ave.kx)'
+    stress_per[ns0:ns,:,1] .= ((1.5 .*p_tot[ns0:ns,:] .- 0.5 .*p_par[ns0:ns,:]) * transpose((im*ky).*ave.kx))   # (is,j) x (j,i)
+    stress_per[ns0:ns,:,2] .= ((1.5 .*q_tot[ns0:ns,:] .- 0.5 .*q_par[ns0:ns,:]) * transpose((im*ky).*ave.kx))
 
 
     # compute the quasilinear weights for the fluxes

@@ -77,7 +77,7 @@
         do j=1,3
            do m=1,nmodes_in
              do i=1,nky
-               write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
+            !    write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
              enddo  ! i
           enddo ! m
         enddo  ! j
@@ -307,6 +307,7 @@
               new_width=.TRUE.
               write(*,*) "this is 3"
               CALL tglf_LS
+              stop "THREE"
               gamma_nb_min_out = gamma_out(1)
           endif
           mask_save(i) = 1

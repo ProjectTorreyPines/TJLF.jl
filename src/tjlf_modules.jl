@@ -1,15 +1,15 @@
-Base.@kwdef mutable struct Species{T<:Real}
-    ZS::Union{T,Missing} = missing
-    MASS::Union{T,Missing} = missing
-    RLNS::Union{T,Missing} = missing
-    RLTS::Union{T,Missing} = missing
-    TAUS::Union{T,Missing} = missing
-    AS::Union{T,Missing} = missing
-    VPAR::Union{T,Missing} = missing
-    VPAR_SHEAR::Union{T,Missing} = missing
-    VNS_SHEAR::Union{T,Missing} = missing
-    VTS_SHEAR::Union{T,Missing} = missing
-end
+# Base.@kwdef mutable struct Species{T<:Real}
+#     ZS::Union{T,Missing} = missing
+#     MASS::Union{T,Missing} = missing
+#     RLNS::Union{T,Missing} = missing
+#     RLTS::Union{T,Missing} = missing
+#     TAUS::Union{T,Missing} = missing
+#     AS::Union{T,Missing} = missing
+#     VPAR::Union{T,Missing} = missing
+#     VPAR_SHEAR::Union{T,Missing} = missing
+#     VNS_SHEAR::Union{T,Missing} = missing
+#     VTS_SHEAR::Union{T,Missing} = missing
+# end
 
 
 mutable struct InputTJLF{T<:Real}

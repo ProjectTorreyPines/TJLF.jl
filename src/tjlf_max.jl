@@ -74,7 +74,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         tp = tmin + (i-1)*dt
         inputs.WIDTH = 10.0^tp
         new_width = true
-        println("this is I")
+        # println("this is I")
         nmodes_out, gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s)
 
         width_n[i] = inputs.WIDTH
@@ -98,7 +98,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             tp = (t2+t1)/2.0    
             inputs.WIDTH = 10.0^tp
             new_width = true
-            println("this is II")
+            # println("this is II")
             _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
             gm = gamma_out[1]
             tm = tp
@@ -112,7 +112,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             tp = (t2+t1)/2.0    
             inputs.WIDTH = 10.0^tp
             new_width = true
-            println("this is III")
+            # println("this is III")
             nmodes_out, gamma_out, freq_out,
             particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
 
@@ -142,7 +142,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                     tp = t1 - dt
                     inputs.WIDTH = 10.0^tp
                     new_width = true
-                    println("this is IV")
+                    # println("this is IV")
                     _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
 
                     tm = t1
@@ -154,7 +154,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                     tp = tm + dt
                     inputs.WIDTH = 10.0^tp
                     new_width = true
-                    println("this is V")
+                    # println("this is V")
                     _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
                     
                     g2 = gamma_out[1]
@@ -164,7 +164,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                     tp = t1 + dt
                     inputs.WIDTH = 10.0^tp
                     new_width = true
-                    println("this is VI")
+                    # println("this is VI")
                     tjlf_LS() ############### have to create this ###############
                     g2 = gm
                     t2 = tm
@@ -178,7 +178,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                     tp = t2 + dt
                     inputs.WIDTH = 10.0^tp
                     new_width = true
-                    println("this is VII")
+                    # println("this is VII")
                     _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
 
                     gm = g2
@@ -190,7 +190,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                     tp = tm - dt
                     inputs.WIDTH = 10.0^tp
                     new_width = true
-                    println("this is VIII")
+                    # println("this is VIII")
                     _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
 
                     g1 = gamma_out[1]
@@ -199,7 +199,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                     tp = t2 - dt
                     inputs.WIDTH = 10.0^tp
                     new_width = true
-                    println("this is IX")
+                    # println("this is IX")
                     _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
 
                     g1 = gm
@@ -214,7 +214,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 tp = tm - dt
                 inputs.WIDTH = 10.0^tp
                 new_width = true
-                println("this is X")
+                # println("this is X")
                 _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
 
                 g1 = gamma_out[1]
@@ -223,7 +223,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 tp = tm + dt
                 inputs.WIDTH = 10.0^tp
                 new_width = true
-                println("this is XI")
+                # println("this is XI")
                 _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
 
                 g2 = gamma_out[1]
@@ -258,7 +258,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             inputs.USE_BPER = original_bper
             inputs.USE_BPAR = original_bpar
         end
-        println("this is XII")
+        # println("this is XII")
         new_width = true
         nmodes_out, gamma_out, freq_out,
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s) 
@@ -269,7 +269,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 new_geometry = false
                 new_width = false
                 new_matrix = true
-                println("this is XIII")
+                # println("this is XIII")
                 tjlf_LS() ############### have to create this ###############
            end
         end

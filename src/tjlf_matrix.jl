@@ -172,18 +172,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
         aveH.hw113[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw113[is,:].*wx)   * h'
         aveH.hw133[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw133[is,:].*wx)   * h'
         aveH.hw333[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw333[is,:].*wx)   * h'
-
-        aveH.hn[abs.(aveH.hn) .< zero_cut] .= 0
-        aveH.hp1[abs.(aveH.hp1) .< zero_cut] .= 0
-        aveH.hp3[abs.(aveH.hp3) .< zero_cut] .= 0
-        aveH.hr11[abs.(aveH.hr11) .< zero_cut] .= 0
-        aveH.hr13[abs.(aveH.hr13) .< zero_cut] .= 0
-        aveH.hr33[abs.(aveH.hr33) .< zero_cut] .= 0
-        aveH.hw113[abs.(aveH.hw113) .< zero_cut] .= 0
-        aveH.hw133[abs.(aveH.hw133) .< zero_cut] .= 0
-        aveH.hw333[abs.(aveH.hw333) .< zero_cut] .= 0
         
-        nroot = 15 ####### hardcoded
         if(nroot>6)
             aveG.gn[is,:,:]    .= h * Diagonal(gxn[is,:]   .*wx)   * h'
             aveG.gp1[is,:,:]   .= h * Diagonal(gxp1[is,:]  .*wx)   * h'
@@ -194,18 +183,31 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             aveG.gw113[is,:,:] .= h * Diagonal(gxw113[is,:].*wx)   * h'
             aveG.gw133[is,:,:] .= h * Diagonal(gxw133[is,:].*wx)   * h'
             aveG.gw333[is,:,:] .= h * Diagonal(gxw333[is,:].*wx)   * h'
-            
-            aveG.gn[abs.(aveG.gn) .< zero_cut] .= 0
-            aveG.gp1[abs.(aveG.gp1) .< zero_cut] .= 0
-            aveG.gp3[abs.(aveG.gp3) .< zero_cut] .= 0
-            aveG.gr11[abs.(aveG.gr11) .< zero_cut] .= 0
-            aveG.gr13[abs.(aveG.gr13) .< zero_cut] .= 0
-            aveG.gr33[abs.(aveG.gr33) .< zero_cut] .= 0
-            aveG.gw113[abs.(aveG.gw113) .< zero_cut] .= 0
-            aveG.gw133[abs.(aveG.gw133) .< zero_cut] .= 0
-            aveG.gw333[abs.(aveG.gw333) .< zero_cut] .= 0
         end
     end
+
+    aveH.hn[abs.(aveH.hn) .< zero_cut] .= 0
+    aveH.hp1[abs.(aveH.hp1) .< zero_cut] .= 0
+    aveH.hp3[abs.(aveH.hp3) .< zero_cut] .= 0
+    aveH.hr11[abs.(aveH.hr11) .< zero_cut] .= 0
+    aveH.hr13[abs.(aveH.hr13) .< zero_cut] .= 0
+    aveH.hr33[abs.(aveH.hr33) .< zero_cut] .= 0
+    aveH.hw113[abs.(aveH.hw113) .< zero_cut] .= 0
+    aveH.hw133[abs.(aveH.hw133) .< zero_cut] .= 0
+    aveH.hw333[abs.(aveH.hw333) .< zero_cut] .= 0
+
+    if(nroot>6)
+        aveG.gn[abs.(aveG.gn) .< zero_cut] .= 0
+        aveG.gp1[abs.(aveG.gp1) .< zero_cut] .= 0
+        aveG.gp3[abs.(aveG.gp3) .< zero_cut] .= 0
+        aveG.gr11[abs.(aveG.gr11) .< zero_cut] .= 0
+        aveG.gr13[abs.(aveG.gr13) .< zero_cut] .= 0
+        aveG.gr33[abs.(aveG.gr33) .< zero_cut] .= 0
+        aveG.gw113[abs.(aveG.gw113) .< zero_cut] .= 0
+        aveG.gw133[abs.(aveG.gw133) .< zero_cut] .= 0
+        aveG.gw333[abs.(aveG.gw333) .< zero_cut] .= 0
+    end
+    
 end
 
 
@@ -286,17 +288,6 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
                 ave.c_par_par[i,j] = ave.c_par_par[i,j] + ww*cx_par_par[k]
             end
 
-            if(abs(ave.wdh[i,j])<zero_cut) ave.wdh[i,j] = 0.0 end
-            if(abs(ave.wdg[i,j])<zero_cut) ave.wdg[i,j] = 0.0 end
-            if(abs(ave.b0[i,j])<zero_cut) ave.b0[i,j] = 0.0 end
-            if(abs(ave.lnB[i,j])<zero_cut) ave.lnB[i,j] = 0.0 end
-            if(abs(ave.p0inv[i,j])<zero_cut) ave.p0inv[i,j] = 0.0 end
-            if(abs(ave.p0[i,j])<zero_cut) ave.p0[i,j] = 0.0 end
-            if(abs(ave.kx[i,j])<zero_cut) ave.kx[i,j] = 0.0 end
-            if(abs(ave.c_tor_par[i,j])<zero_cut) ave.c_tor_par[i,j] = 0.0 end
-            if(abs(ave.c_tor_per[i,j])<zero_cut) ave.c_tor_per[i,j] = 0.0 end
-            if(abs(ave.c_par_par[i,j])<zero_cut) ave.c_par_par[i,j] = 0.0 end
-
             ave.wdh[j,i]       = ave.wdh[i,j]
             ave.wdg[j,i]       = ave.wdg[i,j]
             ave.b0[j,i]        = ave.b0[i,j]
@@ -309,6 +300,17 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
             ave.c_par_par[j,i] = ave.c_par_par[i,j]
         end
     end
+
+    ave.wdh[abs.(ave.wdh) .< zero_cut] .= 0.0
+    ave.wdg[abs.(ave.wdg) .< zero_cut] .= 0.0
+    ave.b0[abs.(ave.b0) .< zero_cut] .= 0.0
+    ave.lnB[abs.(ave.lnB) .< zero_cut] .= 0.0
+    ave.p0inv[abs.(ave.p0inv) .< zero_cut] .= 0.0
+    ave.p0[abs.(ave.p0) .< zero_cut] .= 0.0
+    ave.kx[abs.(ave.kx) .< zero_cut] .= 0.0
+    ave.c_tor_par[abs.(ave.c_tor_par) .< zero_cut] .= 0.0
+    ave.c_tor_per[abs.(ave.c_tor_per) .< zero_cut] .= 0.0
+    ave.c_par_par[abs.(ave.c_par_par) .< zero_cut] .= 0.0
 
     ave.gradB .= (ave.kpar*ave.lnB) .- (ave.lnB*ave.kpar)
 

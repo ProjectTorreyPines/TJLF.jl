@@ -13,6 +13,7 @@ function readInput(baseDirectory::String)
             break
         end
     end
+    @assert ns!=-1
 
     inputTJLF = InputTJLF{Float64}(ns)
 
