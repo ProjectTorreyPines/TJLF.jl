@@ -27,10 +27,12 @@ fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
 
 @profview tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+@profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 # using Profile
 # @profile tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
-# using BenchmarkTools
-# @btime tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# @codewarning
+using BenchmarkTools
+@btime tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
 
 
