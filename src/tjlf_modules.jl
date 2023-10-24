@@ -125,8 +125,6 @@ mutable struct InputTJLF{T<:Real}
 
 
     function InputTJLF{T}(ns::Int) where T<:Real
-
-        emptyVector = Vector{T}(undef,ns)
         
         new("",
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
@@ -261,8 +259,8 @@ mutable struct Ave{T<:Real}
         c_tor_per = zeros(T, nbasis, nbasis)
         kpar = zeros(T, nbasis, nbasis)
         modkpar = zeros(T, nbasis, nbasis)
-        kpar_eff = Array{ComplexF64}(undef, ns, nbasis, nbasis)
-        modkpar_eff = Array{ComplexF64}(undef, ns, nbasis, nbasis)
+        kpar_eff = zeros(ComplexF64, ns, nbasis, nbasis)
+        modkpar_eff = zeros(ComplexF64, ns, nbasis, nbasis)
 
 
         new(kx,
