@@ -34,14 +34,15 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     R_unit = satParams.R_unit
     q_unit = satParams.q_unit
 
-    new_geometry = false ###### hardcoded for now
-    new_width = true ###### hardcoded for now
+    new_geometry = false ######################## hardcoded for now ########################
+    new_width = true ######################## hardcoded for now ########################
     # check co-dependencies
     if(new_geometry) new_width= true end 
     if(new_width) new_matrix = true end
 
     if(new_eikonal_in)
         if(new_geometry)
+            error("REMEMBER TO UPDATE R and Q_UNIT")
             # MILLER geometry
             igeo = 1
             if(igeo==1)
@@ -72,16 +73,12 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
         #  load the x-grid eikonal functions v_QL_out,b0x
         if(new_width)
-            # trace_path[6]=1
             outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky, kx0_e)
-            R_unit = satParams.R_unit
-            q_unit = satParams.q_unit
         end
     end  #new_eikonal_in
 
-    new_matrix = true ####### hardcode for now
+    new_matrix = true ######################## hardcode for now ########################
     if(new_matrix)
-        # trace_path[7]=1
         ave, aveH, aveWH, aveKH, 
         aveG, aveWG, aveKG = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis)
     end
@@ -89,7 +86,6 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     #  solver for linear eigenmodes of tglf equations
     eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
 
-    # error("DSF")
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
 
@@ -109,37 +105,10 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         rr .*= ifelse.((rr.>0.0)  .&  (abs.(ri).>max_freq), -1 , 1)
     end
 
-    #  initalize output to zero
     maxmodes = 16 #### from tglf_modules
     jmax = zeros(Int, maxmodes)
     gamma_out = zeros(Float64, maxmodes)
     freq_out = zeros(Float64, maxmodes)
-    v_QL_out = zeros(Float64, maxmodes)
-    a_par_QL_out = zeros(Float64, maxmodes)
-    b_par_QL_out = zeros(Float64, maxmodes)
-    phi_bar_out = zeros(Float64, maxmodes)
-    a_par_bar_out = zeros(Float64, maxmodes)
-    b_par_bar_out = zeros(Float64, maxmodes)
-    v_bar_out = zeros(Float64, maxmodes)
-    ne_te_phase_out = zeros(Float64, maxmodes)
-
-    field_weight_out = zeros(ComplexF64, maxmodes, 3, nbasis)
-    particle_QL_out = zeros(Float64, maxmodes, ns, 3)
-    energy_QL_out = zeros(Float64, maxmodes, ns, 3)
-    stress_par_QL_out = zeros(Float64, maxmodes, ns, 3)
-    stress_tor_QL_out = zeros(Float64, maxmodes, ns, 3)
-    exchange_QL_out = zeros(Float64, maxmodes, ns, 3)
-
-    N_QL_out = zeros(Float64, maxmodes, ns)
-    T_QL_out = zeros(Float64, maxmodes, ns)
-    U_QL_out = zeros(Float64, maxmodes, ns)
-    Q_QL_out = zeros(Float64, maxmodes, ns)
-    N_bar_out = zeros(Float64, maxmodes, ns)
-    T_bar_out = zeros(Float64, maxmodes, ns)
-    U_bar_out = zeros(Float64, maxmodes, ns)
-    Q_bar_out = zeros(Float64, maxmodes, ns)
-    Ns_Ts_phase_out = zeros(Float64, maxmodes, ns)
-
 
     if(inputs.IBRANCH==0)
         di = zeros(Int, iur)
@@ -217,9 +186,33 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
     
     # get the fluxes for the most unstable modes
-    # v = zeros(ComplexF64, iur)
-    # zmat = Matrix{ComplexF64}(undef, iur, iur)
     if(inputs.IFLUX)
+        #  initalize output to zero
+        maxmodes = 16 #### from tglf_modules
+
+        phi_bar_out = zeros(Float64, maxmodes)
+        a_par_bar_out = zeros(Float64, maxmodes)
+        b_par_bar_out = zeros(Float64, maxmodes)
+        v_bar_out = zeros(Float64, maxmodes)
+        ne_te_phase_out = zeros(Float64, maxmodes)
+
+        field_weight_out = zeros(ComplexF64, maxmodes, 3, nbasis)
+        particle_QL_out = zeros(Float64, maxmodes, ns, 3)
+        energy_QL_out = zeros(Float64, maxmodes, ns, 3)
+        stress_par_QL_out = zeros(Float64, maxmodes, ns, 3)
+        stress_tor_QL_out = zeros(Float64, maxmodes, ns, 3)
+        exchange_QL_out = zeros(Float64, maxmodes, ns, 3)
+
+        N_QL_out = zeros(Float64, maxmodes, ns)
+        T_QL_out = zeros(Float64, maxmodes, ns)
+        U_QL_out = zeros(Float64, maxmodes, ns)
+        Q_QL_out = zeros(Float64, maxmodes, ns)
+        N_bar_out = zeros(Float64, maxmodes, ns)
+        T_bar_out = zeros(Float64, maxmodes, ns)
+        U_bar_out = zeros(Float64, maxmodes, ns)
+        Q_bar_out = zeros(Float64, maxmodes, ns)
+        Ns_Ts_phase_out = zeros(Float64, maxmodes, ns)
+
         wd_bar_out = Vector{Float64}(undef, nmodes_out)
         b0_bar_out = Vector{Float64}(undef, nmodes_out)
         modB_bar_out = Vector{Float64}(undef, nmodes_out)
@@ -228,23 +221,9 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         b_par_QL_out = Vector{Float64}(undef, nmodes_out)
         kx_bar_out = Vector{Float64}(undef, nmodes_out)
         kpar_bar_out = Vector{Float64}(undef, nmodes_out)
+        
         for imax = 1:nmodes_out
             if(jmax[imax]>0)
-                # v .= small
-                # for i = 1:iur
-                #     for j = 1:iur
-                #         # zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (small + alpha[jmax[imax]])*bmat[i,j])
-                #         zmat[i,j] = (beta[jmax[imax]]*amat[i,j] - (alpha[jmax[imax]])*bmat[i,j])
-                #         if i==j
-                #             zmat[i,j] -= small
-                #         end
-                #     end
-                # end
-                # ### gesv!(A,B) solves Ax = B, A becomes LU factor, and B becomes solution
-                # # gesv!(zmat,v)
-                # v = zmat \ v
-
-                # eigenvalue = im*alpha[jmax[imax]]/beta[jmax[imax]]
                 
                 Ns_Ts_phase,
                 Ne_Te_phase,
@@ -324,10 +303,13 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         if(sum_v_bar>epsilon1) ft_test = sum_modB_bar/sum_v_bar end
         modB_min = abs(minimum(satParams.B_geo))
         ft_test = ft_test/modB_min
+
+
+        return nmodes_out, gamma_out, freq_out,
+        particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
     end
 
-    return nmodes_out, gamma_out, freq_out,
-    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
+    return nmodes_out, gamma_out, freq_out
 
     # return  gamma_out, 
     #         freq_out, 
@@ -658,7 +640,6 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     Ns_Ts_cos .= sum(real(conj(n[ns0:ns,:]).*temp[ns0:ns,:]), dims=2)
     Ns_Ts_sin .= sum(imag(conj(n[ns0:ns,:]).*temp[ns0:ns,:]), dims=2)
     Ns_Ts_phase .= atan.(Ns_Ts_sin,Ns_Ts_cos)
-    atan
 
     return Ns_Ts_phase, Ne_Te_phase,
     N_weight, T_weight, U_weight, Q_weight, 

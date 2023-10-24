@@ -307,7 +307,6 @@
               new_width=.TRUE.
               write(*,*) "this is 3"
               CALL tglf_LS
-              stop "THREE"
               gamma_nb_min_out = gamma_out(1)
           endif
           mask_save(i) = 1

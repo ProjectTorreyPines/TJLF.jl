@@ -11,7 +11,7 @@ include("tjlf_LINEAR_SOLUTION.jl")
 #******************************************************************************************************
 # Read input.tglf
 #******************************************************************************************************
-# location for the input.tglf.gen file
+# location for the input.tglf file
 baseDirectory = "../outputs/test_TM/simple_test/"
 
 inputTJLF = readInput(baseDirectory)
@@ -33,8 +33,6 @@ fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 # @codewarning
 using BenchmarkTools
 @btime tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
-
-
 
 
 #*******************************************************************************************************
@@ -76,7 +74,6 @@ plot!(ky_spect, fluxes[2,1,1,:,1], label="Julia", title="energy flux")
 
 plot(ky_spect, exchange_QL[:,1,1,1], label="Fortran")
 plot!(ky_spect, fluxes[5,1,1,:,1], label="Julia", title="exchange flux")
-
 
 plot(ky_spect, toroidal_stress_QL[:,1,1,1], label="Fortran", title="toroidal stress")
 plot!(ky_spect, fluxes[3,1,1,:,1], label="Julia", title="toroidal stress",linestyle=:dash)
