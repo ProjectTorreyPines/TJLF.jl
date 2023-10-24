@@ -298,7 +298,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     ft = √(1.0 - Bmin/B_bounce)
     modB_min = abs(Bmin)
     modB_test = 0.5*(Bmax + Bmin)/Bmin
-    fts = Vector{Float64}(undef, ns)
+    fts = zeros(Float64, ns)
     for is = ns0:ns
         fts[is] = max(ft,0.01)
     end

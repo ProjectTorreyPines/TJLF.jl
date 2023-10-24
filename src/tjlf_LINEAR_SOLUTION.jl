@@ -213,14 +213,14 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         Q_bar_out = zeros(Float64, maxmodes, ns)
         Ns_Ts_phase_out = zeros(Float64, maxmodes, ns)
 
-        wd_bar_out = Vector{Float64}(undef, nmodes_out)
-        b0_bar_out = Vector{Float64}(undef, nmodes_out)
-        modB_bar_out = Vector{Float64}(undef, nmodes_out)
-        v_QL_out = Vector{Float64}(undef, nmodes_out)
-        a_par_QL_out = Vector{Float64}(undef, nmodes_out)
-        b_par_QL_out = Vector{Float64}(undef, nmodes_out)
-        kx_bar_out = Vector{Float64}(undef, nmodes_out)
-        kpar_bar_out = Vector{Float64}(undef, nmodes_out)
+        wd_bar_out = zeros(Float64, nmodes_out)
+        b0_bar_out = zeros(Float64, nmodes_out)
+        modB_bar_out = zeros(Float64, nmodes_out)
+        v_QL_out = zeros(Float64, nmodes_out)
+        a_par_QL_out = zeros(Float64, nmodes_out)
+        b_par_QL_out = zeros(Float64, nmodes_out)
+        kx_bar_out = zeros(Float64, nmodes_out)
+        kpar_bar_out = zeros(Float64, nmodes_out)
         
         for imax = 1:nmodes_out
             if(jmax[imax]>0)
@@ -449,12 +449,12 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     alpha_p_in = inputs.ALPHA_P
     freq_QL = im*eigenvalue
 
-    n = Matrix{ComplexF64}(undef, ns,nbasis)
-    u_par = Matrix{ComplexF64}(undef, ns,nbasis)
-    p_par = Matrix{ComplexF64}(undef, ns,nbasis)
-    p_tot = Matrix{ComplexF64}(undef, ns,nbasis)
-    q_par = Matrix{ComplexF64}(undef, ns,nbasis)
-    q_tot = Matrix{ComplexF64}(undef, ns,nbasis)
+    n = zeros(ComplexF64, ns,nbasis)
+    u_par = zeros(ComplexF64, ns,nbasis)
+    p_par = zeros(ComplexF64, ns,nbasis)
+    p_tot = zeros(ComplexF64, ns,nbasis)
+    q_par = zeros(ComplexF64, ns,nbasis)
+    q_tot = zeros(ComplexF64, ns,nbasis)
 
     for is = ns0:ns
         j = (is-ns0)*nroot*nbasis
@@ -545,8 +545,8 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
     
     # fill the stress moments
-    stress_par = Array{ComplexF64, 3}(undef, ns,nbasis,2)
-    stress_per = Array{ComplexF64, 3}(undef, ns,nbasis,2)
+    stress_par = zeros(ComplexF64, ns,nbasis,2)
+    stress_per = zeros(ComplexF64, ns,nbasis,2)
 
     stress_correction = 1.0
     if(sat_rule_in==0) 
