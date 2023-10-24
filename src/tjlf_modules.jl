@@ -146,7 +146,7 @@ end
 #       Get from tjlf_hermite
 ##########################################################
 
-mutable struct OutputHermite{T<:Real}
+struct OutputHermite{T<:Real}
 
     x::Vector{T}
     wx::Vector{T}
@@ -158,7 +158,7 @@ end
 #       Get from xgrid_functions_geo
 ##########################################################
 
-mutable struct OutputGeometry{T<:Real}
+struct OutputGeometry{T<:Real}
 
     kx0_e::T
 
@@ -178,7 +178,7 @@ mutable struct OutputGeometry{T<:Real}
     
 end
 
-mutable struct SaturationParameters{T<:Real}
+struct SaturationParameters{T<:Real}
 
     SAT_geo0::T
     SAT_geo1::T
