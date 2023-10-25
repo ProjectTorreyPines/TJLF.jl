@@ -1,5 +1,4 @@
 using LinearAlgebra
-import LinearAlgebra.LAPACK.syev!
 
 include("tjlf_modules.jl")
 include("tjlf_finiteLarmorRadius.jl")
@@ -368,40 +367,25 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     end
 
     # find the eigenvalues of ave.wdh
-    a = deepcopy(ave.wdh)
-    w,a = syev!('V','U',a)
-    for k = 1:size(ave.modwdh)[2]
-        if(abs(w[k])<wd_zero_in)
-            if(w[k]>=0.0)
-                w[k] = wd_zero_in
-            else
-                w[k] = -wd_zero_in
-            end
-        end
-    end
-    # compute ave.modwd and recompute ave.wd with regularized eigenvalues
-    # note that the DSYEV normalized eigenvectors are now in a[i,j]
+    eigen = eigen!(Symmetric(ave.wdh))
+    w = eigen.values
+    a = eigen.vectors
+    # if abs(w)<wd_zero, make it +- wd_zero. otherwise keep the w
+    w .= sign.(w) .* max.(abs.(w), wd_zero_in)
     w = Diagonal(w)
     ave.modwdh = a * abs.(w) * transpose(a)
-    ave.wdh = a * w * transpose(a) ### excessive
+    ave.wdh = a * w * transpose(a) 
 
-    # find the eigenvalues of ave.wdg
-    a = deepcopy(ave.wdg)
-    w,a = syev!('V','U',a)
-    for k = 1:size(ave.modwdh)[2]
-        if(abs(w[k])<wd_zero_in)
-            if(w[k]>=0.0)
-                w[k] = wd_zero_in
-            else
-                w[k] = -wd_zero_in
-            end
-        end
-    end
-    # compute ave.modwd and recompute ave.wd with regularized eigenvalues
-    # note that the DSYEV normalized eigenvectors are now in a[i,j]
+
+    ### now for wdg
+    eigen = eigen!(Symmetric(ave.wdg))
+    w = eigen.values
+    a = eigen.vectors
+    # if abs(w)<wd_zero, make it +- wd_zero. otherwise keep the w
+    w .= sign.(w) .* max.(abs.(w), wd_zero_in)
     w = Diagonal(w)
     ave.modwdg = a * abs.(w) * transpose(a)
-    ave.wdg = a * w * transpose(a) ### excessive
+    ave.wdg = a * w * transpose(a)
 
 end
 
@@ -423,23 +407,24 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
         end
     else
     # find the eigenvalues and eigenvectors
-        if(vpar_model_in!=1)   
-            a = im*deepcopy(ave.kpar)
-
-            w,a = syev!('V','U',a)
-            w = Diagonal(w)
-            b = a * abs.(w) * transpose(conj.(a))
-            ave.modkpar = real.(b)
+        if(vpar_model_in!=1)
+            a = Hermitian(im.*ave.kpar)
+            eigen = eigen!(a)
+            w = Diagonal(eigen.values)
+            a = eigen.vectors
+            b = a * abs.(w) * adjoint(a)
+            ave.modkpar .= real.(b)
             for is = ns0:ns
                 ave.modkpar_eff[is,:,:] .= b
             end
 
         else 
             for is = ns0:ns
-                a = im*deepcopy(ave.kpar_eff[is,:,:])
-                w,a = syev!('V','U',a)
-                b = a * abs.(w) * transpose(conj.(a))
-                
+                a = Hermitian(im.*ave.kpar_eff[is,:,:])
+                eigen = eigen!(a)
+                w = Diagonal(eigen.values)
+                a = eigen.vectors
+                b = a * abs.(w) * adjoint(a)
                 ave.modkpar_eff[is,:,:] .= b
             end 
         end
