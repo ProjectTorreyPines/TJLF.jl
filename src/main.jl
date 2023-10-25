@@ -1,12 +1,7 @@
 # calls the fortran code as a shared library
 # ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
-include("tjlf_modules.jl")
-include("tjlf_read_input.jl")
-include("tjlf_hermite.jl")
-include("tjlf_kygrid.jl")
-include("tjlf_geometry.jl")
-include("tjlf_TRANSPORT_MODEL.jl")
-include("tjlf_LINEAR_SOLUTION.jl")
+
+using TJLF
 
 #******************************************************************************************************
 # Read input.tglf
