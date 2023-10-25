@@ -1,10 +1,6 @@
-# calls the fortran code as a shared library
-# ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
-
 module TJLF
 
 using LinearAlgebra
-import LinearAlgebra.LAPACK: gesv!, syev!
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
@@ -20,7 +16,7 @@ include("tjlf_finiteLarmorRadius.jl")
 include("tjlf_matrix.jl")
 include("tjlf_LINEAR_SOLUTION.jl")
 include("tjlf_max2.jl")
-include("tjlf_transport_model.jl")
+include("tjlf_TRANSPORT_MODEL2.jl")
 
 export readInput
 export gauss_hermite, get_sat_params, get_ky_spectrum, tjlf_TM

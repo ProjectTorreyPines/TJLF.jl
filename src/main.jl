@@ -1,7 +1,7 @@
 # calls the fortran code as a shared library
 # ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
 
-using TJLF
+using .TJLF
 
 #******************************************************************************************************
 # Read input.tglf

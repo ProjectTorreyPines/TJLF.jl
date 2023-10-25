@@ -705,7 +705,7 @@ if(new_matrix)then
         enddo
         vnorm = vnorm/ABS(as(1)*zs(1))   ! normalize to electron charge density
       endif
-     write(*,*)"vnorm =",vnorm !DSUN
+    !  write(*,*) "vnorm =",vnorm !DSUN
     !  stop "LS 702"
 !
 !  compute the electromagnetic potentials
@@ -898,7 +898,7 @@ if(new_matrix)then
         enddo
       enddo
     !   write(*,*) particle_weight
-      write(*,*) ave_c_tor_per
+    !   write(*,*) ave_c_tor_per
     !   stop "LS 895"
 !
 !   add the vpar shifts to the total  moments
