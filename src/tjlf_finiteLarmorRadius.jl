@@ -1,5 +1,3 @@
-include("tjlf_FLR_modules.jl")
-
 function FLR_Hn(ft::T,b::T)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
@@ -50,7 +48,7 @@ function FLR_Hn(ft::T,b::T)::T where T<:Real
         h[i] = b/( y[i]^4 + b^2)
     end
     for i = 5:na
-        h[i] = b^2/(0.25*y[i]^5 + b^2.5)       
+        h[i] = b^2/(0.25*y[i]^5 + b^2.5)
     end
 
     # transform to gt grid
@@ -133,7 +131,7 @@ function FLR_dHp1(ft::T,b::T)::T where T<:Real
     for i = 5:na
        h[i] = b^2/(0.25*y[i]^5 + b^2.5)
     end
-    
+
     # transform to gt grid
     gt = √(1-ft)
     if(gt > g[nf]) gt = g[nf] end
@@ -285,12 +283,12 @@ function FLR_dHr11(ft::T,b::T)::T where T<:Real
     nf::Int = 40
     na::Int = 13
     h::Vector{Float64} = Vector{Float64}(undef, na)
-      
+
     for i = 1:4
        h[i] = b/( y[i]^4 + b^2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)       
+       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
     end
 
     # transform to gt grid
@@ -368,7 +366,7 @@ function FLR_dHr13(ft::T,b::T)::T where T<:Real
        h[i] = b/( y[i]^4 + b^2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)       
+       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
     end
 
     # transform to gt grid
@@ -446,7 +444,7 @@ function FLR_dHr33(ft::T,b::T)::T where T<:Real
         h[i] = b/( y[i]^4 + b^2)
     end
     for i = 5:na
-        h[i] = b^2/(0.25*y[i]^5 + b^2.5)       
+        h[i] = b^2/(0.25*y[i]^5 + b^2.5)
     end
 
     # transform to gt grid
@@ -525,7 +523,7 @@ function FLR_dHw113(ft::T,b::T)::T where T<:Real
         h[i] = b/( y[i]^4 + b^2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)       
+       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
     end
 
     # transform to gt grid
@@ -604,7 +602,7 @@ function FLR_dHw133(ft::T,b::T)::T where T<:Real
         h[i] = b/( y[i]^4 + b^2)
     end
     for i = 5:na
-        h[i] = b^2/(0.25*y[i]^5 + b^2.5)       
+        h[i] = b^2/(0.25*y[i]^5 + b^2.5)
     end
     # transform to gt grid
     gt = √(1-ft)
@@ -683,7 +681,7 @@ function FLR_dHw333(ft::T,b::T)::T where T<:Real
        h[i] = b/( y[i]^4 + b^2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)       
+       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
     end
 
     # transform to gt grid

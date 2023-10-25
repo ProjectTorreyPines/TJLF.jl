@@ -1,7 +1,3 @@
-# import LinearAlgebra.LAPACK.ggev!
-include("tjlf_modules.jl")
-include("tjlf_get_uv.jl")
-
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
@@ -25,7 +21,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     taus::Vector{Float64} = inputs.TAUS
     zs::Vector{Float64} = inputs.ZS
     as::Vector{Float64} = inputs.AS
-    
+
 
     vs2 = √(taus[2] / mass[2])
     vs1 = √(taus[1] / mass[1])
@@ -229,7 +225,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     bper_DH = 1
     dper_DH = √(π/2)
     dpar_HP = 2*√(2π)/(3π - 8)
-    
+
     b1 = bpar_HP
     d1 = dpar_HP
     b3 = bper_DH
@@ -269,7 +265,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     xnu_q1_u_1  = -(4/5)*k2
     xnu_q1_q1_1 = -(16/35)*k3
     xnu_q1_q3_1 =  (6/5)*k2 + (12/35)*k3
-    xnu_q3_u_1  = -(4/9)*k2    
+    xnu_q3_u_1  = -(4/9)*k2
     xnu_q3_q3_1 =  (2/3)*k2 - (4/15)*k3
 
     if(park_in==0.0)
@@ -282,7 +278,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         xnu_q3_q3_1 = 0.0
     end
     if(nroot>6)
-        
+
         xnu_hat = xnue_s/(ky*taus[1]/R_unit)
 
         # model for effective ion wavenumber averaged with ion charge densities zs*as
@@ -318,7 +314,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         xnu_n_b     = xnu_factor_in*xnu_bndry*xnu_p1_1
         xnu_p3_b    =  xnu_n_b
         xnu_p1_b    = xnu_n_b
-        xnu_u_b     = xnu_factor_in*xnu_bndry*xnu_q1_q1_1 
+        xnu_u_b     = xnu_factor_in*xnu_bndry*xnu_q1_q1_1
         xnu_q3_b    = xnu_u_b
         xnu_q1_b    = xnu_u_b
 
@@ -328,18 +324,18 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             xnu_q3_b =0.0
         end
     end
-        
+
     cnuei = 0.0
     if(xnu_model>=2) cnuei = xnue_s end
     kparvthe = abs(k_par0)*vs1/√(2)
     kparvthe = max(kparvthe,1.0E-10)
 
     #*************************************************************
-    # full velocity space terms 
+    # full velocity space terms
     #*************************************************************
     #### from tglf_modules.f90
-    nuei_c1 = [0.4919, 0.7535, 0.6727, 0.8055, 1.627, 
-                2.013, 0.4972, 0.7805, 1.694, 3.103, 
+    nuei_c1 = [0.4919, 0.7535, 0.6727, 0.8055, 1.627,
+                2.013, 0.4972, 0.7805, 1.694, 3.103,
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     k1 = cnuei*(nuei_c1[1] +zeff_in*nuei_c1[2])
     k2 = cnuei*(nuei_c1[3] +zeff_in*nuei_c1[4])
@@ -369,7 +365,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     nuei_q1_q3_1 = -(9/5)*nuei_q1_q1_1
     nuei_q1_u_1  = (9/5)*nuei_q3_u_1
     nuei_q1_q3_1 = nuei_q1_q3_1 + (9/5)*nuei_q3_q3_1
-    
+
     nuei_p1_p1_t = c01
     nuei_p1_p3_t = -ft2*nuei_p1_p1_t
     nuei_u_q3_t  = c02
@@ -382,16 +378,16 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     nuei_q1_q3_t = -(9.0/5.0)*ft2*nuei_q1_q1_t
     nuei_q1_u_t  = (9.0/5.0)*ft2*nuei_q3_u_t
     nuei_q1_q3_t = nuei_q1_q3_t + (9.0/5.0)*ft2*nuei_q3_q3_t
-    
-    an = 0.75 
-    ap3 = 1.25 
-    ap1 = 2.25 
+
+    an = 0.75
+    ap3 = 1.25
+    ap1 = 2.25
     bn = ft
     bp3 = ft
     bp1 = ft3
     cb3=0.0
     cb5 =0.0
-        
+
     cb1 = 0.163*√(kparvthe*cnuei*(1.0 + 0.82*zeff_in))
     if(xnu_model_in==3)
         if(wdia_trapped_in==0.0)
@@ -403,7 +399,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     cb1 = cb1*xnu_factor_in
     cb2 = cb1
     cb4 = cb1
-    
+
     # even trapped region terms
     nuei_n_n   = (1.0 - ft2)*cb1
     nuei_n_p3  = (1.0 - ft2)*cnuei*cb3
@@ -425,7 +421,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     nuei_p1_n  = nuei_p1_n - nuei_p1_p3 -ft2*nuei_p1_p1
     nuei_p1_n  = nuei_p1_n + ft2*nuei_p3_n
     nuei_p1_p3 = nuei_p1_p3 + ft2*nuei_p3_p3
-    nuei_p1_p1 = nuei_p1_p1 + ft2*nuei_p3_p1      
+    nuei_p1_p1 = nuei_p1_p1 + ft2*nuei_p3_p1
 
     cb5 = 0.0
     cb6 = 0.0
@@ -433,13 +429,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     cb8 = 0.0
     nuei_u_u = (1.0 -ft2)*cnuei*cb5
     nuei_u_q3 = (1.0 -ft2)*cnuei*cb7
-    
+
     nuei_u_q1 = 0.0
     nuei_u_q3 = nuei_u_q3 - (9.0/5.0)*ft2*nuei_u_q1
     nuei_u_u = nuei_u_u -(5.0/3.0)*nuei_u_q3 -3.0*ft2*nuei_u_q1
     nuei_q3_u = (10.0/9.0)*(1.0 -ft2)*cnuei*cb7
     nuei_q3_q3 = (1.0 - ft2)*cnuei*cb6
-    
+
     nuei_q3_q1 = 0.0
     nuei_q3_q3 = nuei_q3_q3 -(9.0/5.0)*ft2*nuei_q3_q1
     nuei_q3_u = nuei_q3_u - (5.0/3.0)*nuei_q3_q3 -3.0*ft2*nuei_q3_q1
@@ -500,7 +496,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             u8_r = v[15]
             u8_i = v[16]
             u9_r = v[17]
-            u9_i = v[18] 
+            u9_i = v[18]
             u10_r = v[19]
             u10_i = v[20]
 
@@ -521,7 +517,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             ub8_r = vb[15]
             ub8_i = vb[16]
             ub9_r = vb[17]
-            ub9_i = vb[18] 
+            ub9_i = vb[18]
             ub10_r = vb[19]
             ub10_i = vb[20]
 
@@ -580,7 +576,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     if(ib==jb && is==js)   d_ab=1.0 end
                     if(is==1 && d_ab==1.0) d_ee=1.0 end
                     if(ib==jb)             d_ab_psi=1.0 end
-                    
+
                     b1 = bpar_HP
                     d1 = dpar_HP
                     b3 = bper_DH
@@ -730,7 +726,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     grad_hu1 = 0.0
                     grad_hu3 = 0.0
                     dhr13 = -b3*(aveKH.kparht3[is,ib,jb] - aveKH.kparht1[is,ib,jb]/3 - aveKH.kparhu3[is,ib,jb] + aveKH.kparhu1[is,ib,jb]/3)
-        
+
                     if(linsker==0.0)
                         gradhp1 = 0.0
                         gradhr11 = 0.0
@@ -745,7 +741,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         gradhr13 = linsker*ave_gradhr13p0[is,ib,jb]
                         gradhp1p1 = linsker*ave_gradhp1p1[is,ib,jb]
                         gradhr11p1 = linsker*ave_gradhr11p1[is,ib,jb]
-                        gradhr13p1 = linsker*ave_gradhr13p1[is,ib,jb] 
+                        gradhr13p1 = linsker*ave_gradhr13p1[is,ib,jb]
                     end
 
                     if(nroot>6)
@@ -787,7 +783,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             g10r13 = 3.5*gr13b0 - 1.5*gw133b0
                             g10r33 = 3.5*gr33b0 - 1.5*gw333b0
                         end
-                        
+
                         gu1 = aveG.gu1[is,ib,jb]
                         gu3 = aveG.gu3[is,ib,jb]
                         gt1 = aveG.gt1[is,ib,jb]
@@ -890,7 +886,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
                         grad_gu1 = 0.0
                         grad_gu3 = 0.0
-                        dgr13 = -b3*(ft2*aveKG.kpargt3[is,ib,jb] - aveKG.kpargt1[is,ib,jb]/3 
+                        dgr13 = -b3*(ft2*aveKG.kpargt3[is,ib,jb] - aveKG.kpargt1[is,ib,jb]/3
                                     - ft2*aveKG.kpargu3[is,ib,jb] + aveKG.kpargu1[is,ib,jb]/3)
 
                         if(nbasis==1 || linsker==0.0)
@@ -907,8 +903,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradgr13 = linsker*ave_gradgr13p0[is,ib,jb]
                             gradgp1p1 = linsker*ave_gradgp1p1[is,ib,jb]
                             gradgr11p1 = linsker*ave_gradgr11p1[is,ib,jb]
-                            gradgr13p1 = linsker*ave_gradgr13p1[is,ib,jb] 
-                        end  
+                            gradgr13p1 = linsker*ave_gradgr13p1[is,ib,jb]
+                        end
                     end  # nroot>6
 
                     w_d1 = -ghat_in*w_d0
@@ -988,7 +984,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 #*************************************************************
                     ia0 = (is-ns0)*nroot*nbasis
                     ja0 = (js-ns0)*nroot*nbasis
-    
+
                     ia = ib + ia0
                     #****************
                     #  untrapped terms
@@ -1011,7 +1007,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     if(use_bpar_in)
                         sig_A = -(betae_sig*(asJS*tausJS*zsIS/massIS) *
                             (im*w_s*(rlnsIS*h10n + rltsIS*1.5*(h10p3-h10n))))
-                        sig_B = (betae_sig*h10n*asJS*tausJS*zsIS*zsIS 
+                        sig_B = (betae_sig*h10n*asJS*tausJS*zsIS*zsIS
                             /(tausIS*massIS))
                         sig_A = sig_A - damp_sig*sig_B
                     end
@@ -1027,7 +1023,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             psi_BN = -betae_psi*U0*M_i*N_j*vpar[is]*hp1bp/vsIS
                         end
                     end
-                    amat[ia,ja] = phi_A + psi_AN  
+                    amat[ia,ja] = phi_A + psi_AN
                     bmat[ia,ja] = d_ab + phi_B + psi_BN
 
                     ja = nbasis+jb + ja0
@@ -1050,7 +1046,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     amat[ia,ja] = 0.0
                     bmat[ia,ja] = 0.0
 
-                    
+
                     if(nroot>6)
                         #****************
                         #  n_u ghost terms
@@ -1102,9 +1098,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     ia = nbasis+ib + ia0
 
                     phi_A = N_j*im*w_s*vpar_shear[is]*hp1/vsIS
-                    phi_B = 0.0 
+                    phi_B = 0.0
                     if(vpar_model_in==0)
-                        phi_A = phi_A  +N_j*im*w_cd*wdhp1p0*vpar[is]/vsIS 
+                        phi_A = phi_A  +N_j*im*w_cd*wdhp1p0*vpar[is]/vsIS
                             + d_1*(nuei_u_u_1+nuei_u_q3_1*5.0/3.0)*hp1*E_i*N_j*vpar[is]/vsIS
                         phi_B = -E_i*N_j*hp1*vpar[is]/vsIS
                     end
@@ -1117,7 +1113,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     psi_AN = 0.0
                     psi_BN = 0.0
                     if(use_bper_in)
-                        psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hp1b0+1.5*rltsIS*(hr13b0-hp1b0))  
+                        psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hp1b0+1.5*rltsIS*(hr13b0-hp1b0))
                         psi_B = betae_psi*M_i*J_j*hp1b0
                         psi_A = psi_A - damp_psi*psi_B
                         if(vpar_model_in==0)
@@ -1137,7 +1133,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     bmat[ia,ja] = phi_B + psi_BN
 
                     ja = nbasis + jb + ja0
-                    amat[ia,ja] =  (psi_A +phi_AU -d_ee*nuei_u_u_1 
+                    amat[ia,ja] =  (psi_A +phi_AU -d_ee*nuei_u_u_1
                         + xnuei*(d_ab*xnu_u_u_1 - d_ij*hu3*xnu_u_q3_1))
                     bmat[ia,ja] = d_ab + psi_B +phi_BU
 
@@ -1168,19 +1164,19 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(psi_A + phi_AU)
                         bmat[ia,ja] = -1.0*(psi_B + phi_BU)
-    
+
                         ja = 8*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-    
+
                         ja = 9*nbasis+jb + ja0
-                        amat[ia,ja] = 0.0 
+                        amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -1206,7 +1202,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 #*************************************************************
                     ia = 2*nbasis+ib + ia0
 
-                    phi_A = N_j*im*w_s*(rlnsIS*hp1 + rltsIS*1.5*(hr13-hp1))  
+                    phi_A = N_j*im*w_s*(rlnsIS*hp1 + rltsIS*1.5*(hr13-hp1))
                     if(vpar_model_in==0)
                         phi_A = phi_A +N_j*E_i*kpar_hp1p0*vpar[is]
                     end
@@ -1240,26 +1236,26 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     #  p_par_u  untrapped terms
                     #****************
                     ja = jb + ja0
-                    amat[ia,ja] = (phi_A + psi_AN 
-                            + 2*tausIS*(modw_d1*hv1rht1/abs(zsIS) + w_d1*im*hv1iht1/zsIS) 
+                    amat[ia,ja] = (phi_A + psi_AN
+                            + 2*tausIS*(modw_d1*hv1rht1/abs(zsIS) + w_d1*im*hv1iht1/zsIS)
                             + 2*tausIS*(modw_d1*hv2rht3/abs(zsIS) +w_d1*im*hv2iht3/zsIS)
                             -xnuei*d_ij*xnu_p1_1*(ht1-ht3))
                     bmat[ia,ja] = phi_B + psi_BN
-            
+
                     ja = nbasis+jb + ja0
                     amat[ia,ja] = k_par1*grad_hu1*vsIS + psi_A + phi_AU
                     bmat[ia,ja] = psi_B + phi_BU
 
                     ja = 2*nbasis+jb + ja0
                     amat[ia,ja] =  (-0.5*sig_A
-                            -im*w_d1*(tausIS/zsIS)*(0.5*wdhu1+1.5*wdhu3) 
-                            -2.0*tausIS*(modw_d1*hv1r/abs(zsIS) +w_d1*im*hv1i/zsIS) 
-                            -d_ee*nuei_p1_p1_1  
+                            -im*w_d1*(tausIS/zsIS)*(0.5*wdhu1+1.5*wdhu3)
+                            -2.0*tausIS*(modw_d1*hv1r/abs(zsIS) +w_d1*im*hv1i/zsIS)
+                            -d_ee*nuei_p1_p1_1
                             +xnuei*d_ab*xnu_p1_1)
                     bmat[ia,ja] = d_ab -0.5*sig_B
 
                     ja = 3*nbasis+jb + ja0
-                    amat[ia,ja] = (1.5*sig_A -2.0*tausIS* 
+                    amat[ia,ja] = (1.5*sig_A -2.0*tausIS*
                             (modw_d1*hv2r/abs(zsIS) +w_d1*im*hv2i/zsIS)
                             -d_ee*nuei_p1_p3_1 -xnuei*d_ab*xnu_p1_1)
                     bmat[ia,ja] = 1.5*sig_B
@@ -1309,18 +1305,18 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 13*nbasis+jb + ja0
                         amat[ia,ja] = -0.5*sig_A
                         bmat[ia,ja] = -0.5*sig_B
-                        
+
                         ja = 14*nbasis+jb + ja0
                         amat[ia,ja] = 1.5*sig_A
                         bmat[ia,ja] = 1.5*sig_B
-                        
+
                     end   # nroot >6
 #*************************************************************
 # p_tot_u equ #4
 #*************************************************************
                     ia = 3*nbasis+ib + ia0
 
-                    phi_A = N_j*im*w_s*(rlnsIS*hp3+rltsIS*1.5*(hr33-hp3))  
+                    phi_A = N_j*im*w_s*(rlnsIS*hp3+rltsIS*1.5*(hr33-hp3))
                     if(vpar_model_in==0)
                         phi_A = phi_A + N_j*E_i*kpar_hp3p0*vpar[is]
                     end
@@ -1362,27 +1358,27 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     ja = nbasis+jb + ja0
                     amat[ia,ja] = k_par1*grad_hu3*vsIS + psi_A + phi_AU
                     bmat[ia,ja] = psi_B + phi_BU
-                    
+
                     ja = 2*nbasis+jb + ja0
-                    amat[ia,ja] = (-0.5*sig_A  
-                            -im*w_d1*(tausIS/zsIS)*0.5*wdhu3 
+                    amat[ia,ja] = (-0.5*sig_A
+                            -im*w_d1*(tausIS/zsIS)*0.5*wdhu3
                             -2.0*tausIS*(modw_d1*hv3r/abs(zsIS) +w_d1*im*hv3i/zsIS))
                     bmat[ia,ja] = -0.5*sig_B
-                    
+
                     ja = 3*nbasis+jb + ja0
-                    amat[ia,ja] =  (1.5*sig_A  
-                            -im*w_d1*(tausIS/zsIS)*1.5*wdhu33 
+                    amat[ia,ja] =  (1.5*sig_A
+                            -im*w_d1*(tausIS/zsIS)*1.5*wdhu33
                             -2.0*tausIS*(modw_d1*hv4r/abs(zsIS) +w_d1*im*hv4i/zsIS))
                     bmat[ia,ja] = d_ab + 1.5*sig_B
 
                     ja = 4*nbasis+jb + ja0
                     amat[ia,ja] = 0.0
                     bmat[ia,ja] = 0.0
-                    
+
                     ja = 5*nbasis+jb + ja0
                     amat[ia,ja] = -k_par*vsIS + am*gradB*vsIS
                     bmat[ia,ja] = 0.0
-                    
+
                     if(nroot>6)
                         #****************
                         #   p_tot_u ghost terms
@@ -1390,23 +1386,23 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 6*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(phi_A + psi_AN)
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                        
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(psi_A + phi_AU)
                         bmat[ia,ja] = -1.0*(psi_B + phi_BU)
-                        
+
                         ja = 8*nbasis+jb + ja0
                         amat[ia,ja] = -0.5*(-1.0*sig_A)
                         bmat[ia,ja] = -0.5*(-1.0*sig_B)
-                        
+
                         ja = 9*nbasis+jb + ja0
                         amat[ia,ja] = 1.5*(-1.0*sig_A)
                         bmat[ia,ja] = 1.5*(-1.0*sig_B)
-                        
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                        
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -1417,25 +1413,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                        
+
                         ja = 13*nbasis+jb + ja0
                         amat[ia,ja] = -0.5*sig_A
                         bmat[ia,ja] = -0.5*sig_B
-                        
+
                         ja = 14*nbasis+jb + ja0
                         amat[ia,ja] = 1.5*sig_A
                         bmat[ia,ja] = 1.5*sig_B
-                        
+
                     end # nroot>6
 #*************************************************************
 # q_par_u equ #5
 #*************************************************************
                     ia = 4*nbasis+ib + ia0
-                
+
                     phi_A = N_j*im*w_s*hr11*vpar_shear[is]/vsIS
                     phi_B = 0.0
                     if(vpar_model_in==0)
-                        phi_A = (phi_A +N_j*im*w_cd*wdhr11p0*vpar[is]/vsIS 
+                        phi_A = (phi_A +N_j*im*w_cd*wdhr11p0*vpar[is]/vsIS
                                 + d_1*(nuei_q1_u_1 + (5/3)*nuei_q1_q3_1+3*nuei_q1_q1_1)
                                 *hr11*E_i*N_j*vpar[is]/vsIS)
                         phi_B = -E_i*N_j*hr11*vpar[is]/vsIS
@@ -1449,12 +1445,12 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     psi_AN = 0.0
                     psi_BN = 0.0
                     if(use_bper_in)
-                        psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hr11b0+1.5*rltsIS*(hw113b0-hr11b0)) 
+                        psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hr11b0+1.5*rltsIS*(hw113b0-hr11b0))
                         psi_B =betae_psi*M_i*J_j*hr11b0
                         psi_A = psi_A - damp_psi*psi_B
                         if(vpar_model_in==0)
                             psi_A = psi_A  -betae_psi*J_j*M_i*kpar_hr11b0*vpar[is]
-                            phi_AU = (betae_psi*U0*J_j*im*(w_s*hr11bp*vpar_shear[is] +w_cd*wdhr11bp*vpar[is])/vsIS 
+                            phi_AU = (betae_psi*U0*J_j*im*(w_s*hr11bp*vpar_shear[is] +w_cd*wdhr11bp*vpar[is])/vsIS
                                     + d_1*(nuei_q1_u_1 + (5.0/3.0)*nuei_q1_q3_1+3.0*nuei_q1_q1_1)
                                     *hr11bp*E_i*betae_psi*U0*J_j*vpar[is]/vsIS)
                             phi_BU = -betae_psi*U0*E_i*J_j*hr11bp*vpar[is]/vsIS
@@ -1469,39 +1465,39 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     ja =  jb + ja0
                     amat[ia,ja] = k_par1*kpar_hb1ht1*vsIS + phi_A + psi_AN
                     bmat[ia,ja] = phi_B + psi_BN
-                
+
                     ja =   nbasis+jb + ja0
-                    amat[ia,ja] = (psi_A + phi_AU +modk_par1*modkpar_hd1hu1*vsIS 
-                            - tausIS*(modw_d1*hv5r/abs(zsIS) + w_d1*im*hv5i/zsIS) 
-                            -d_ee*nuei_q1_u_1  
-                            +xnuei*(d_ab*xnu_q1_u_1 - d_ij*hu1*xnu_q1_q1_1 
+                    amat[ia,ja] = (psi_A + phi_AU +modk_par1*modkpar_hd1hu1*vsIS
+                            - tausIS*(modw_d1*hv5r/abs(zsIS) + w_d1*im*hv5i/zsIS)
+                            -d_ee*nuei_q1_u_1
+                            +xnuei*(d_ab*xnu_q1_u_1 - d_ij*hu1*xnu_q1_q1_1
                             - d_ij*hu3*xnu_q1_q3_1))
                     bmat[ia,ja] = psi_B + phi_BU
-                
+
                     ja = 2*nbasis+jb + ja0
-                    amat[ia,ja] = (-k_par1*(kpar_hu1 -grad_hu1 - gradhr11p1)*vsIS 
-                            - k_par1*kpar_hb1*vsIS + (am+bm*1.5)*gradBhu1*vsIS 
+                    amat[ia,ja] = (-k_par1*(kpar_hu1 -grad_hu1 - gradhr11p1)*vsIS
+                            - k_par1*kpar_hb1*vsIS + (am+bm*1.5)*gradBhu1*vsIS
                             - d_11*k_par*vsIS*c06)
                     bmat[ia,ja] = 0.0
-                
+
                     ja = 3*nbasis+jb + ja0
                     amat[ia,ja] = (-bm*4.5*gradBhu3*vsIS
                             + d_11*k_par*vsIS*c06 - d_11*k_par*vsIS*c08)
                     bmat[ia,ja] = 0.0
-                
+
                     ja = 4*nbasis+jb + ja0
                     amat[ia,ja] = (-modk_par1*modkpar_hd1*vsIS
                             - tausIS*(modw_d1*hv6r/abs(zsIS) + w_d1*im*hv6i/zsIS)
                             -d_ee*nuei_q1_q1_1
                             +xnuei*d_ab*xnu_q1_q1_1)
                     bmat[ia,ja] = d_ab
-                
+
                     ja = 5*nbasis+jb + ja0
                     amat[ia,ja] = (-tausIS*(modw_d1*hv7r/abs(zsIS) + w_d1*im*hv7i/zsIS)
                             -d_ee*nuei_q1_q3_1
                             +xnuei*d_ab*xnu_q1_q3_1)
                     bmat[ia,ja] = 0.0
-                
+
                     if(nroot>6)
                         #****************
                         #  q_par_u ghost terms
@@ -1509,23 +1505,23 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 6*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(phi_A + psi_AN)
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(psi_A + phi_AU)
                         bmat[ia,ja] = -1.0*(psi_B + phi_BU)
-                    
+
                         ja = 8*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 9*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -1535,25 +1531,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 14*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                     end   # nroot >6
 #*************************************************************
 # q_tot_u equ #6
 #*************************************************************
                     ia = 5*nbasis+ib + ia0
-        
+
                     phi_A = N_j*im*w_s*vpar_shear[is]*hr13/vsIS
                     phi_B = 0.0
                     if(vpar_model_in==0)
-                        phi_A = (phi_A +N_j*im*w_cd*wdhr13p0*vpar[is]/vsIS 
+                        phi_A = (phi_A +N_j*im*w_cd*wdhr13p0*vpar[is]/vsIS
                                 + d_1*(nuei_q3_u_1 + (5.0/3.0)*nuei_q3_q3_1)
                                 *hr13*E_i*N_j*vpar[is]/vsIS)
                         phi_B = -E_i*N_j*hr13*vpar[is]/vsIS
@@ -1567,12 +1563,12 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     psi_AN = 0.0
                     psi_BN = 0.0
                     if(use_bper_in)
-                        psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hr13b0+1.5*rltsIS*(hw133b0-hr13b0)) 
+                        psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hr13b0+1.5*rltsIS*(hw133b0-hr13b0))
                         psi_B = hr13b0*betae_psi*M_i*J_j
                         psi_A = psi_A - damp_psi*psi_B
                         if(vpar_model_in==0)
                             psi_A = psi_A -betae_psi*J_j*M_i*kpar_hr13b0*vpar[is]
-                            phi_AU = (betae_psi*U0*J_j*im*(w_s*vpar_shear[is]*hr13bp +w_cd*wdhr13bp*vpar[is])/vsIS 
+                            phi_AU = (betae_psi*U0*J_j*im*(w_s*vpar_shear[is]*hr13bp +w_cd*wdhr13bp*vpar[is])/vsIS
                                     + d_1*(nuei_q3_u_1 + (5.0/3.0)*nuei_q3_q3_1)
                                     *hr13bp*E_i*betae_psi*U0*J_j*vpar[is]/vsIS)
                             phi_BU = -betae_psi*U0*E_i*J_j*hr13bp*vpar[is]/vsIS
@@ -1585,38 +1581,38 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     #  q_tot_u untrapped terms
                     #****************
                     ja = jb + ja0
-                    amat[ia,ja] = (phi_A + psi_AN  
+                    amat[ia,ja] = (phi_A + psi_AN
                             +k_par1*(kpar_hb3ht3 -dhr13+ kpar_hb33ht1)*vsIS)
                     bmat[ia,ja] = phi_B + psi_BN
-                
+
                     ja = nbasis+jb + ja0
                     amat[ia,ja] =  (psi_A  + phi_AU +
-                            modk_par1*(modkpar_hd3hu3 + modkpar_hd33hu1)*vsIS 
-                            - tausIS*(modw_d1*hv8r/abs(zsIS) + w_d1*im*hv8i/zsIS) 
-                            -d_ee*nuei_q3_u_1 
+                            modk_par1*(modkpar_hd3hu3 + modkpar_hd33hu1)*vsIS
+                            - tausIS*(modw_d1*hv8r/abs(zsIS) + w_d1*im*hv8i/zsIS)
+                            -d_ee*nuei_q3_u_1
                             +xnuei*(d_ab*xnu_q3_u_1 - d_ij*hu3*xnu_q3_q3_1))
                     bmat[ia,ja] = psi_B + phi_BU
-                
+
                     ja = 2*nbasis+jb + ja0
                     amat[ia,ja] = (- k_par1*(kpar_hu3 -grad_hu3 - gradhr13p1)*vsIS
-                            - k_par1*kpar_hb33*vsIS + (am+bm*0.5)*gradBhu3*vsIS 
+                            - k_par1*kpar_hb33*vsIS + (am+bm*0.5)*gradBhu3*vsIS
                             -d_11*k_par*vsIS*c07)
                     bmat[ia,ja] = 0.0
-                
+
                     ja = 3*nbasis+jb + ja0
-                    amat[ia,ja] = (-k_par1*kpar_hb3*vsIS - bm*1.5*gradBhu33*vsIS 
+                    amat[ia,ja] = (-k_par1*kpar_hb3*vsIS - bm*1.5*gradBhu33*vsIS
                             +d_11*k_par*vsIS*c07 )
                     bmat[ia,ja] = 0.0
-                
+
                     ja = 4*nbasis+jb + ja0
-                    amat[ia,ja] = (-modk_par1*modkpar_hd33*vsIS 
+                    amat[ia,ja] = (-modk_par1*modkpar_hd33*vsIS
                             - tausIS*(modw_d1*hv9r/abs(zsIS) + w_d1*im*hv9i/zsIS))
                     bmat[ia,ja] = 0.0
-                
+
                     ja = 5*nbasis+jb + ja0
-                    amat[ia,ja] = (-modk_par1*modkpar_hd3*vsIS 
-                            - tausIS*(modw_d1*hv10r/abs(zsIS) + w_d1*im*hv10i/zsIS) 
-                            -d_ee*nuei_q3_q3_1  
+                    amat[ia,ja] = (-modk_par1*modkpar_hd3*vsIS
+                            - tausIS*(modw_d1*hv10r/abs(zsIS) + w_d1*im*hv10i/zsIS)
+                            -d_ee*nuei_q3_q3_1
                             +xnuei*d_ab*xnu_q3_q3_1)
                     bmat[ia,ja] = d_ab
 
@@ -1627,23 +1623,23 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 6*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(phi_A + psi_AN)
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(psi_A + phi_AU)
                         bmat[ia,ja] = -1.0*(psi_B + phi_BU)
-                    
+
                         ja = 8*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 9*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -1653,24 +1649,24 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 14*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
 
                     end    # nroot>6
-        
+
                     if(nroot>6)
 #*************************************************************
 # n_g equ #7
 #*************************************************************
                         ia = 6*nbasis+ib + ia0
-                    
-                        phi_A = N_j*im*w_s*(rlnsIS*gn + rltsIS*1.5*(gp3-gn))  
+
+                        phi_A = N_j*im*w_s*(rlnsIS*gn + rltsIS*1.5*(gp3-gn))
                         if(vpar_model_in==0)
                             phi_A = phi_A + N_j*E_i*kpar_gnp0*vpar[is]
                         end
@@ -1685,7 +1681,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         psi_AN = 0.0
                         psi_BN = 0.0
                         if(use_bpar_in)
-                            sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)* 
+                            sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10n + rltsIS*1.5*(g10p3-g10n))))
                             sig_B = (betae_sig*g10n*asJS*tausJS*zsIS*zsIS
                                     /(tausIS*massIS))
@@ -1696,7 +1692,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             if(vpar_model_in==0)
                                 psi_A = psi_A -betae_psi*J_j*im*w_cd*vpar[is]*wdgp1b0
                                 psi_B = betae_psi*M_i*J_j*vpar[is]*gp1b0/vsIS
-                                phi_AU = betae_psi*U0*J_j*(im*w_s*(rlnsIS*gnbp + rltsIS*1.5*(gp3bp-gnbp)) 
+                                phi_AU = betae_psi*U0*J_j*(im*w_s*(rlnsIS*gnbp + rltsIS*1.5*(gp3bp-gnbp))
                                         + E_i*kpar_gnbp*vpar[is])
                                 phi_BU = -betae_psi*U0*E_i*J_j*gnbp
                                 psi_AN = betae_psi*U0*N_j*im*(w_cd*vpar[is]*wdgp1bp+w_s*vpar_shear[is]*gp1bp)
@@ -1709,25 +1705,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN +d_ee*nuei_n_n*bn
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
                         amat[ia,ja] = psi_A + phi_AU
                         bmat[ia,ja] = psi_B + phi_BU
-                    
+
                         ja = 2*nbasis+jb + ja0
                         amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_n_p1*bp1
                                 -d_ee*(1.0 - ft2)*(bn*an*nuei_n_n + bp3*ap3*nuei_n_p3 + bp1*ap1*nuei_n_p1))
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 3*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*sig_A +d_ee*nuei_n_p3*bp3  
+                        amat[ia,ja] = (1.5*sig_A +d_ee*nuei_n_p3*bp3
                                 +d_ee*(1.0 - ft2)*(bn*an*nuei_n_n + bp3*ap3*nuei_n_p3 + bp1*ap1*nuei_n_p1))
                         bmat[ia,ja] = 1.5*sig_B
-                    
+
                         ja = 4*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 5*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -1742,21 +1738,21 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = -k_par*vsIS + am*gradB*vsIS - (psi_A + phi_AU)
                         bmat[ia,ja] = -(psi_B + phi_BU)
-                    
+
                         ja = 8*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*sig_A 
+                        amat[ia,ja] = (-0.5*sig_A
                                 -0.5*im*w_dg*tausIS/zsIS-d_ee*nuei_n_p1)
                         bmat[ia,ja] = -0.5*(-1*sig_B)
-                    
+
                         ja = 9*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*(-1*sig_A) 
+                        amat[ia,ja] = (1.5*(-1*sig_A)
                                 -1.5*im*w_dg*tausIS/zsIS -d_ee*nuei_n_p3)
                         bmat[ia,ja] = 1.5*(-1*sig_B)
-                    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -1766,19 +1762,19 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
-                        amat[ia,ja] = -0.5*sig_A 
+                        amat[ia,ja] = -0.5*sig_A
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 14*nbasis+jb + ja0
-                        amat[ia,ja] = 1.5*sig_A  
+                        amat[ia,ja] = 1.5*sig_A
                         bmat[ia,ja] = 1.5*sig_B
 #*************************************************************
 # u_par_g equ #8
 #*************************************************************
                         ia = 7*nbasis+ib + ia0
-                    
+
                         phi_A = N_j*im*w_s*vpar_shear[is]*gp1/vsIS
                         if(vpar_model_in==0)
                             phi_A = phi_A  + N_j*im*w_cd*wdgp1p0*vpar[is]/vsIS
@@ -1811,28 +1807,28 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
-                        amat[ia,ja] = psi_A + phi_AU + d_ee*ft3*nuei_u_u 
+                        amat[ia,ja] = psi_A + phi_AU + d_ee*ft3*nuei_u_u
                         bmat[ia,ja] = psi_B + phi_BU
-                    
+
                         ja = 2*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 3*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 4*nbasis+jb + ja0
                         amat[ia,ja] = (d_ee*ft5*nuei_u_q1
                                 -d_ee*(1.0 -ft2)*(ft3*nuei_u_u*1.25 +ft3*nuei_u_q3*35.0/12.0 +ft5*nuei_u_q1*6.25) )
-                                    
+
                         bmat[ia,ja] = 0.0
-            
+
                         ja = 5*nbasis+jb + ja0
-                        amat[ia,ja] = (d_ee*ft3*nuei_u_q3 
-                                +d_ee*(1.0-ft2)*(ft3*nuei_u_u*2.25 +ft3*nuei_u_q3*5.25 +ft5*nuei_u_q1*11.25))    
+                        amat[ia,ja] = (d_ee*ft3*nuei_u_q3
+                                +d_ee*(1.0-ft2)*(ft3*nuei_u_u*2.25 +ft3*nuei_u_q3*5.25 +ft5*nuei_u_q1*11.25))
                         bmat[ia,ja] = 0.0
                         #****************
                         # u_par_g ghost terms
@@ -1840,31 +1836,31 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 6*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(phi_A + psi_AN)
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-            
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = (-1.0*(psi_A + phi_AU)
                                 -d_ee*nuei_u_u_t -d_ee*nuei_u_u
                                 +xnuei*(d_ab*xnu_u_u_1 - d_ij*gu3*xnu_u_q3_1)
                                 +xnuei*d_ab*xnu_u_b)
                         bmat[ia,ja] = d_ab -1.0*(psi_B + phi_BU)
-            
+
                         ja = 8*nbasis+jb + ja0
                         amat[ia,ja] = (-(k_par - k_par1*gradgp1p1)*vsIS
                                 +(am + bm*0.5)*gradB*vsIS )
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 9*nbasis+jb + ja0
                         amat[ia,ja] = -bm*1.5*gradB*vsIS
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = (-0.5*im*w_dg*tausIS/zsIS
                             -d_ee*nuei_u_q1)
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
-                        amat[ia,ja] = (-1.5*im*w_dg*tausIS/zsIS 
-                                -d_ee*nuei_u_q3_t -d_ee*nuei_u_q3 
+                        amat[ia,ja] = (-1.5*im*w_dg*tausIS/zsIS
+                                -d_ee*nuei_u_q3_t -d_ee*nuei_u_q3
                                 +xnuei*d_ab*xnu_u_q3_1)
                         bmat[ia,ja] = 0.0
                         #****************
@@ -1873,11 +1869,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 14*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -1885,8 +1881,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 # p_par_g equ #9
 #*************************************************************
                         ia = 8*nbasis+ib + ia0
-                    
-                        phi_A = N_j*im*w_s*(rlnsIS*gp1 + rltsIS*1.5*(gr13-gp1))  
+
+                        phi_A = N_j*im*w_s*(rlnsIS*gp1 + rltsIS*1.5*(gr13-gp1))
                         if(vpar_model_in==0)
                             phi_A = phi_A  +N_j*E_i*kpar_gp1p0*vpar[is]
                         end
@@ -1903,7 +1899,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         if(use_bpar_in)
                             sig_A =( -betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10p1 + rltsIS*1.5*(g10r13-g10p1))))
-                            sig_B = (betae_sig*g10p1*asJS*tausJS*zsIS*zsIS 
+                            sig_B = (betae_sig*g10p1*asJS*tausJS*zsIS*zsIS
                                     /(tausIS*massIS))
                             sig_A = sig_A - damp_sig*sig_B
                         end
@@ -1925,25 +1921,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN +d_ee*nuei_p1_n*bn
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
                         amat[ia,ja] = psi_A + phi_AU
                         bmat[ia,ja] = psi_B + phi_BU
-                    
+
                         ja = 2*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_p1_p1*bp1  
+                        amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_p1_p1*bp1
                                 -d_ee*(1.0 - ft2)*(bn*an*nuei_p1_n + bp3*ap3*nuei_p1_p3 + bp1*ap1*nuei_p1_p1))
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 3*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*sig_A +d_ee*nuei_p1_p3*bp3 
+                        amat[ia,ja] = (1.5*sig_A +d_ee*nuei_p1_p3*bp3
                                 +d_ee*(1.0 - ft2)*(bn*an*nuei_p1_n + bp3*ap3*nuei_p1_p3 + bp1*ap1*nuei_p1_p1))
                         bmat[ia,ja] = 1.5*sig_B
-                    
+
                         ja = 4*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 5*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -1958,30 +1954,30 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                                 -d_ee*nuei_p1_n
                                 -xnuei*d_ij*xnu_p1_1*(gt1-ft2*gt3))
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = k_par1*grad_gu1*vsIS -1.0*(psi_A + phi_AU)
                         bmat[ia,ja] = -1.0*(psi_B + phi_BU)
-                    
+
                         ja = 8*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*(-1.0*sig_A) 
+                        amat[ia,ja] = (-0.5*(-1.0*sig_A)
                                 -im*w_d1*(tausIS/zsIS)*(0.5*wdgu1+1.5*wdgu3)
                                 -2.0*tausIS*(modw_d1*gu1r/abs(zsIS) +w_d1*im*gu1i/zsIS)
-                                -d_ee*nuei_p1_p1_t -d_ee*nuei_p1_p1  
+                                -d_ee*nuei_p1_p1_t -d_ee*nuei_p1_p1
                                 +xnuei*d_ab*(xnu_p1_1 + xnu_p1_b))
                         bmat[ia,ja] = d_ab -0.5*(-1.0*sig_B)
-                    
+
                         ja = 9*nbasis+jb + ja0
                         amat[ia,ja] = (1.5*(-1.0*sig_A)
                                 -2.0*tausIS*(modw_d1*gu2r/abs(zsIS) +w_d1*im*gu2i/zsIS)
-                                -d_ee*nuei_p1_p3_t -d_ee*nuei_p1_p3 
+                                -d_ee*nuei_p1_p3_t -d_ee*nuei_p1_p3
                                 -xnuei*d_ab*xnu_p1_1*ft2)
                         bmat[ia,ja] = 1.5*(-1.0*sig_B)
-                    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = -k_par*vsIS +(am +bm)*gradB*vsIS
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = -bm*3.0*gradB*vsIS
                         bmat[ia,ja] = 0.0
@@ -1991,21 +1987,21 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
-                        amat[ia,ja] = -0.5*sig_A 
+                        amat[ia,ja] = -0.5*sig_A
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 14*nbasis+jb + ja0
-                        amat[ia,ja] = 1.5*sig_A 
+                        amat[ia,ja] = 1.5*sig_A
                         bmat[ia,ja] = 1.5*sig_B
 #*************************************************************
 # p_tot_g equ #10
 #*************************************************************
                         ia = 9*nbasis+ib + ia0
-                    
+
                         phi_A = N_j*im*w_s*(rlnsIS*gp3+rltsIS*1.5*(gr33-gp3))
-                        if(vpar_model_in==0) 
+                        if(vpar_model_in==0)
                             phi_A = phi_A + N_j*E_i*kpar_gp3p0*vpar[is]
                         end
                         phi_B = -gp3*E_i*N_j
@@ -2021,7 +2017,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         if(use_bpar_in)
                             sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10p3 + rltsIS*1.5*(g10r33-g10p3))))
-                            sig_B = (betae_sig*g10p3*asJS*tausJS*zsIS*zsIS 
+                            sig_B = (betae_sig*g10p3*asJS*tausJS*zsIS*zsIS
                                     /(tausIS*massIS))
                             sig_A = sig_A - damp_sig*sig_B
                         end
@@ -2030,7 +2026,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             if(vpar_model_in==0)
                                 psi_A = psi_A -betae_psi*J_j*im*w_cd*vpar[is]*wdgr13b0
                                 psi_B = betae_psi*M_i*J_j*vpar[is]*gr13b0/vsIS
-                                phi_AU = (betae_psi*U0*J_j*(im*w_s*(rlnsIS*gp3bp+rltsIS*1.5*(gr33bp-gp3bp))  
+                                phi_AU = (betae_psi*U0*J_j*(im*w_s*(rlnsIS*gp3bp+rltsIS*1.5*(gr33bp-gp3bp))
                                         + E_i*kpar_gp3bp*vpar[is]))
                                 phi_BU = -betae_psi*U0*gp3bp*E_i*J_j
                                 psi_AN = betae_psi*U0*N_j*im*(w_cd*vpar[is]*wdgr13bp+w_s*vpar_shear[is]*gr13bp)
@@ -2043,25 +2039,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN +d_ee*nuei_p3_n*bn
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
                         amat[ia,ja] = psi_A + phi_AU
                         bmat[ia,ja] = psi_B + phi_BU
-                    
+
                         ja = 2*nbasis+jb + ja0
                         amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_p3_p1*bp1
                                 -d_ee*(1.0 - ft2)*(bn*an*nuei_p3_n + bp3*ap3*nuei_p3_p3 + bp1*ap1*nuei_p3_p1))
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 3*nbasis+jb + ja0
                         amat[ia,ja] = (1.5*sig_A +d_ee*nuei_p3_p3*bp3
                                 +d_ee*(1.0 - ft2)*(bn*an*nuei_p3_n + bp3*ap3*nuei_p3_p3 + bp1*ap1*nuei_p3_p1))
                         bmat[ia,ja] = 1.5*sig_B
-                    
+
                         ja = 4*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 5*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -2069,35 +2065,35 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         #  p_tot_g ghost terms
                         #****************
                         ja = 6*nbasis+jb + ja0
-                        amat[ia,ja] = (-1.0*(phi_A + psi_AN) 
-                                +2.0*tausIS*(modw_d1*gu3rgt1/abs(zsIS) +w_d1*im*gu3igt1/zsIS) 
-                                +2.0*tausIS*(modw_d1*gu4rgt3/abs(zsIS) +w_d1*im*gu4igt3/zsIS) 
+                        amat[ia,ja] = (-1.0*(phi_A + psi_AN)
+                                +2.0*tausIS*(modw_d1*gu3rgt1/abs(zsIS) +w_d1*im*gu3igt1/zsIS)
+                                +2.0*tausIS*(modw_d1*gu4rgt3/abs(zsIS) +w_d1*im*gu4igt3/zsIS)
                                 -d_ee*nuei_p3_n)
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = k_par1*grad_gu3*vsIS -1.0*(psi_A + phi_AU)
                         bmat[ia,ja] = -1.0*(psi_B + phi_BU)
-                    
+
                         ja = 8*nbasis+jb + ja0
                         amat[ia,ja] = (-0.5*(-1.0*sig_A)
                             -im*w_d1*(tausIS/zsIS)*0.5*wdgu3
                             -2.0*tausIS*(modw_d1*gu3r/abs(zsIS) +w_d1*im*gu3i/zsIS)
                             -d_ee*nuei_p3_p1)
                         bmat[ia,ja] = -0.5*(-1.0*sig_B)
-                    
+
                         ja = 9*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*(-1.0*sig_A) 
+                        amat[ia,ja] = (1.5*(-1.0*sig_A)
                                 -im*w_d1*(tausIS/zsIS)*1.5*wdgu33
                                 -2.0*tausIS*(modw_d1*gu4r/abs(zsIS) +w_d1*im*gu4i/zsIS)
-                                -d_ee*nuei_p3_p3  
+                                -d_ee*nuei_p3_p3
                                 +xnuei*d_ab*xnu_p3_b)
                         bmat[ia,ja] = d_ab + 1.5*(-1.0*sig_B)
 
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = -k_par*vsIS + am*gradB*vsIS
                         bmat[ia,ja] = 0.0
@@ -2107,13 +2103,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
-                        amat[ia,ja] = -0.5*sig_A 
+                        amat[ia,ja] = -0.5*sig_A
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 14*nbasis+jb + ja0
-                        amat[ia,ja] = 1.5*sig_A 
+                        amat[ia,ja] = 1.5*sig_A
                         bmat[ia,ja] = 1.5*sig_B
 #*************************************************************
 #  q_par_g equ #11
@@ -2152,62 +2148,62 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
                         amat[ia,ja] = psi_A + phi_AU +d_ee*ft3*nuei_q1_u
                         bmat[ia,ja] = psi_B + phi_BU
-                    
+
                         ja = 2*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 3*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 4*nbasis+jb + ja0
                         amat[ia,ja] = (d_ee*ft5*nuei_q1_q1
                                 -d_ee*(1.0 -ft2)*(ft3*nuei_q1_u*1.25 +ft3*nuei_q1_q3*35.0/12.0+ft5*nuei_q1_q1*6.25))
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 5*nbasis+jb + ja0
-                        amat[ia,ja] = (d_ee*ft3*nuei_q1_q3  
+                        amat[ia,ja] = (d_ee*ft3*nuei_q1_q3
                                 +d_ee*(1.0 -ft2)*(ft3*nuei_q1_u*2.25 +ft3*nuei_q1_q3*5.25 +ft5*nuei_q1_q1*11.25))
                         bmat[ia,ja] = 0.0
                         #****************
                         # q_par_g ghost terms
                         #****************
                         ja = 6*nbasis+jb + ja0
-                        amat[ia,ja] = -1.0*(phi_A + psi_AN) + k_par1*kpar_gb1gt1*vsIS 
+                        amat[ia,ja] = -1.0*(phi_A + psi_AN) + k_par1*kpar_gb1gt1*vsIS
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
-                        amat[ia,ja] = (-1.0*(psi_A + phi_AU) +modk_par1*modkpar_gd1gu1*vsIS  
-                                - tausIS*(modw_d1*gu5r/abs(zsIS) + w_d1*im*gu5i/zsIS) 
-                                -d_ee*nuei_q1_u_t -d_ee*nuei_q1_u 
-                                +xnuei*(d_ab*xnu_q1_u_1*ft2 - d_ij*gu1*xnu_q1_q1_1 
+                        amat[ia,ja] = (-1.0*(psi_A + phi_AU) +modk_par1*modkpar_gd1gu1*vsIS
+                                - tausIS*(modw_d1*gu5r/abs(zsIS) + w_d1*im*gu5i/zsIS)
+                                -d_ee*nuei_q1_u_t -d_ee*nuei_q1_u
+                                +xnuei*(d_ab*xnu_q1_u_1*ft2 - d_ij*gu1*xnu_q1_q1_1
                                 - d_ij*gu3*xnu_q1_q3_1*ft2))
                         bmat[ia,ja] = -1.0*(psi_B + phi_BU)
-        
+
                         ja = 8*nbasis+jb + ja0
-                        amat[ia,ja] =  (-k_par1*(kpar_gu1 -grad_gu1 - gradgr11p1)*vsIS 
+                        amat[ia,ja] =  (-k_par1*(kpar_gu1 -grad_gu1 - gradgr11p1)*vsIS
                                 - k_par1*kpar_gb1*vsIS + (am+bm*1.5)*gradBgu1*vsIS)
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 9*nbasis+jb + ja0
-                        amat[ia,ja] = -bm*4.5*gradBgu3*vsIS 
+                        amat[ia,ja] = -bm*4.5*gradBgu3*vsIS
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 10*nbasis+jb + ja0
-                        amat[ia,ja] = (-modk_par1*modkpar_gd1*vsIS 
-                                - tausIS*(modw_d1*gu6r/abs(zsIS) + w_d1*im*gu6i/zsIS) 
-                                -d_ee*nuei_q1_q1_t -d_ee*nuei_q1_q1  
+                        amat[ia,ja] = (-modk_par1*modkpar_gd1*vsIS
+                                - tausIS*(modw_d1*gu6r/abs(zsIS) + w_d1*im*gu6i/zsIS)
+                                -d_ee*nuei_q1_q1_t -d_ee*nuei_q1_q1
                                 +xnuei*d_ab*(xnu_q1_q1_1 + xnu_q1_b))
                         bmat[ia,ja] = d_ab
-                    
+
                         ja = 11*nbasis+jb + ja0
-                        amat[ia,ja] = (- tausIS*(modw_d1*gu7r/abs(zsIS) + w_d1*im*gu7i/zsIS) 
-                                -d_ee*nuei_q1_q3_t -d_ee*nuei_q1_q3 
+                        amat[ia,ja] = (- tausIS*(modw_d1*gu7r/abs(zsIS) + w_d1*im*gu7i/zsIS)
+                                -d_ee*nuei_q1_q3_t -d_ee*nuei_q1_q3
                                 +xnuei*d_ab*xnu_q1_q3_1*ft2)
                         bmat[ia,ja] = 0.0
                         #****************
@@ -2216,11 +2212,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 14*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -2228,7 +2224,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 # q_tot_g equ #12
 #*************************************************************
                         ia = 11*nbasis+ib + ia0
-                    
+
                         phi_A = N_j*im*w_s*vpar_shear[is]*gr13/vsIS
                         if(vpar_model_in==0)
                             phi_A = phi_A + N_j*im*w_cd*wdgr13p0*vpar[is]/vsIS
@@ -2250,7 +2246,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                                 psi_A = psi_A  -betae_psi*J_j*M_i*kpar_gr13b0*vpar[is]
                                 phi_AU = betae_psi*U0*J_j*im*(w_s*vpar_shear[is]*gr13bp +w_cd*wdgr13bp*vpar[is])/vsIS
                                 phi_BU = -betae_psi*U0*E_i*J_j*gr13bp*vpar[is]/vsIS
-                                psi_AN = betae_psi*U0*N_j*(vsIS*im*w_s*(rlnsIS*gr13bp+1.5*rltsIS*(gw133bp-gr13bp)) 
+                                psi_AN = betae_psi*U0*N_j*(vsIS*im*w_s*(rlnsIS*gr13bp+1.5*rltsIS*(gw133bp-gr13bp))
                                         +M_i*kpar_gr13bp*vpar[is])
                                 psi_BN = -gr13bp*betae_psi*U0*M_i*N_j
                             end
@@ -2261,26 +2257,26 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
                         amat[ia,ja] = psi_A + phi_AU + d_ee*ft3*nuei_q3_u
                         bmat[ia,ja] = psi_B + phi_BU
-                    
+
                         ja = 2*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 3*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 4*nbasis+jb + ja0
-                        amat[ia,ja] = (d_ee*ft5*nuei_q3_q1   
+                        amat[ia,ja] = (d_ee*ft5*nuei_q3_q1
                                 -d_ee*(1.0 -ft2)*(ft3*nuei_q3_u*1.25 +ft3*nuei_q3_q3*35.0/12.0 +ft5*nuei_q3_q1*6.25))
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 5*nbasis+jb + ja0
-                        amat[ia,ja] = (d_ee*ft3*nuei_q3_q3  
+                        amat[ia,ja] = (d_ee*ft3*nuei_q3_q3
                                 +d_ee*(1.0 -ft2)*(ft3*nuei_q3_u*2.25 + ft3*nuei_q3_q3*5.25 + ft5*nuei_q3_q1*11.25))
                         bmat[ia,ja] = 0.0
                         #****************
@@ -2289,34 +2285,34 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 6*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(phi_A + psi_AN) + k_par1*(kpar_gb3gt3 -dgr13 + kpar_gb33gt1)*vsIS
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
-                        amat[ia,ja] = (-1.0*(psi_A + phi_AU) + 
-                                modk_par1*(modkpar_gd3gu3 + modkpar_gd33gu1)*vsIS 
-                                - tausIS*(modw_d1*gu8r/abs(zsIS) + w_d1*im*gu8i/zsIS) 
-                                -d_ee*nuei_q3_u_t -d_ee*nuei_q3_u  
+                        amat[ia,ja] = (-1.0*(psi_A + phi_AU) +
+                                modk_par1*(modkpar_gd3gu3 + modkpar_gd33gu1)*vsIS
+                                - tausIS*(modw_d1*gu8r/abs(zsIS) + w_d1*im*gu8i/zsIS)
+                                -d_ee*nuei_q3_u_t -d_ee*nuei_q3_u
                                 +xnuei*(d_ab*xnu_q3_u_1 - d_ij*gu3*xnu_q3_q3_1))
                         bmat[ia,ja] = -1.0*(psi_B + phi_BU)
-                    
+
                         ja = 8*nbasis+jb + ja0
                         amat[ia,ja] = (- k_par1*(kpar_gu3 -grad_gu3 - gradgr13p1)*vsIS
                                 - k_par1*kpar_gb33*vsIS + (am+bm*0.5)*gradBgu3*vsIS)
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 9*nbasis+jb + ja0
-                        amat[ia,ja] = - k_par1*kpar_gb3*vsIS - bm*1.5*gradBgu33*vsIS 
+                        amat[ia,ja] = - k_par1*kpar_gb3*vsIS - bm*1.5*gradBgu33*vsIS
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 10*nbasis+jb + ja0
-                        amat[ia,ja] = (-modk_par1*modkpar_gd33*vsIS 
-                                - tausIS*(modw_d1*gu9r/abs(zsIS) + w_d1*im*gu9i/zsIS) 
+                        amat[ia,ja] = (-modk_par1*modkpar_gd33*vsIS
+                                - tausIS*(modw_d1*gu9r/abs(zsIS) + w_d1*im*gu9i/zsIS)
                                 -d_ee*nuei_q3_q1)
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = (-modk_par1*modkpar_gd3*vsIS
                                 - tausIS*(modw_d1*gu10r/abs(zsIS) +w_d1* im*gu10i/zsIS)
-                                -d_ee*nuei_q3_q3_t -d_ee*nuei_q3_q3 
+                                -d_ee*nuei_q3_q3_t -d_ee*nuei_q3_q3
                                 +xnuei*d_ab*(xnu_q3_q3_1 + xnu_q3_b))
                         bmat[ia,ja] = d_ab
                         #****************
@@ -2325,11 +2321,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 12*nbasis+jb + ja0
                         amat[ia,ja] = phi_A + psi_AN
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 14*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -2337,8 +2333,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 # n_t equ #13
 #*************************************************************
                         ia = 12*nbasis+ib + ia0
-                    
-                        phi_A = N_j*im*w_s*(rlnsIS*gn + rltsIS*1.5*(gp3-gn))       
+
+                        phi_A = N_j*im*w_s*(rlnsIS*gn + rltsIS*1.5*(gp3-gn))
                         phi_B = -gn*E_i*N_j
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_n_b*phi_B
                         sig_A = 0.0
@@ -2350,9 +2346,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         psi_AN = 0.0
                         psi_BN = 0.0
                         if(use_bpar_in)
-                            sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)* 
+                            sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10n + rltsIS*1.5*(g10p3-g10n))))
-                            sig_B = (betae_sig*g10n*asJS*tausJS*zsIS*zsIS 
+                            sig_B = (betae_sig*g10n*asJS*tausJS*zsIS*zsIS
                                     /(tausIS*massIS))
                             sig_A = sig_A - damp_sig*sig_B
                         end
@@ -2373,25 +2369,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN +d_ee*nuei_n_n*bn
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 2*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_n_p1*bp1  
+                        amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_n_p1*bp1
                                 -d_ee*(1.0 - ft2)*(bn*an*nuei_n_n + bp3*ap3*nuei_n_p3 + bp1*ap1*nuei_n_p1))
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 3*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*sig_A +d_ee*nuei_n_p3*bp3    
+                        amat[ia,ja] = (1.5*sig_A +d_ee*nuei_n_p3*bp3
                                 +d_ee*(1.0 - ft2)*(bn*an*nuei_n_n + bp3*ap3*nuei_n_p3 + bp1*ap1*nuei_n_p1))
                         bmat[ia,ja] = 1.5*sig_B
-                    
+
                         ja = 4*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 5*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -2401,23 +2397,23 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = 6*nbasis+jb + ja0
                         amat[ia,ja] = -1.0*(phi_A + psi_AN)
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 8*nbasis+jb + ja0
-                        amat[ia,ja] = -0.5*(-1.0*sig_A) 
+                        amat[ia,ja] = -0.5*(-1.0*sig_A)
                         bmat[ia,ja] = -0.5*(-1.0*sig_B)
-                    
+
                         ja = 9*nbasis+jb + ja0
-                        amat[ia,ja] = 1.5*(-1.0*sig_A) 
+                        amat[ia,ja] = 1.5*(-1.0*sig_A)
                         bmat[ia,ja] = 1.5*(-1.0*sig_B)
-                    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -2425,24 +2421,24 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     # n_t trapped terms
                     #****************
                         ja = 12*nbasis+jb + ja0
-                        amat[ia,ja] = phi_A + psi_AN -d_ee*nuei_n_n +xnuei*d_ab*xnu_n_b 
+                        amat[ia,ja] = phi_A + psi_AN -d_ee*nuei_n_n +xnuei*d_ab*xnu_n_b
                         bmat[ia,ja] = d_ab + phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*sig_A -0.5*im*w_dg*tausIS/zsIS 
+                        amat[ia,ja] = (-0.5*sig_A -0.5*im*w_dg*tausIS/zsIS
                                 -d_ee*nuei_n_p1)
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 14*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*sig_A -1.5*im*w_dg*tausIS/zsIS 
+                        amat[ia,ja] = (1.5*sig_A -1.5*im*w_dg*tausIS/zsIS
                                 -d_ee*nuei_n_p3)
                         bmat[ia,ja] = 1.5*sig_B
 #*************************************************************
 # p_par_t equ #14
 #*************************************************************
                         ia = 13*nbasis+ib + ia0
-                    
-                        phi_A = N_j*im*w_s*(rlnsIS*gp1 + rltsIS*1.5*(gr13-gp1))     
+
+                        phi_A = N_j*im*w_s*(rlnsIS*gp1 + rltsIS*1.5*(gr13-gp1))
                         phi_B = -gp1*E_i*N_j
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_p1_b*phi_B
                         sig_A = 0.0
@@ -2454,9 +2450,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         psi_AN = 0.0
                         psi_BN = 0.0
                         if(use_bpar_in)
-                            sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)* 
+                            sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10p1 + rltsIS*1.5*(g10r13-g10p1))))
-                            sig_B = (betae_sig*g10p1*asJS*tausJS*zsIS*zsIS 
+                            sig_B = (betae_sig*g10p1*asJS*tausJS*zsIS*zsIS
                                     /(tausIS*massIS))
                             sig_A = sig_A - damp_sig*sig_B
                         end
@@ -2477,25 +2473,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN +d_ee*nuei_p1_n*bn
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 2*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_p1_p1*bp1 
+                        amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_p1_p1*bp1
                                 -d_ee*(1.0 - ft2)*(bn*an*nuei_p1_n + bp3*ap3*nuei_p1_p3 + bp1*ap1*nuei_p1_p1))
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 3*nbasis+jb + ja0
                         amat[ia,ja] = 1.5*sig_A
                         bmat[ia,ja] = (1.5*sig_B +d_ee*nuei_p1_p3*bp3
                                 +d_ee*(1.0 - ft2)*(bn*an*nuei_p1_n + bp3*ap3*nuei_p1_p3 + bp1*ap1*nuei_p1_p1))
-                    
+
                         ja = 4*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 5*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -2503,59 +2499,59 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     # p_par_t  ghost terms
                     #****************
                         ja = 6*nbasis+jb + ja0
-                        amat[ia,ja] = -1.0*(phi_A + psi_AN) 
+                        amat[ia,ja] = -1.0*(phi_A + psi_AN)
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 8*nbasis+jb + ja0
                         amat[ia,ja] = -0.5*(-1.0*sig_A)
                         bmat[ia,ja] = -0.5*(-1.0*sig_B)
-    
+
                         ja = 9*nbasis+jb + ja0
                         amat[ia,ja] = 1.5*(-1.0*sig_A)
                         bmat[ia,ja] = 1.5*(-1.0*sig_B)
-                    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
                     #****************
                     # p_par_t  trapped terms
                     #****************
-    
+
                         ja = 12*nbasis+jb + ja0
-                        amat[ia,ja] = (phi_A +psi_AN 
-                                +2.0*tausIS*(modw_d1*gu1rgt1/abs(zsIS) +w_d1*im*gu1igt1/zsIS) 
-                                +2.0*tausIS*(modw_d1*gu2rgt3/abs(zsIS) +w_d1*im*gu2igt3/zsIS) 
+                        amat[ia,ja] = (phi_A +psi_AN
+                                +2.0*tausIS*(modw_d1*gu1rgt1/abs(zsIS) +w_d1*im*gu1igt1/zsIS)
+                                +2.0*tausIS*(modw_d1*gu2rgt3/abs(zsIS) +w_d1*im*gu2igt3/zsIS)
                                 -d_ee*nuei_p1_n -xnuei*d_ij*xnu_p1_1*(gt1-ft2*gt3))
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
                         amat[ia,ja] =  (-0.5*sig_A
-                                -im*w_d1*(tausIS/zsIS)*(0.5*wdgu1+1.5*wdgu3) 
-                                -2.0*tausIS*(modw_d1*gu1r/abs(zsIS) +w_d1*im*gu1i/zsIS) 
-                                -d_ee*nuei_p1_p1_t -d_ee*nuei_p1_p1  
+                                -im*w_d1*(tausIS/zsIS)*(0.5*wdgu1+1.5*wdgu3)
+                                -2.0*tausIS*(modw_d1*gu1r/abs(zsIS) +w_d1*im*gu1i/zsIS)
+                                -d_ee*nuei_p1_p1_t -d_ee*nuei_p1_p1
                                 +xnuei*d_ab*(xnu_p1_1 + xnu_p1_b))
                         bmat[ia,ja] = d_ab -0.5*sig_B
-                    
+
                         ja = 14*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*sig_A     
-                                -2.0*tausIS*(modw_d1*gu2r/abs(zsIS) +w_d1*im*gu2i/zsIS) 
-                                -d_ee*nuei_p1_p3_t -d_ee*nuei_p1_p3  
+                        amat[ia,ja] = (1.5*sig_A
+                                -2.0*tausIS*(modw_d1*gu2r/abs(zsIS) +w_d1*im*gu2i/zsIS)
+                                -d_ee*nuei_p1_p3_t -d_ee*nuei_p1_p3
                                 -xnuei*d_ab*xnu_p1_1*ft2)
                         bmat[ia,ja] = 1.5*sig_B
 #*************************************************************
 # p_tot_t equ #15
 #*************************************************************
                         ia = 14*nbasis+ib + ia0
-                    
-                        phi_A = N_j*im*w_s*(rlnsIS*gp3+rltsIS*1.5*(gr33-gp3)) 
+
+                        phi_A = N_j*im*w_s*(rlnsIS*gp3+rltsIS*1.5*(gr33-gp3))
                         phi_B = -gp3*E_i*N_j
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_p3_b*phi_B
                         sig_A = 0.0
@@ -2567,9 +2563,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         psi_AN = 0.0
                         psi_BN = 0.0
                         if(use_bpar_in)
-                            sig_A =( -betae_sig*(asJS*tausJS*zsIS/massIS)* 
+                            sig_A =( -betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10p3 + rltsIS*1.5*(g10r33-g10p3))))
-                            sig_B = (betae_sig*g10p3*asJS*tausJS*zsIS*zsIS 
+                            sig_B = (betae_sig*g10p3*asJS*tausJS*zsIS*zsIS
                                     /(tausIS*massIS))
                             sig_A = sig_A - damp_sig*sig_B
                         end
@@ -2578,7 +2574,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             if(vpar_model_in==0)
                                 psi_A = psi_A -betae_psi*J_j*im*w_cd*vpar[is]*wdgr13b0
                                 psi_B = betae_psi*M_i*J_j*vpar[is]*gr13b0/vsIS
-                                phi_AU = betae_psi*U0*J_j*im*w_s*(rlnsIS*gp3bp+rltsIS*1.5*(gr33bp-gp3bp)) 
+                                phi_AU = betae_psi*U0*J_j*im*w_s*(rlnsIS*gp3bp+rltsIS*1.5*(gr33bp-gp3bp))
                                 phi_BU = -betae_psi*U0*gp3bp*E_i*J_j
                                 psi_AN = betae_psi*U0*N_j*im*(w_cd*vpar[is]*wdgr13bp+w_s*vpar_shear[is]*gr13bp)
                                 psi_BN = -betae_psi*U0*M_i*N_j*vpar[is]*gr13bp/vsIS
@@ -2590,25 +2586,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ja = jb + ja0
                         amat[ia,ja] = phi_A + psi_AN +d_ee*nuei_p3_n*bn
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 2*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_p3_p1*bp1 
+                        amat[ia,ja] = (-0.5*sig_A +d_ee*nuei_p3_p1*bp1
                                 -d_ee*(1.0 - ft2)*(bn*an*nuei_p3_n + bp3*ap3*nuei_p3_p3 + bp1*ap1*nuei_p3_p1))
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 3*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*sig_A +d_ee*nuei_p3_p3*bp3 
+                        amat[ia,ja] = (1.5*sig_A +d_ee*nuei_p3_p3*bp3
                                 +d_ee*(1.0 - ft2)*(bn*an*nuei_p3_n + bp3*ap3*nuei_p3_p3 + bp1*ap1*nuei_p3_p1))
                         bmat[ia,ja] = 1.5*sig_B
-                    
+
                         ja = 4*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 5*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -2616,25 +2612,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     # p_tot_t ghost terms
                     #****************
                         ja = 6*nbasis+jb + ja0
-                        amat[ia,ja] = -1.0*(phi_A + psi_AN) 
+                        amat[ia,ja] = -1.0*(phi_A + psi_AN)
                         bmat[ia,ja] = -1.0*(phi_B + psi_BN)
-                    
+
                         ja = 7*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 8*nbasis+jb + ja0
-                        amat[ia,ja] = -0.5*(-1.0*sig_A) 
+                        amat[ia,ja] = -0.5*(-1.0*sig_A)
                         bmat[ia,ja] = -0.5*(-1.0*sig_B)
-                    
+
                         ja = 9*nbasis+jb + ja0
-                        amat[ia,ja] = 1.5*(-1.0*sig_A) 
+                        amat[ia,ja] = 1.5*(-1.0*sig_A)
                         bmat[ia,ja] = 1.5*(-1.0*sig_B)
-                    
+
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
-                    
+
                         ja = 11*nbasis+jb + ja0
                         amat[ia,ja] = 0.0
                         bmat[ia,ja] = 0.0
@@ -2642,27 +2638,27 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     # p_tot_t trapped terms
                     #****************
                         ja = 12*nbasis+jb + ja0
-                        amat[ia,ja] = (phi_A + psi_AN 
-                                +2.0*tausIS*(modw_d1*gu3rgt1/abs(zsIS) +w_d1*im*gu3igt1/zsIS) 
-                                +2.0*tausIS*(modw_d1*gu4rgt3/abs(zsIS) +w_d1*im*gu4igt3/zsIS) 
+                        amat[ia,ja] = (phi_A + psi_AN
+                                +2.0*tausIS*(modw_d1*gu3rgt1/abs(zsIS) +w_d1*im*gu3igt1/zsIS)
+                                +2.0*tausIS*(modw_d1*gu4rgt3/abs(zsIS) +w_d1*im*gu4igt3/zsIS)
                                 -d_ee*nuei_p3_n )
                         bmat[ia,ja] = phi_B + psi_BN
-                    
+
                         ja = 13*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*sig_A -im*w_d1*(tausIS/zsIS)*0.5*wdgu3 
-                                -2.0*tausIS*(modw_d1*gu3r/abs(zsIS) +w_d1*im*gu3i/zsIS) 
+                        amat[ia,ja] = (-0.5*sig_A -im*w_d1*(tausIS/zsIS)*0.5*wdgu3
+                                -2.0*tausIS*(modw_d1*gu3r/abs(zsIS) +w_d1*im*gu3i/zsIS)
                                 -d_ee*nuei_p3_p1)
                         bmat[ia,ja] = -0.5*sig_B
-                    
+
                         ja = 14*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*sig_A -im*w_d1*(tausIS/zsIS)*1.5*wdgu33 
-                                -2.0*tausIS*(modw_d1*gu4r/abs(zsIS) +w_d1*im*gu4i/zsIS) 
-                                -d_ee*nuei_p3_p3  
+                        amat[ia,ja] = (1.5*sig_A -im*w_d1*(tausIS/zsIS)*1.5*wdgu33
+                                -2.0*tausIS*(modw_d1*gu4r/abs(zsIS) +w_d1*im*gu4i/zsIS)
+                                -d_ee*nuei_p3_p3
                                 +xnuei*d_ab*xnu_p3_b)
                         bmat[ia,ja] = d_ab + 1.5*sig_B
 
                     end # nroot > 6
-                end # end of js loop 
+                end # end of js loop
             end # end of ib loop
         end # end of jb loop
     end # end of is loop
@@ -2683,7 +2679,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # vr = zeros(iur, iur)
     # vi = zeros(iur, iur)
     # for j1 = 1:iur
-        
+
     #     beta2 = real(conj(beta[j1])*beta[j1])
     #     if(beta2!=0.0)
     #         zomega[j1] = alpha[j1]*conj(beta[j1])/beta2
@@ -2693,7 +2689,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
     #     rr[j1] = real(zomega[j1])
     #     ri[j1] = imag(zomega[j1])
-    #     # filter out numerical instabilities that sometimes occur 
+    #     # filter out numerical instabilities that sometimes occur
     #     # with high mode frequency
     #     if(inputs.FILTER>0.0)
             # if(rr[j1]>0.0 && abs(ri[j1])>max_freq)
@@ -2708,5 +2704,5 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # end
     solution = eigen(amat, bmat)
     return solution.values, solution.vectors
-    
+
 end
