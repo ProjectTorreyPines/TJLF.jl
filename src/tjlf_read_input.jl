@@ -1,5 +1,3 @@
-include("tjlf_modules.jl")
-
 function readInput(baseDirectory::String)
     fileDirectory = baseDirectory * "input.tglf"
     lines = readlines(fileDirectory)
@@ -32,7 +30,7 @@ function readInput(baseDirectory::String)
             # setfield!(inputSpecies[parse(Int,speciesIndex)],    speciesField,     parse(Float64,strip(line[2], ['\'','.',' '])))
         else # if not for the species vector
             field = Symbol(line[1])
-            
+
             # string
             if line[2][1] == '\''
                 val = string(strip(line[2], ['\'']))
@@ -53,7 +51,7 @@ function readInput(baseDirectory::String)
                 throw(error(field))
             end
 
-        end 
+        end
     end
 
     if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3

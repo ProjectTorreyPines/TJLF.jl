@@ -1,11 +1,5 @@
-using Revise
-include("tjlf_modules.jl")
-# include("tjlf_max.jl")
-include("tjlf_max2.jl")
-
-
 #  Main transport model subroutine.
-#  Calls linear TGLF over a spectrum of ky's and computes spectral integrals of 
+#  Calls linear TGLF over a spectrum of ky's and computes spectral integrals of
 #  field, intensity and fluxes.
 function tjlf_TM(inputs::InputTJLF{T},
                 satParams::SaturationParameters{T},
@@ -21,7 +15,7 @@ function tjlf_TM(inputs::InputTJLF{T},
         original_vexb_shear = vexb_shear_s
         original_find_width = inputs.FIND_WIDTH
         original_iflux = inputs.IFLUX
-        inputs.IFLUX = false      # do not compute eigenvectors on first pass 
+        inputs.IFLUX = false      # do not compute eigenvectors on first pass
         # println("this is a")
         firstPass_width, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite, ky_spect)
 
@@ -75,7 +69,7 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
     ### output values
     firstPass_width = Vector{Float64}(undef,nky)
     eigenvalue_spectrum_out = zeros(Float64, 2, nky, nmodes)
-    
+
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     for i = eachindex(ky_spect)
         ky_s = ky_spect[i]
@@ -83,7 +77,7 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         if(new_eikonal_in) # not sure what this is -DSUN
             if(find_width_in) # find the width
                 # println("this is 1")
-                nmodes_out, gamma_nb_min_out, 
+                nmodes_out, gamma_nb_min_out,
                 gamma_out, freq_out = tjlf_max2(inputs, satParams, outputHermite, ky_s)
                 firstPass_width[i] = inputs.WIDTH
                 ### reset value
@@ -97,7 +91,7 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
                 firstPass_width[i] = inputs.WIDTH
                 gamma_nb_min_out = gamma_out[1]
             end
-            
+
         else
             error("NOT IMPLEMENTED YET -DSUN")
         end
@@ -141,7 +135,7 @@ function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
     R_unit = satParams.R_unit
     q_unit = satParams.q_unit
     ### change input value
-    inputs.IFLUX = true 
+    inputs.IFLUX = true
 
     # initialize output arrays
 
@@ -164,15 +158,15 @@ function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
             # println("this is 3")
 
             nmodes_out, gamma_out, freq_out,
-            particle_QL_out, 
-            energy_QL_out, 
-            stress_tor_QL_out, 
-            stress_par_QL_out, 
-            exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s, 
-                                kx0_e[i], gamma_reference_kx0, freq_reference_kx0) 
-                
+            particle_QL_out,
+            energy_QL_out,
+            stress_tor_QL_out,
+            stress_par_QL_out,
+            exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s,
+                                kx0_e[i], gamma_reference_kx0, freq_reference_kx0)
+
             gamma_nb_min_out = gamma_out[1]
-            
+
             mask_save[i] = 1
             if(gamma_out[1] == 0.0) mask_save[i] = 0 end
         else
@@ -203,7 +197,7 @@ function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
 
         unstable = true
         gamma_max = max(gamma_out[1],gamma_out[2]) # this covers ibranch=-1,0
-        if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end     
+        if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
 
 
         if(unstable)
@@ -249,7 +243,7 @@ function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
             #         intensity_spectrum_out[4,is,i,imax] = Q_bar_out[imax,is]
             #     end #imax
             # end  # is
-            # save flux_spectrum_out 
+            # save flux_spectrum_out
             for is = ns0:ns
                 for j = 1:3
                     for imax = 1:nmodes_out
@@ -271,11 +265,11 @@ function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
                         # flux_spectrum_out[5,is,j,i,imax] = phi_bar*exch1
                     end #imax
                 end # j
-            end  # is 
+            end  # is
 
         end
 
-    end  # i 
+    end  # i
 
     # recompute spectrum using non-local in ky multiscale model
     # if(sat_rule_in >= 1) get_multiscale_spectrum(inputs) end
@@ -373,16 +367,16 @@ end
 
 
 
-# computes the bilinear fluctuation moments 
+# computes the bilinear fluctuation moments
 # and saves them in flux_spectrum_out, intensity_spectrum_out
 # and field_spectrum_out
 # function get_bilinear_spectrum(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
-#             ky_spect::Vector{T}, vexb_shear_s::T, 
+#             ky_spect::Vector{T}, vexb_shear_s::T,
 #             firstPass::Bool = true,
 #             firstPass_width::Union{Vector{T},Missing} = missing,
 #             firstPass_eigenvalue::Union{Array{T},Missing} = missing) where T<:Real
 
-    
+
 #     sat_rule_in = inputs.SAT_RULE
 #     nmodes = inputs.NMODES
 #     ns = inputs.NS
@@ -411,7 +405,7 @@ end
 #     ### save values!!!
 #     original_width = inputs.WIDTH
 #     ### change values
-#     inputs.IFLUX = true 
+#     inputs.IFLUX = true
 
 #     gmax = 0.0
 #     fmax = 0.0
@@ -441,7 +435,7 @@ end
 #             if(firstPass) ### first pass
 #                 if(find_width_in)
 #                     # println("this is 1")
-#                     nmodes_out, gamma_nb_min_out, 
+#                     nmodes_out, gamma_nb_min_out,
 #                     gamma_out, freq_out,
 #                     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky_s, vexb_shear_s)
 #                 else
@@ -462,16 +456,16 @@ end
 #                 # println("this is 3")
 
 #                 nmodes_out, gamma_out, freq_out,
-#                 particle_QL_out, 
-#                 energy_QL_out, 
-#                 stress_tor_QL_out, 
-#                 stress_par_QL_out, 
-#                 exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s, 
-#                                     kx0_e[i], gamma_reference_kx0, freq_reference_kx0) 
-                    
+#                 particle_QL_out,
+#                 energy_QL_out,
+#                 stress_tor_QL_out,
+#                 stress_par_QL_out,
+#                 exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s,
+#                                     kx0_e[i], gamma_reference_kx0, freq_reference_kx0)
+
 #                 gamma_nb_min_out = gamma_out[1]
 #             end
-            
+
 #             ############### need these values from the function calls earlier probably
 #             mask_save[i] = 1
 #             if(gamma_out[1] == 0.0) mask_save[i] = 0 end
@@ -519,8 +513,8 @@ end
 
 #         unstable = true
 #         gamma_max = max(gamma_out[1],gamma_out[2]) # this covers ibranch=-1,0
-#         if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end     
-        
+#         if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
+
 #         gamma_cutoff = 0.1*ky_s/R_unit
 #         rexp = 1.0
 #         reduce = 1.0
@@ -568,7 +562,7 @@ end
 #             #         intensity_spectrum_out[4,is,i,imax] = Q_bar_out[imax,is]
 #             #     end #imax
 #             # end  # is
-#             # save flux_spectrum_out 
+#             # save flux_spectrum_out
 #             for is = ns0:ns
 #                 for j = 1:3
 #                     for imax = 1:nmodes_out
@@ -591,7 +585,7 @@ end
 #                         # println(pflux1) #DSUN
 #                     end #imax
 #                 end # j
-#             end  # is 
+#             end  # is
 #             # save ne_te crossphase
 
 #             ##### COME BACK
@@ -609,7 +603,7 @@ end
 #         # reset width to maximum if used tjlf_max
 #         if(find_width_in) inputs.WIDTH = original_width end
 
-#     end  # i 
+#     end  # i
 
 #     # recompute spectrum using non-local in ky multiscale model
 #     # if(sat_rule_in >= 1) get_multiscale_spectrum(inputs) end
@@ -619,5 +613,5 @@ end
 #     # inputs.NEW_EIKONAL = true  # reset default for next call to tjlf_TM
 
 #     return firstPass_width, eigenvalue_spectrum_out, QL_flux_spectrum_out
-      
+
 # end

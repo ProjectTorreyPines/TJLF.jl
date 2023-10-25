@@ -1,12 +1,5 @@
-using LinearAlgebra
-import LinearAlgebra.LAPACK.syev!
-
-include("tjlf_modules.jl")
-include("tjlf_finiteLarmorRadius.jl")
-
-
-function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T}, 
-                    ky::T, 
+function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},
+                    ky::T,
                     nbasis::Int) where T<:Real
 
     ns::Int = inputs.NS
@@ -55,7 +48,7 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
 
     wd_h!(inputs, ave, aveH, aveWH)
     kpar_h!(inputs, ave, aveH, aveKH)
-       
+
     if(inputs.GRADB_FACTOR!=0.0) error("Haven't implemented :)") end #gradB_h() end
 
 
@@ -83,7 +76,7 @@ end
 #  begin computation of the FLR integrals
 #*************************************************************
 #  compute the FLR integrals at the hermite nodes
-function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T}, 
+function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},
     aveH::AveH{T}, aveG::AveG{T}, ky::T, nbasis::Int) where T<:Real
 
     zero_cut = 1.e-12
@@ -96,7 +89,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     wx = outputHermite.wx
     h = outputHermite.h[1:nbasis,:]
 
-    
+
     hxn = zeros(Float64, ns, nx)
     hxp1 = zeros(Float64, ns, nx)
     hxp3 = zeros(Float64, ns, nx)
@@ -129,7 +122,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             #***************************************************************
             #   compute the average h-bessel functions
             #***************************************************************
-            bb = taus*mass*(ky/zs)^2 
+            bb = taus*mass*(ky/zs)^2
             b = bb*b0x[i]/b2x[i]
             hxn[is,i]    = FLR_Hn(fth,b)
             hxp1[is,i]   = hxn[is,i]
@@ -140,7 +133,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             hxw113[is,i] = FLR_dHw113(fth,b)+ (7/3)*hxr11[is,i]
             hxw133[is,i] = FLR_dHw133(fth,b)+ (7/3)*hxr13[is,i]
             hxw333[is,i] = FLR_dHw333(fth,b)+ (7/3)*hxr33[is,i]
-            
+
             #***************************************************************
             #   compute the average g- bessel functions
             #***************************************************************
@@ -172,7 +165,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
         aveH.hw113[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw113[is,:].*wx)   * h'
         aveH.hw133[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw133[is,:].*wx)   * h'
         aveH.hw333[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw333[is,:].*wx)   * h'
-        
+
         if(nroot>6)
             aveG.gn[is,:,:]    .= h * Diagonal(gxn[is,:]   .*wx)   * h'
             aveG.gp1[is,:,:]   .= h * Diagonal(gxp1[is,:]  .*wx)   * h'
@@ -207,7 +200,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
         aveG.gw133[abs.(aveG.gw133) .< zero_cut] .= 0
         aveG.gw333[abs.(aveG.gw333) .< zero_cut] .= 0
     end
-    
+
 end
 
 
@@ -216,11 +209,11 @@ end
 #***********************************************************
 #  compute  k-independent hermite basis averages
 #***********************************************************
-function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermite::OutputHermite{T},ave::Ave{T}, 
+function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermite::OutputHermite{T},ave::Ave{T},
     nbasis::Int, ky::T) where T<:Real
 
     zero_cut = 1.e-12
-    fts = outputGeo.fts 
+    fts = outputGeo.fts
     ft2 = fts[1]^2
 
     width_in = inputs.WIDTH
@@ -267,16 +260,16 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
 
 
     #  compute the guass-hermite intregrals
-    for i = 1:nbasis        
+    for i = 1:nbasis
         if(i<nbasis)
             ave.kpar[i,i+1] = √(i/2.0)
             ave.kpar[i+1,i] = -ave.kpar[i,i+1]
         end
-       
+
         for j = i:nbasis
-        
+
             for k = 1:nx
-                ww = wx[k]*h[i,k]*h[j,k]     
+                ww = wx[k]*h[i,k]*h[j,k]
                 ave.wdh[i,j] = ave.wdh[i,j] + ww*wdx[k]
                 ave.wdg[i,j] = ave.wdg[i,j] + ww*(wdx[k]+wdpx[k]*(1.0-ft2)/(1.0+ft2))
                 ave.b0[i,j]  = ave.b0[i,j]  + ww*b0x[k]
@@ -325,7 +318,7 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
         else
             for i = 1:nbasis
                 for j = 1:nbasis
-                    ave.kpar_eff[is,i,j] = ave.kpar[i,j]     
+                    ave.kpar_eff[is,i,j] = ave.kpar[i,j]
                     if(vpar_model_in==1 && i==j)
                         error("too lazy rn -DSUN")
                         vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.VPAR[is]
@@ -423,7 +416,7 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
         end
     else
     # find the eigenvalues and eigenvectors
-        if(vpar_model_in!=1)   
+        if(vpar_model_in!=1)
             a = im*deepcopy(ave.kpar)
 
             w,a = syev!('V','U',a)
@@ -434,14 +427,14 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
                 ave.modkpar_eff[is,:,:] .= b
             end
 
-        else 
+        else
             for is = ns0:ns
                 a = im*deepcopy(ave.kpar_eff[is,:,:])
                 w,a = syev!('V','U',a)
                 b = a * abs.(w) * transpose(conj.(a))
-                
+
                 ave.modkpar_eff[is,:,:] .= b
-            end 
+            end
         end
 
     end
@@ -494,8 +487,8 @@ function ave_hp0!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T}) where T<:Real
         aveH.hp3p0[is,:,:]   .= aveH.hp3[is,:,:]*ave.p0inv
         aveH.hr11p0[is,:,:]  .= aveH.hr11[is,:,:]*ave.p0inv
         aveH.hr13p0[is,:,:]  .= aveH.hr13[is,:,:]*ave.p0inv
-        aveH.hr33p0[is,:,:]  .= aveH.hr33[is,:,:]*ave.p0inv     
-        
+        aveH.hr33p0[is,:,:]  .= aveH.hr33[is,:,:]*ave.p0inv
+
         aveH.c_tor_par_hp1p0[is,:,:]  .= ave.c_tor_par * aveH.hp1p0[is,:,:]
         aveH.c_tor_par_hr11p0[is,:,:] .= ave.c_tor_par * aveH.hr11p0[is,:,:]
         aveH.c_tor_par_hr13p0[is,:,:] .= ave.c_tor_par * aveH.hr13p0[is,:,:]
@@ -545,7 +538,7 @@ function ave_hbp!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T}) where T<:Real
         aveH.hw113bp[is,:,:]  .= aveH.hw113[is,:,:] * ave.bpinv
         aveH.hw133bp[is,:,:]  .= aveH.hw133[is,:,:] * ave.bpinv
         aveH.hw333bp[is,:,:]  .= aveH.hw333[is,:,:] * ave.bpinv
-    end       
+    end
 end
 
 
@@ -582,7 +575,7 @@ function wd_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T}) w
         aveWH.modwdhu33[is,:,:]   .= ave.modwdh * aveH.hu33[is,:,:]
         aveWH.modwdhu33ht1[is,:,:].= ave.modwdh * aveH.hu33ht1[is,:,:]
         aveWH.modwdhu33ht3[is,:,:].= ave.modwdh * aveH.hu33ht3[is,:,:]
-        
+
         if(use_bper_in)
             aveWH.wdhp1b0[is,:,:]  .= ave.wdh * aveH.hp1b0[is,:,:]
             aveWH.wdhr11b0[is,:,:] .= ave.wdh * aveH.hr11b0[is,:,:]
@@ -647,7 +640,7 @@ function g_ratios!(inputs::InputTJLF{T}, aveG::AveG{T}) where T<:Real
         gninv = inv(aveG.gn[is,:,:])
         gp1inv = inv(aveG.gp1[is,:,:])
         gp3inv = inv(aveG.gp3[is,:,:])
-    
+
         aveG.gt1[is,:,:]  .= aveG.gp1[is,:,:] *gninv
         aveG.gt3[is,:,:]  .= aveG.gp3[is,:,:] *gninv
         aveG.gu1[is,:,:]  .= aveG.gr11[is,:,:]*gp1inv
@@ -676,8 +669,8 @@ function ave_gp0!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T}) where T<:Real
         aveG.gr33p0[is,:,:] .= aveG.gr33[is,:,:]*ave.p0inv
 
         aveG.c_tor_par_gp1p0[is,:,:] .= ave.c_tor_par*aveG.gp1p0[is,:,:]
-        aveG.c_tor_par_gr11p0[is,:,:] .= ave.c_tor_par*aveG.gr11p0[is,:,:]        
-        aveG.c_tor_par_gr13p0[is,:,:] .= ave.c_tor_par*aveG.gr13p0[is,:,:]      
+        aveG.c_tor_par_gr11p0[is,:,:] .= ave.c_tor_par*aveG.gr11p0[is,:,:]
+        aveG.c_tor_par_gr13p0[is,:,:] .= ave.c_tor_par*aveG.gr13p0[is,:,:]
     end
 end
 

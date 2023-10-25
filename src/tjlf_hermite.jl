@@ -1,6 +1,3 @@
-include("tjlf_modules.jl")
-
-
 function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
 
     eps=3.0E-14
@@ -33,7 +30,7 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
         else
             z = 2.0*z - y[i+2]
         end
-        
+
         pp = 0
         for its = 1:maxit
             p1 = h0

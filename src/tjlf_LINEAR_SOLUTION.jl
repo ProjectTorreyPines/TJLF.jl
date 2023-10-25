@@ -1,17 +1,10 @@
-import LinearAlgebra.LAPACK.gesv!
-using Revise
-
-include("tjlf_modules.jl")
-include("tjlf_geometry.jl")
-include("tjlf_eigensolver.jl")
-include("tjlf_matrix.jl")
 #***********************************************************************
-#  TGLF Linear Stability driver computes all quasilinear quantities 
+#  TGLF Linear Stability driver computes all quasilinear quantities
 #  for a single ky
 #
 #***********************************************************************
-function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, 
-            ky::T, 
+function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
+            ky::T,
             nbasis::Int,
             vexb_shear_s::T,
             kx0_e::T = 0.0,
@@ -30,14 +23,14 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     alpha_quench_in = inputs.ALPHA_QUENCH
     new_eikonal_in = inputs.NEW_EIKONAL
     filter_in = inputs.FILTER
-    
+
     R_unit = satParams.R_unit
     q_unit = satParams.q_unit
 
     new_geometry = false ######################## hardcoded for now ########################
     new_width = true ######################## hardcoded for now ########################
     # check co-dependencies
-    if(new_geometry) new_width= true end 
+    if(new_geometry) new_width= true end
     if(new_width) new_matrix = true end
 
     if(new_eikonal_in)
@@ -63,7 +56,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 #trace_path[8]=1
                 ELITE_geo(inputs)
             end
-        
+
             # compute the eikonal functions for general geometry (igeo>0)
             # if(igeo > 0) mercier_luc(inputs) end
 
@@ -79,7 +72,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     new_matrix = true ######################## hardcode for now ########################
     if(new_matrix)
-        ave, aveH, aveWH, aveKH, 
+        ave, aveH, aveWH, aveKH,
         aveG, aveWG, aveKG = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis)
     end
 
@@ -163,7 +156,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         jmax .= ifelse.(rr[jmax].>epsilon1, jmax, 0)
         reverse!(jmax)
         nmodes_out = 0
-        for j1 = 1:nmodes_in 
+        for j1 = 1:nmodes_in
             if(jmax[j1]!=0)
                 nmodes_out = nmodes_out + 1
                 gamma_out[j1] = rr[jmax[j1]]
@@ -181,10 +174,10 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         end
     # use spectral shift model for second pass
     elseif(vexb_shear_s!=0.0)
-        gamma_out .= gamma_reference_kx0 
+        gamma_out .= gamma_reference_kx0
         freq_out .= freq_reference_kx0
     end
-    
+
     # get the fluxes for the most unstable modes
     if(inputs.IFLUX)
         #  initalize output to zero
@@ -221,29 +214,29 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         b_par_QL_out = zeros(Float64, nmodes_out)
         kx_bar_out = zeros(Float64, nmodes_out)
         kpar_bar_out = zeros(Float64, nmodes_out)
-        
+
         for imax = 1:nmodes_out
             if(jmax[imax]>0)
-                
+
                 Ns_Ts_phase,
                 Ne_Te_phase,
-                N_weight, 
-                T_weight, 
-                U_weight, 
-                Q_weight, 
-                wd_bar, 
-                b0_bar, 
-                modB_bar, 
-                v_weight, 
-                a_par_weight, 
-                b_par_weight, 
-                kx_bar, 
-                kpar_bar, 
-                field_weight_QL_out, 
-                particle_weight, 
-                energy_weight, 
-                stress_par_weight, 
-                stress_tor_weight, 
+                N_weight,
+                T_weight,
+                U_weight,
+                Q_weight,
+                wd_bar,
+                b0_bar,
+                modB_bar,
+                v_weight,
+                a_par_weight,
+                b_par_weight,
+                kx_bar,
+                kpar_bar,
+                field_weight_QL_out,
+                particle_weight,
+                energy_weight,
+                stress_par_weight,
+                stress_tor_weight,
                 exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalues[jmax[imax]], v[:,jmax[imax]])
                 #### probably outputs
                 wd_bar_out[imax] = wd_bar
@@ -269,7 +262,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 Ns_Ts_phase_out[imax,:] .= Ns_Ts_phase
 
                 ne_te_phase_out[imax] = Ne_Te_phase
-          
+
                 if(abs(v_QL_out[imax])<epsilon1)
                     v_bar_out[imax] = 0.0
                     phi2_bar = 0.0
@@ -292,7 +285,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             end
         end
 
-        # check for inward ballooing 
+        # check for inward ballooing
         ft_test = 0.0
         sum_modB_bar = 0.0
         sum_v_bar = 0.0
@@ -311,9 +304,9 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     return nmodes_out, gamma_out, freq_out
 
-    # return  gamma_out, 
-    #         freq_out, 
-    #         v_QL_out, 
+    # return  gamma_out,
+    #         freq_out,
+    #         v_QL_out,
     #         a_par_QL_out,
     #         b_par_QL_out,
     #         phi_bar_out,
@@ -360,7 +353,7 @@ function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, k
     pols = (ave.p0[1,1]/abs(inputs.AS[1]*inputs.ZS[1]^2))^2
     ks = kp* √(inputs.TAUS[1]*inputs.MASS[2])/abs(inputs.ZS[1])
     measure = √(inputs.TAUS[1]*inputs.MASS[2])
-    
+
     if(sat_rule_in==0)
         igeo = 1 ################### MILLER GEO for now
         if(igeo==0)
@@ -371,7 +364,7 @@ function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, k
                 cnorm = 24.58*pols
                 exponent1 = 1.761
             end
-        
+
             if(ks>1.0) cnorm=cnorm/(ks)^etg_factor_in end
             c1 = 0.0
 
@@ -385,25 +378,25 @@ function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, k
                 exponent1 = 1.66
                 c1 = 0.234
             end
-        
+
             if(ks>1.0) cnorm=cnorm/(ks)^etg_factor_in end
         end
 
         wd0 = ks*√(inputs.TAUS[1]*inputs.MASS[2])/R_unit  #renomalized for scale invariance
         gnet = gp/wd0
         intensity = cnorm*(wd0^2)*(gnet^exponent1 + c1*gnet)/(kp^4)
-       
+
         if(alpha_quench_in==0.0 && abs(kx0_e)>0.0)
             intensity = intensity/(1.0+0.56*kx0_e^2)^2
             intensity = intensity/(1.0+(1.15*kx0_e)^4)^2
         end
-        
+
         SAT_geo0_out = 1.0 ############# BRUH #################
         intensity = intensity*SAT_geo0_out*measure
     elseif(sat_rule_in>=1)
         intensity = 1.0
     end
-       
+
     return intensity
 end
 
@@ -442,7 +435,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     vs = .√(taus./mass)
     vpar = inputs.VPAR
     vpar_shear = inputs.VPAR_SHEAR
-    
+
     vpar_model_in = inputs.VPAR_MODEL
     alpha_mach_in = inputs.ALPHA_MACH
     sign_It_in = inputs.SIGN_IT
@@ -458,7 +451,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
     for is = ns0:ns
         j = (is-ns0)*nroot*nbasis
-        for i = 1:nbasis          
+        for i = 1:nbasis
             n[is,i] = v[j+i]
             u_par[is,i] = v[j+nbasis+i]
             p_par[is,i] = v[j+nbasis*2+i]
@@ -489,7 +482,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
         end
         vnorm = vnorm/abs(inputs.AS[1]*inputs.ZS[1])   #normalize to electron charge density
     end
-    
+
     # compute the electromagnetic potentials
     betae_s = inputs.BETAE ##### not true for 'GENE' units
     betae_psi = 0.0
@@ -543,13 +536,13 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     kx_bar = real(phi_kx_phi)/phi_norm
     kpar_bar = real(phi_kpar_phi)/phi_norm
 
-    
+
     # fill the stress moments
     stress_par = zeros(ComplexF64, ns,nbasis,2)
     stress_per = zeros(ComplexF64, ns,nbasis,2)
 
     stress_correction = 1.0
-    if(sat_rule_in==0) 
+    if(sat_rule_in==0)
         wp = (ky*abs(alpha_p_in)) .* aveH.hp1[ns0:ns,1,1].*vpar_shear./vs
         stress_correction = (imag(freq_QL).+2.0.*wp)./(imag(freq_QL).+wp)
     end
@@ -572,16 +565,16 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     particle_weight[ns0:ns,1]   .= real.(im.*n[ns0:ns,:]*conj(phi))
     energy_weight[ns0:ns,1]     .= real.(im.*p_tot[ns0:ns,:]*conj(phi))
     stress_par_weight[ns0:ns,1] .= real.(im.* (stress_par[ns0:ns,:,1]*ave.c_par_par')*conj(phi))
-    stress_tor_weight[ns0:ns,1] .= real.(im.* (stress_par[ns0:ns,:,1]*ave.c_tor_par' 
+    stress_tor_weight[ns0:ns,1] .= real.(im.* (stress_par[ns0:ns,:,1]*ave.c_tor_par'
                                             .+ stress_per[ns0:ns,:,1]*ave.c_tor_per')*conj(phi))
     exchange_weight[ns0:ns,1]   .= Diagonal(zs[ns0:ns]) * real.((im*freq_QL).* n[ns0:ns,:]*conj(phi))
-    
+
 
     if(inputs.USE_BPER)
         particle_weight[ns0:ns,2]   .= - Diagonal(vs[ns0:ns])      * real.(im.* u_par[ns0:ns,:]*conj(psi))
-        energy_weight[ns0:ns,2]     .= - (Diagonal(vs[ns0:ns])     * real.(im.* q_tot[ns0:ns,:]*conj(psi)) 
+        energy_weight[ns0:ns,2]     .= - (Diagonal(vs[ns0:ns])     * real.(im.* q_tot[ns0:ns,:]*conj(psi))
                                       .+ Diagonal((zs.*vs)[ns0:ns])* real.((im*freq_QL).* u_par[ns0:ns,:]*conj(psi)))
-        stress_par_weight[ns0:ns,2] .= - real.(im.* (stress_par[ns0:ns,:,2]*ave.c_par_par')*conj(psi))      
+        stress_par_weight[ns0:ns,2] .= - real.(im.* (stress_par[ns0:ns,:,2]*ave.c_par_par')*conj(psi))
         stress_tor_weight[is,2]     .= - real.(im.* (stress_par[ns0:ns,:,2]*ave.c_tor_par'
                                                   .+ stress_per[ns0:ns,:,2]*ave.c_tor_per')*conj(psi))
     end
@@ -617,7 +610,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     U_weight = zeros(Float64, ns)
     Q_weight = zeros(Float64, ns)
     temp = Matrix{ComplexF64}(undef, ns, nbasis)
-    
+
     temp .= p_tot .- n
     N_weight .= sum(real(n     .* conj(n)), dims=2)./phi_norm
     T_weight .= sum(real(temp  .* conj(temp)), dims=2)./phi_norm
@@ -628,7 +621,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     b_par_weight = bsig_norm/phi_norm
 
 
-    #compute electron density-temperature phase 
+    #compute electron density-temperature phase
     Ne_Te_cos = real(adjoint(n[1,:])*temp[1,:])
     Ne_Te_sin = imag(adjoint(n[1,:])*temp[1,:])
     Ne_Te_phase = atan(Ne_Te_sin,Ne_Te_cos)
@@ -642,8 +635,8 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     Ns_Ts_phase .= atan.(Ns_Ts_sin,Ns_Ts_cos)
 
     return Ns_Ts_phase, Ne_Te_phase,
-    N_weight, T_weight, U_weight, Q_weight, 
-    wd_bar, b0_bar, modB_bar, v_weight, a_par_weight, b_par_weight, kx_bar, kpar_bar, 
+    N_weight, T_weight, U_weight, Q_weight,
+    wd_bar, b0_bar, modB_bar, v_weight, a_par_weight, b_par_weight, kx_bar, kpar_bar,
     field_weight_QL_out, particle_weight, energy_weight, stress_par_weight, stress_tor_weight, exchange_weight
 
 end
