@@ -61,7 +61,6 @@
 !
 ! compute the flux spectrum
 !
-!    write(*,*)"vexb_shear = ",vexb_shear_s
     if(alpha_quench_in .eq. 0.0 .and. vexb_shear_s .ne. 0.0)then
 !      write(*,*)"spectral shift"
 !  spectral shift model double pass

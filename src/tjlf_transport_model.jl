@@ -15,29 +15,27 @@ function tjlf_TM(inputs::InputTJLF{T},
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
 
+    original_iflux = inputs.IFLUX
+
     # compute the flux spectrum
     if(alpha_quench_in==0.0 && vexb_shear_s != 0.0)
         #  spectral shift model double pass
-        original_iflux = inputs.IFLUX
-        inputs.IFLUX = false      # do not compute eigenvectors on first pass 
+        inputs.IFLUX = false # do not compute eigenvectors on first pass 
         # println("this is a")
         firstPass_width, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite, ky_spect)
 
-        inputs.IFLUX = original_iflux
-
+        inputs.IFLUX = true # compute eigenvectors on second pass 
         # println("this is b")
         fluxes = secondpass(inputs, satParams, outputHermite, ky_spect, firstPass_width, firstPass_eigenvalue)
-
-        #  reset eigenvalues to the values with vexb_shear=0.
-        #  note ql weights are with vexb_shear
-        inputs.IFLUX = original_iflux
     else
-        error("NOT IMPLEMENTED YET")
-        firstPass_width .= inputs.WIDTH # needed for spectral shift model double pass
-        jmax_out = 0
-        print("this is c")
-        get_bilinear_spectrum()
+        inputs.IFLUX = true
+        # print("this is c")
+        fluxes, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite, ky_spect, vexb_shear_s)
     end
+
+    inputs.IFLUX = original_iflux
+
+    return fluxes, firstPass_eigenvalue
 
     # sum_ky_spectrum(inputs, ky_spect, eigenvalue_spectrum_out[1,:,:],
     #             ave_p0,potential,
@@ -47,8 +45,6 @@ function tjlf_TM(inputs::InputTJLF{T},
     #             parallel_stress_QL,
     #             exchange_QL)
 
-    return fluxes, firstPass_eigenvalue
-
 end
 
 
@@ -57,7 +53,7 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 
 # calculate the widths and eigenvalues with vexb_shear = 0.0
-function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}) where T<:Real
+function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}, vexb_shear_s::T=0.0) where T<:Real
 
     nmodes = inputs.NMODES
     new_eikonal_in = inputs.NEW_EIKONAL
@@ -69,20 +65,32 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
     original_width = inputs.WIDTH
 
     ### output values
-    firstPass_width = Vector{Float64}(undef,nky)
     eigenvalue_spectrum_out = zeros(Float64, 2, nky, nmodes)
+    if !inputs.IFLUX
+        firstPass_width = Vector{Float64}(undef,nky)
+    else
+        ns = inputs.NS
+        ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+        QL_flux_spectrum_out::Array{Float64, 5} = zeros(Float64, 5, ns, 3, nky, nmodes)
+    end
     
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     for i = eachindex(ky_spect)
         ky_s = ky_spect[i]
-
         if(new_eikonal_in) # not sure what this is -DSUN
             if(find_width_in) # find the width
                 # println("this is 1")
-                nmodes_out, gamma_nb_min_out, 
-                gamma_out, freq_out = tjlf_max2(inputs, satParams, outputHermite, ky_s)
-                firstPass_width[i] = inputs.WIDTH
-                ### reset value
+                if !inputs.IFLUX
+                    nmodes_out, gamma_nb_min_out, 
+                    gamma_out, freq_out = tjlf_max2(inputs, satParams, outputHermite, ky_s, vexb_shear_s)
+                    
+                    firstPass_width[i] = inputs.WIDTH
+                else
+                    nmodes_out, gamma_nb_min_out, 
+                    gamma_out, freq_out,
+                    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max2(inputs, satParams, outputHermite, ky_s, vexb_shear_s)
+                end
+
                 inputs.WIDTH = original_width
 
             else # use width from input file
@@ -105,10 +113,22 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         if(unstable)
             eigenvalue_spectrum_out[1,i,1:nmodes_out] .= gamma_out[1:nmodes_out]
             eigenvalue_spectrum_out[2,i,1:nmodes_out] .= freq_out[1:nmodes_out]
+
+            if inputs.IFLUX
+                QL_flux_spectrum_out[1,ns0:ns,1:3,i,1:nmodes_out] .= permutedims(particle_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes_out]
+                QL_flux_spectrum_out[2,ns0:ns,1:3,i,1:nmodes_out] .= permutedims(energy_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes_out]
+                QL_flux_spectrum_out[3,ns0:ns,1:3,i,1:nmodes_out] .= permutedims(stress_tor_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes_out]
+                QL_flux_spectrum_out[4,ns0:ns,1:3,i,1:nmodes_out] .= permutedims(stress_par_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes_out]
+                QL_flux_spectrum_out[5,ns0:ns,1:3,i,1:nmodes_out] .= permutedims(exchange_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes_out]
+            end
         end
     end
 
-    return firstPass_width, eigenvalue_spectrum_out
+    if !inputs.IFLUX
+        return firstPass_width, eigenvalue_spectrum_out
+    else
+        return QL_flux_spectrum_out, eigenvalue_spectrum_out
+    end
 end
 
 #----------------------------------------------------------------------------------------------------------------------------
@@ -136,8 +156,6 @@ function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
     ### saturation values
     R_unit = satParams.R_unit
     q_unit = satParams.q_unit
-    ### change input value
-    inputs.IFLUX = true 
 
     # initialize output arrays
 
@@ -165,7 +183,7 @@ function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
             stress_tor_QL_out, 
             stress_par_QL_out, 
             exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s, 
-                                kx0_e[i], gamma_reference_kx0, freq_reference_kx0) 
+                                kx0_e[i], gamma_reference_kx0, freq_reference_kx0)
                 
             gamma_nb_min_out = gamma_out[1]
             
