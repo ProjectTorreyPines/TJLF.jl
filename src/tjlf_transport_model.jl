@@ -18,14 +18,11 @@ function tjlf_TM(inputs::InputTJLF{T},
     # compute the flux spectrum
     if(alpha_quench_in==0.0 && vexb_shear_s != 0.0)
         #  spectral shift model double pass
-        original_vexb_shear = vexb_shear_s
-        original_find_width = inputs.FIND_WIDTH
         original_iflux = inputs.IFLUX
         inputs.IFLUX = false      # do not compute eigenvectors on first pass 
         # println("this is a")
         firstPass_width, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite, ky_spect)
 
-        inputs.FIND_WIDTH = false
         inputs.IFLUX = original_iflux
 
         # println("this is b")
@@ -34,7 +31,6 @@ function tjlf_TM(inputs::InputTJLF{T},
         #  reset eigenvalues to the values with vexb_shear=0.
         #  note ql weights are with vexb_shear
         inputs.IFLUX = original_iflux
-        inputs.FIND_WIDTH = original_find_width
     else
         error("NOT IMPLEMENTED YET")
         firstPass_width .= inputs.WIDTH # needed for spectral shift model double pass
