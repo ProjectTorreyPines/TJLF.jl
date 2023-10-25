@@ -1,3 +1,7 @@
+const nf = 40
+const na = 13
+const h = Vector{Float64}(undef, na)
+
 function FLR_Hn(ft::T,b::T)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
@@ -41,9 +45,6 @@ function FLR_Hn(ft::T,b::T)::T where T<:Real
     g = FLR_constants.g
     a = FLR_constants.a_Hn
 
-    nf = 40
-    na = 13
-    h = Vector{Float64}(undef, na)
     for i = 1:4
         h[i] = b/( y[i]^4 + b^2)
     end
@@ -53,7 +54,6 @@ function FLR_Hn(ft::T,b::T)::T where T<:Real
 
     # transform to gt grid
     gt = √(1-ft)
-    nf = 40
     if(gt>g[nf]) gt = g[nf] end
     # find grid position
     if(gt<=g[2])
@@ -121,10 +121,6 @@ function FLR_dHp1(ft::T,b::T)::T where T<:Real
     g = FLR_constants.g
     a = FLR_constants.a_dHp1
 
-
-    nf = 40
-    na = 13
-    h = Vector{Float64}(undef, na)
     for i = 1:4
        h[i] = b/( y[i]^4 + b^2)
     end
@@ -201,9 +197,6 @@ function FLR_dHp3(ft::T,b::T)::T where T<:Real
     g = FLR_constants.g
     a = FLR_constants.a_dHp3
 
-    nf::Int = 40
-    na::Int = 13
-    h::Vector{Float64} = Vector{Float64}(undef, na)
     for i = 1:4
         h[i] = b/( y[i]^4 + b^2)
     end
@@ -280,10 +273,6 @@ function FLR_dHr11(ft::T,b::T)::T where T<:Real
     g = FLR_constants.g
     a = FLR_constants.a_dHr11
 
-    nf::Int = 40
-    na::Int = 13
-    h::Vector{Float64} = Vector{Float64}(undef, na)
-
     for i = 1:4
        h[i] = b/( y[i]^4 + b^2)
     end
@@ -358,10 +347,6 @@ function FLR_dHr13(ft::T,b::T)::T where T<:Real
     g = FLR_constants.g
     a = FLR_constants.a_dHr13
 
-    nf = 40
-    na = 13
-    h = Vector{Float64}(undef, na)
-
     for i = 1:4
        h[i] = b/( y[i]^4 + b^2)
     end
@@ -435,10 +420,6 @@ function FLR_dHr33(ft::T,b::T)::T where T<:Real
     y = FLR_constants.y
     g = FLR_constants.g
     a = FLR_constants.a_dHr33
-
-    nf = 40
-    na = 13
-    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/( y[i]^4 + b^2)
@@ -515,10 +496,6 @@ function FLR_dHw113(ft::T,b::T)::T where T<:Real
     g = FLR_constants.g
     a = FLR_constants.a_dHw113
 
-    nf = 40
-    na = 13
-    h = Vector{Float64}(undef, na)
-
     for i = 1:4
         h[i] = b/( y[i]^4 + b^2)
     end
@@ -594,10 +571,6 @@ function FLR_dHw133(ft::T,b::T)::T where T<:Real
     g = FLR_constants.g
     a = FLR_constants.a_dHw133
 
-    nf = 40
-    na = 13
-    h = Vector{Float64}(undef, na)
-
     for i = 1:4
         h[i] = b/( y[i]^4 + b^2)
     end
@@ -672,10 +645,6 @@ function FLR_dHw333(ft::T,b::T)::T where T<:Real
     y = FLR_constants.y
     g = FLR_constants.g
     a = FLR_constants.a_dHw333
-
-    nf = 40
-    na = 13
-    h = Vector{Float64}(undef, na) # zeros(N), similar()
 
     for i = 1:4
        h[i] = b/( y[i]^4 + b^2)
