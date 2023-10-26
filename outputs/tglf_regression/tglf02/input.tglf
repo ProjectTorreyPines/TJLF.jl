@@ -1,0 +1,5 @@
+# GA standard case with Miller geometry, high elongation.
+
+KAPPA_LOC=2.0
+S_KAPPA_LOC=0.5
+

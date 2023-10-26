@@ -1,0 +1,12 @@
+# GA standard case with Miller geometry, kinetic carbon
+
+NS=3
+ZS_3=6.0
+MASS_3=6.0
+AS_2=0.4
+AS_3=0.1
+RLNS_3=1.0
+RLTS_3=3.0
+TAUS_3=1.0
+
+

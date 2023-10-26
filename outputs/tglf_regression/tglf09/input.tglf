@@ -1,0 +1,3 @@
+# GA standard case with Miller geometry, finite beta Bper only
+USE_BPER=.true.
+BETAE=0.1

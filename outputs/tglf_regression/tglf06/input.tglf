@@ -1,0 +1,9 @@
+# GA standard case with Miller geometry and parallel velocity shear
+
+GEOMETRY_FLAG=1
+ALPHA_P=1.0
+VPAR_SHEAR_1=1.0
+VPAR_SHEAR_2=1.0
+
+
+

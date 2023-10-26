@@ -1,0 +1,9 @@
+# GA standard case with Miller geometry and Waltz ExB shear quench rule
+
+GEOMETRY_FLAG=1
+ALPHA_E=1.0
+VEXB_SHEAR=0.1
+ALPHA_QUENCH=1.0
+
+
+
