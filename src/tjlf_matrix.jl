@@ -340,16 +340,26 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
         end
     end
 
-    ave.wdh[abs.(ave.wdh) .< zero_cut] .= 0.0
-    ave.wdg[abs.(ave.wdg) .< zero_cut] .= 0.0
-    ave.b0[abs.(ave.b0) .< zero_cut] .= 0.0
-    ave.lnB[abs.(ave.lnB) .< zero_cut] .= 0.0
-    ave.p0inv[abs.(ave.p0inv) .< zero_cut] .= 0.0
-    ave.p0[abs.(ave.p0) .< zero_cut] .= 0.0
-    ave.kx[abs.(ave.kx) .< zero_cut] .= 0.0
-    ave.c_tor_par[abs.(ave.c_tor_par) .< zero_cut] .= 0.0
-    ave.c_tor_per[abs.(ave.c_tor_per) .< zero_cut] .= 0.0
-    ave.c_par_par[abs.(ave.c_par_par) .< zero_cut] .= 0.0
+    cut = abs.(ave.wdh) .< zero_cut
+    ave.wdh[cut] .= 0.0
+    cut .= abs.(ave.wdg) .< zero_cut
+    ave.wdg[cut] .= 0.0
+    cut .= abs.(ave.b0) .< zero_cut
+    ave.b0[cut] .= 0.0
+    cut .= abs.(ave.lnB) .< zero_cut
+    ave.lnB[cut] .= 0.0
+    cut .= abs.(ave.p0inv) .< zero_cut
+    ave.p0inv[cut] .= 0.0
+    cut .= abs.(ave.p0) .< zero_cut
+    ave.p0[cut] .= 0.0
+    cut .= abs.(ave.kx) .< zero_cut
+    ave.kx[cut] .= 0.0
+    cut .= abs.(ave.c_tor_par) .< zero_cut
+    ave.c_tor_par[cut] .= 0.0
+    cut .= abs.(ave.c_tor_per) .< zero_cut
+    ave.c_tor_per[cut] .= 0.0
+    cut .= abs.(ave.c_par_par) .< zero_cut
+    ave.c_par_par[cut] .= 0.0
 
     ave.gradB .= (ave.kpar*ave.lnB) .- (ave.lnB*ave.kpar)
 
