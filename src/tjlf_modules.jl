@@ -58,7 +58,6 @@ mutable struct InputTJLF{T<:Real}
     VNS_SHEAR::Vector{T}
     VTS_SHEAR::Vector{T}
 
-
     SIGN_BT::T
     SIGN_IT::T
     KY::T
@@ -69,7 +68,6 @@ mutable struct InputTJLF{T<:Real}
     XNUE::T
     ZEFF::T
     DEBYE::T
-
     
     ALPHA_MACH::T
     ALPHA_E::T
@@ -81,7 +79,6 @@ mutable struct InputTJLF{T<:Real}
     ETG_FACTOR::T
     RLNP_CUTOFF::T
     
-
     WIDTH::T
     WIDTH_MIN::T
 
