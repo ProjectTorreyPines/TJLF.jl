@@ -581,7 +581,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
         energy_weight[ns0:ns,2]     .= - (Diagonal(vs[ns0:ns])     * real.(im.* q_tot[ns0:ns,:]*conj(psi))
                                       .+ Diagonal((zs.*vs)[ns0:ns])* real.((im*freq_QL).* u_par[ns0:ns,:]*conj(psi)))
         stress_par_weight[ns0:ns,2] .= - real.(im.* (stress_par[ns0:ns,:,2]*ave.c_par_par')*conj(psi))
-        stress_tor_weight[is,2]     .= - real.(im.* (stress_par[ns0:ns,:,2]*ave.c_tor_par'
+        stress_tor_weight[ns0:ns,2]     .= - real.(im.* (stress_par[ns0:ns,:,2]*ave.c_tor_par'
                                                   .+ stress_per[ns0:ns,:,2]*ave.c_tor_per')*conj(psi))
     end
     if(inputs.USE_BPAR)
