@@ -1,6 +1,6 @@
 # export xgrid_functions_geo, get_sat_params, mercier_luc, miller_geo
 
-function xgrid_functions_geo(inputs::InputTJLF, satParams::SaturationParameters{T}, ky::Vector{T}, gammas::Matrix{T},
+function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky::Vector{T}, gammas::Matrix{T},
     small::T=0.00000001) where T<:Real
     sign_IT = inputs.SIGN_IT
     vexb_shear = inputs.VEXB_SHEAR
