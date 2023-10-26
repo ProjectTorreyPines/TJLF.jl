@@ -7,18 +7,18 @@ using ..TJLF
 # saturation rule test
 directory = "../outputs/tglf_regression/"
 tests = readdir(directory)
-for dir_name in tests
-    if dir_name == ".DS_Store" continue end
-    baseDirectory = satRuleDirectory*dir_name*"/"
 
-    #******************************************************************************#************************
-    # Read input.tglf
-    #******************************************************************************#************************
+excludeFolders = ["tglf05"]
+testFolders = [joinpath(directory,item) for item in readdir(directory) if isdir(joinpath(directory,item)) && item ∉ excludeFolders]
+
+for baseDirectory in testFolders
     
     inputTJLF = readInput(baseDirectory)
-
-    #*******************************************************************************************************
-    #   start running stuff
-    #*******************************************************************************************************
+    println(dir_name)
+    fluxes = TJLF.run(inputTJLF)
+    
+    @assert !isnan(sum(fluxes))
 
 end
+
+println("REGRESSION SUCCESS")

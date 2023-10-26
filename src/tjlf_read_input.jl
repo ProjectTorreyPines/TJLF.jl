@@ -1,5 +1,5 @@
 function readInput(baseDirectory::String)
-    fileDirectory = baseDirectory * "input.tglf"
+    fileDirectory = joinpath(baseDirectory, "input.tglf")
     lines = readlines(fileDirectory)
 
     ns = -1
@@ -16,6 +16,8 @@ function readInput(baseDirectory::String)
     inputTJLF = InputTJLF{Float64}(ns)
 
     for line in lines[1:length(lines)]
+        if contains(line,'#') || !contains(line,'=') continue end
+        line = replace(line, " "=>"")
         line = split(line, "\n")
         line = split(line[1],"=")
 
@@ -48,6 +50,8 @@ function readInput(baseDirectory::String)
             try
                 setfield!(inputTJLF,field,val)
             catch
+                println(field)
+                println(val)
                 throw(error(field))
             end
 
