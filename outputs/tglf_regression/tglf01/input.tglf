@@ -1,3 +1,4 @@
+# Empty input.tglf file (GA standard case with Miller geometry)
 UNITS='GYRO'
 USE_TRANSPORT_MODEL=.true.
 GEOMETRY_FLAG=1  
