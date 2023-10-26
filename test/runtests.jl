@@ -1,18 +1,7 @@
 using Test
 using Base.Filesystem
-# using AxisArrays
-
-include("../src/tjlf_modules.jl")
-include("../src/tjlf_read_input.jl")
-include("../src/tjlf_multiscale_spectrum.jl")
-include("../src/tjlf_geometry.jl")
-include("../src/tjlf_kygrid.jl")
-include("../src/tjlf_hermite.jl")
-include("../src/tjlf_kygrid.jl")
-include("../src/tjlf_TRANSPORT_MODEL.jl")
-include("../src/tjlf_max.jl")
-include("../src/tjlf_LINEAR_SOLUTION.jl")
-include("../src/tjlf_eigensolver.jl")
+include("../src/TJLF.jl")
+using ..TJLF
 
 
 # saturation rule test
@@ -282,26 +271,17 @@ for dir_name in tests
     freqJulia = eigenvalue[2,:,1]
 
     for i in eachindex(fluxes[1,1,1,:,1])
-        if particle_QL[i,1,1,1] != 0.0
             @assert isapprox(particle_QL[i,1,1,1], fluxes[1,1,1,i,1], rtol=1e-6)
-        end
-        if energy_QL[i,1,1,1] != 0.0
             @assert isapprox(energy_QL[i,1,1,1], fluxes[2,1,1,i,1], rtol=1e-6)
-        end
-        if exchange_QL[i,1,1,1] != 0.0
             @assert isapprox(exchange_QL[i,1,1,1], fluxes[5,1,1,i,1], rtol=1e-6)
-        end
-        if exchange_QL[i,1,1,1] != 0.0
-            @assert isapprox(toroidal_stress_QL[i,1,1,1], fluxes[3,1,1,i,1], rtol=1e-6)
-        end
-        if exchange_QL[i,1,1,1] != 0.0
-            @assert isapprox(parallel_stress_QL[i,1,1,1], fluxes[4,1,1,i,1], rtol=1e-6)
-        end
+
+            ### stresses are VERY sensitive to eigenvalues
+            @assert isapprox(toroidal_stress_QL[i,1,1,1], fluxes[3,1,1,i,1], atol=1e-10)
+            @assert isapprox(parallel_stress_QL[i,1,1,1], fluxes[4,1,1,i,1], atol=1e-10)
+
     end
     for i in eachindex(gammaJulia)
         @assert isapprox(gamma[1][i],gammaJulia[i], atol=1e-6)
-    end
-    for i in eachindex(freqJulia)
         @assert isapprox(freq[1][i],freqJulia[i], atol=1e-6)
     end
 
