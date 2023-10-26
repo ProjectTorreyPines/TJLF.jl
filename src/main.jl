@@ -7,8 +7,8 @@ using .TJLF
 # Read input.tglf
 #******************************************************************************************************
 # location for the input.tglf file
-# baseDirectory = "../outputs/test_TM/simple_test/"
-baseDirectory = "../outputs/test_TM/exb_shear0/"
+baseDirectory = "../outputs/test_TM/simple_test/"
+# baseDirectory = "../outputs/test_TM/exb_shear0/"
 
 inputTJLF = readInput(baseDirectory)
 
@@ -38,8 +38,8 @@ using BenchmarkTools
 using Plots
 
 # calls the fortran code as an executable
-path = "./Fortran/tglf"
-run(`$(path) $baseDirectory`)
+# path = "./Fortran/tglf"
+# run(`$(path) $baseDirectory`)
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
