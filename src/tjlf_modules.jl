@@ -149,7 +149,12 @@ struct OutputHermite{T<:Real}
     x::Vector{T}
     wx::Vector{T}
     h::Matrix{T}
+    _dvec::Vector{T}
+end
 
+function OutputHermite(x, wx, h)
+    _dvec = similar(wx)
+    return OutputHermite(x, wx, h, _dvec)
 end
 
 ##########################################################

@@ -69,7 +69,15 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     return ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG
 end
 
-
+function outer!(Y, x, dvec, is)
+    _, M, N = size(Y)
+    for j in 1:N
+        for i in 1:M
+            Y[is, i, j] = sum(dvec[k] * x[i, k] * conj(x[j, k]) for k in eachindex(dvec))
+        end
+    end
+    return Y
+end
 
 
 #*************************************************************
@@ -88,7 +96,6 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     b2x = outputGeo.b2x
     wx = outputHermite.wx
     h = outputHermite.h[1:nbasis,:]
-
 
     hxn = zeros(Float64, ns, nx)
     hxp1 = zeros(Float64, ns, nx)
@@ -155,50 +162,87 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
         end
     end
 
+    dvec = outputHermite._dvec
     for is = ns0:ns
-        aveH.hn[is,:,:]    .= h[1:nbasis,:] * Diagonal(hxn[is,:]   .*wx)   * h'
-        aveH.hp1[is,:,:]   .= h[1:nbasis,:] * Diagonal(hxp1[is,:]  .*wx)   * h'
-        aveH.hp3[is,:,:]   .= h[1:nbasis,:] * Diagonal(hxp3[is,:]  .*wx)   * h'
-        aveH.hr11[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr11[is,:] .*wx)   * h'
-        aveH.hr13[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr13[is,:] .*wx)   * h'
-        aveH.hr33[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr33[is,:] .*wx)   * h'
-        aveH.hw113[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw113[is,:].*wx)   * h'
-        aveH.hw133[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw133[is,:].*wx)   * h'
-        aveH.hw333[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw333[is,:].*wx)   * h'
+        @views dvec .= hxn[is,:] .* wx
+        outer!(aveH.hn, h, dvec, is)
+        @views dvec .= hxp1[is,:] .* wx
+        outer!(aveH.hp1, h, dvec, is)
+        @views dvec .= hxp3[is,:] .* wx
+        outer!(aveH.hp3, h, dvec, is)
+        @views dvec .= hxr11[is,:] .* wx
+        outer!(aveH.hr11, h, dvec, is)
+        @views dvec .= hxr13[is,:] .* wx
+        outer!(aveH.hr13, h, dvec, is)
+        @views dvec .= hxr33[is,:] .* wx
+        outer!(aveH.hr33, h, dvec, is)
+        @views dvec .= hxw113[is,:] .* wx
+        outer!(aveH.hw113, h, dvec, is)
+        @views dvec .= hxw133[is,:] .* wx
+        outer!(aveH.hw133, h, dvec, is)
+        @views dvec .= hxw333[is,:] .* wx
+        outer!(aveH.hw333, h, dvec, is)
 
         if(nroot>6)
-            aveG.gn[is,:,:]    .= h * Diagonal(gxn[is,:]   .*wx)   * h'
-            aveG.gp1[is,:,:]   .= h * Diagonal(gxp1[is,:]  .*wx)   * h'
-            aveG.gp3[is,:,:]   .= h * Diagonal(gxp3[is,:]  .*wx)   * h'
-            aveG.gr11[is,:,:]  .= h * Diagonal(gxr11[is,:] .*wx)   * h'
-            aveG.gr13[is,:,:]  .= h * Diagonal(gxr13[is,:] .*wx)   * h'
-            aveG.gr33[is,:,:]  .= h * Diagonal(gxr33[is,:] .*wx)   * h'
-            aveG.gw113[is,:,:] .= h * Diagonal(gxw113[is,:].*wx)   * h'
-            aveG.gw133[is,:,:] .= h * Diagonal(gxw133[is,:].*wx)   * h'
-            aveG.gw333[is,:,:] .= h * Diagonal(gxw333[is,:].*wx)   * h'
+            @views dvec .= gxn[is,:] .* wx
+            outer!(aveG.gn, h, dvec, is)
+            @views dvec .= gxp1[is,:] .* wx
+            outer!(aveG.gp1, h, dvec, is)
+            @views dvec .= gxp3[is,:] .* wx
+            outer!(aveG.gp3, h, dvec, is)
+            @views dvec .= gxr11[is,:] .* wx
+            outer!(aveG.gr11, h, dvec, is)
+            @views dvec .= gxr13[is,:] .* wx
+            outer!(aveG.gr13, h, dvec, is)
+            @views dvec .= gxr33[is,:] .* wx
+            outer!(aveG.gr33, h, dvec, is)
+            @views dvec .= gxw113[is,:] .* wx
+            outer!(aveG.gw113, h, dvec, is)
+            @views dvec .= gxw133[is,:] .* wx
+            outer!(aveG.gw133, h, dvec, is)
+            @views dvec .= gxw333[is,:] .* wx
+            outer!(aveG.gw333, h, dvec, is)
         end
     end
 
-    aveH.hn[abs.(aveH.hn) .< zero_cut] .= 0
-    aveH.hp1[abs.(aveH.hp1) .< zero_cut] .= 0
-    aveH.hp3[abs.(aveH.hp3) .< zero_cut] .= 0
-    aveH.hr11[abs.(aveH.hr11) .< zero_cut] .= 0
-    aveH.hr13[abs.(aveH.hr13) .< zero_cut] .= 0
-    aveH.hr33[abs.(aveH.hr33) .< zero_cut] .= 0
-    aveH.hw113[abs.(aveH.hw113) .< zero_cut] .= 0
-    aveH.hw133[abs.(aveH.hw133) .< zero_cut] .= 0
-    aveH.hw333[abs.(aveH.hw333) .< zero_cut] .= 0
+    cut = abs.(aveH.hn) .< zero_cut
+    aveH.hn[cut] .= 0
+    cut .= abs.(aveH.hp1) .< zero_cut
+    aveH.hp1[cut] .= 0
+    cut .= abs.(aveH.hp3) .< zero_cut
+    aveH.hp3[cut] .= 0
+    cut .= abs.(aveH.hr11) .< zero_cut
+    aveH.hr11[cut] .= 0
+    cut .= abs.(aveH.hr13) .< zero_cut
+    aveH.hr13[cut] .= 0
+    cut .= abs.(aveH.hr33) .< zero_cut
+    aveH.hr33[cut] .= 0
+    cut .= abs.(aveH.hw113) .< zero_cut
+    aveH.hw113[cut] .= 0
+    cut .= abs.(aveH.hw133) .< zero_cut
+    aveH.hw133[cut] .= 0
+    cut .= abs.(aveH.hw333) .< zero_cut
+    aveH.hw333[cut] .= 0
 
     if(nroot>6)
-        aveG.gn[abs.(aveG.gn) .< zero_cut] .= 0
-        aveG.gp1[abs.(aveG.gp1) .< zero_cut] .= 0
-        aveG.gp3[abs.(aveG.gp3) .< zero_cut] .= 0
-        aveG.gr11[abs.(aveG.gr11) .< zero_cut] .= 0
-        aveG.gr13[abs.(aveG.gr13) .< zero_cut] .= 0
-        aveG.gr33[abs.(aveG.gr33) .< zero_cut] .= 0
-        aveG.gw113[abs.(aveG.gw113) .< zero_cut] .= 0
-        aveG.gw133[abs.(aveG.gw133) .< zero_cut] .= 0
-        aveG.gw333[abs.(aveG.gw333) .< zero_cut] .= 0
+        cut .= abs.(aveG.gn) .< zero_cut
+        aveG.gn[cut] .= 0
+        cut .= abs.(aveG.gp1) .< zero_cut
+        aveG.gp1[cut] .= 0
+        cut .= abs.(aveG.gp3) .< zero_cut
+        aveG.gp3[cut] .= 0
+        cut .= abs.(aveG.gr11) .< zero_cut
+        aveG.gr11[cut] .= 0
+        cut .= abs.(aveG.gr13) .< zero_cut
+        aveG.gr13[cut] .= 0
+        cut .= abs.(aveG.gr33) .< zero_cut
+        aveG.gr33[cut] .= 0
+        cut .= abs.(aveG.gw113) .< zero_cut
+        aveG.gw113[cut] .= 0
+        cut .= abs.(aveG.gw133) .< zero_cut
+        aveG.gw133[cut] .= 0
+        cut .= abs.(aveG.gw333) .< zero_cut
+        aveG.gw333[cut] .= 0
     end
 
 end
@@ -344,8 +388,6 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
     end
 
 end
-
-
 
 #***************************************************************
 #   compute the matricies modwdh and modwdg
