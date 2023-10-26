@@ -2,7 +2,7 @@ const nf = 40
 const na = 13
 const h = Vector{Float64}(undef, na)
 
-function FLR_Hn(ft::T,b::T)::T where T<:Real
+function FLR_Hn(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -41,15 +41,16 @@ function FLR_Hn(ft::T,b::T)::T where T<:Real
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
 
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_Hn
 
     for i = 1:4
-        h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-        h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
 
     # transform to gt grid
@@ -78,7 +79,7 @@ end
 
 
 
-function FLR_dHp1(ft::T,b::T)::T where T<:Real
+function FLR_dHp1(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -117,15 +118,16 @@ function FLR_dHp1(ft::T,b::T)::T where T<:Real
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
 
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHp1
 
     for i = 1:4
-       h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
 
     # transform to gt grid
@@ -154,7 +156,7 @@ end
 
 
 
-function FLR_dHp3(ft::T,b::T)::T where T<:Real
+function FLR_dHp3(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -193,15 +195,16 @@ function FLR_dHp3(ft::T,b::T)::T where T<:Real
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
 
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHp3
 
     for i = 1:4
-        h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-        h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
 
     # transform to gt grid
@@ -230,7 +233,7 @@ function FLR_dHp3(ft::T,b::T)::T where T<:Real
 end
 
 
-function FLR_dHr11(ft::T,b::T)::T where T<:Real
+function FLR_dHr11(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -269,15 +272,16 @@ function FLR_dHr11(ft::T,b::T)::T where T<:Real
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
 
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHr11
 
     for i = 1:4
-       h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
 
     # transform to gt grid
@@ -305,7 +309,7 @@ function FLR_dHr11(ft::T,b::T)::T where T<:Real
 end
 
 
-function FLR_dHr13(ft::T,b::T)::T where T<:Real
+function FLR_dHr13(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -343,15 +347,16 @@ function FLR_dHr13(ft::T,b::T)::T where T<:Real
 #     h12 = b^2/(xa12+b^2.5)
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHr13
 
     for i = 1:4
-       h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
 
     # transform to gt grid
@@ -378,7 +383,7 @@ function FLR_dHr13(ft::T,b::T)::T where T<:Real
 end
 
 
-function FLR_dHr33(ft::T,b::T)::T where T<:Real
+function FLR_dHr33(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -417,15 +422,16 @@ function FLR_dHr33(ft::T,b::T)::T where T<:Real
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
 
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHr33
 
     for i = 1:4
-        h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-        h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
 
     # transform to gt grid
@@ -453,7 +459,7 @@ function FLR_dHr33(ft::T,b::T)::T where T<:Real
 end
 
 
-function FLR_dHw113(ft::T,b::T)::T where T<:Real
+function FLR_dHw113(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -492,15 +498,16 @@ function FLR_dHw113(ft::T,b::T)::T where T<:Real
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
 
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHw113
 
     for i = 1:4
-        h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
 
     # transform to gt grid
@@ -528,7 +535,7 @@ end
 
 
 
-function FLR_dHw133(ft::T,b::T)::T where T<:Real
+function FLR_dHw133(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -567,16 +574,18 @@ function FLR_dHw133(ft::T,b::T)::T where T<:Real
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
 
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHw133
 
     for i = 1:4
-        h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-        h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
+
     # transform to gt grid
     gt = √(1-ft)
     if(gt>g[nf]) gt = g[nf] end
@@ -603,7 +612,7 @@ end
 
 
 
-function FLR_dHw333(ft::T,b::T)::T where T<:Real
+function FLR_dHw333(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
 #     Approxmation to the integral of (J0^2)*Fmaxwellian over a
 #     wedge of velocity space -ft < (v_par/v) < ft.
@@ -642,15 +651,16 @@ function FLR_dHw333(ft::T,b::T)::T where T<:Real
 #     h13 = b^2/(xa13+b^2.5)
 #******************************************************************
 
-    y = FLR_constants.y
+    y4 = FLR_constants.y4
+    y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHw333
 
     for i = 1:4
-       h[i] = b/( y[i]^4 + b^2)
+        h[i] = b/(y4[i] + b2)
     end
     for i = 5:na
-       h[i] = b^2/(0.25*y[i]^5 + b^2.5)
+        h[i] = b2/(0.25*y5[i] + b25)
     end
 
     # transform to gt grid

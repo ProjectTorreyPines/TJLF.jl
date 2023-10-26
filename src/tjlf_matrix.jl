@@ -131,15 +131,17 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             #***************************************************************
             bb = taus*mass*(ky/zs)^2
             b = bb*b0x[i]/b2x[i]
-            hxn[is,i]    = FLR_Hn(fth,b)
+            b2 = b ^ 2
+            b25 = b ^ 2.5
+            hxn[is,i]    = FLR_Hn(fth, b; b2, b25)
             hxp1[is,i]   = hxn[is,i]
-            hxp3[is,i]   = FLR_dHp3(fth,b) + hxn[is,i]
+            hxp3[is,i]   = FLR_dHp3(fth, b; b2, b25) + hxn[is,i]
             hxr11[is,i]  = 3.0 * hxp1[is,i]
-            hxr13[is,i]  = FLR_dHr13(fth,b) + (5/3)*hxp1[is,i]
-            hxr33[is,i]  = FLR_dHr33(fth,b) + (5/3)*hxp3[is,i]
-            hxw113[is,i] = FLR_dHw113(fth,b)+ (7/3)*hxr11[is,i]
-            hxw133[is,i] = FLR_dHw133(fth,b)+ (7/3)*hxr13[is,i]
-            hxw333[is,i] = FLR_dHw333(fth,b)+ (7/3)*hxr33[is,i]
+            hxr13[is,i]  = FLR_dHr13(fth, b; b2, b25) + (5/3)*hxp1[is,i]
+            hxr33[is,i]  = FLR_dHr33(fth, b; b2, b25) + (5/3)*hxp3[is,i]
+            hxw113[is,i] = FLR_dHw113(fth, b; b2, b25)+ (7/3)*hxr11[is,i]
+            hxw133[is,i] = FLR_dHw133(fth, b; b2, b25)+ (7/3)*hxr13[is,i]
+            hxw333[is,i] = FLR_dHw333(fth, b; b2, b25)+ (7/3)*hxr33[is,i]
 
             #***************************************************************
             #   compute the average g- bessel functions
@@ -148,15 +150,15 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
                 fts = outputGeo.fts
                 ftx::Float64 = fts[is]
                 ft2 = ftx^2
-                gxn[is,i]    = FLR_Hn(ftx,b)
-                gxp1[is,i]   = FLR_dHp1(ftx,b)  + ft2*gxn[is,i]
-                gxp3[is,i]   = FLR_dHp3(ftx,b)  + gxn[is,i]
-                gxr11[is,i]  = FLR_dHr11(ftx,b) + 3*ft2*gxp1[is,i]
-                gxr13[is,i]  = FLR_dHr13(ftx,b) + (5/3)*gxp1[is,i]
-                gxr33[is,i]  = FLR_dHr33(ftx,b) + (5/3)*gxp3[is,i]
-                gxw113[is,i] = FLR_dHw113(ftx,b)+ (7/3)*gxr11[is,i]
-                gxw133[is,i] = FLR_dHw133(ftx,b)+ (7/3)*gxr13[is,i]
-                gxw333[is,i] = FLR_dHw333(ftx,b)+ (7/3)*gxr33[is,i]
+                gxn[is,i]    = FLR_Hn(ftx, b; b2, b25)
+                gxp1[is,i]   = FLR_dHp1(ftx, b; b2, b25)  + ft2*gxn[is,i]
+                gxp3[is,i]   = FLR_dHp3(ftx, b; b2, b25)  + gxn[is,i]
+                gxr11[is,i]  = FLR_dHr11(ftx, b; b2, b25) + 3*ft2*gxp1[is,i]
+                gxr13[is,i]  = FLR_dHr13(ftx, b; b2, b25) + (5/3)*gxp1[is,i]
+                gxr33[is,i]  = FLR_dHr33(ftx, b; b2, b25) + (5/3)*gxp3[is,i]
+                gxw113[is,i] = FLR_dHw113(ftx, b; b2, b25)+ (7/3)*gxr11[is,i]
+                gxw133[is,i] = FLR_dHw133(ftx, b; b2, b25)+ (7/3)*gxr13[is,i]
+                gxw333[is,i] = FLR_dHw333(ftx, b; b2, b25)+ (7/3)*gxr33[is,i]
 
             end
         end
