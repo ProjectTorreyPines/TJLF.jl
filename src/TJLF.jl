@@ -16,7 +16,8 @@ include("tjlf_finiteLarmorRadius.jl")
 include("tjlf_matrix.jl")
 include("tjlf_LINEAR_SOLUTION.jl")
 include("tjlf_max2.jl")
-include("tjlf_TRANSPORT_MODEL2.jl")
+include("tjlf_TRANSPORT_MODEL.jl")
+include("run_tjlf.jl")
 
 export readInput
 export gauss_hermite, get_sat_params, get_ky_spectrum, tjlf_TM
