@@ -1,6 +1,6 @@
 # calls the fortran code as a shared library
 # ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
-
+include("../src/TJLF.jl")
 using .TJLF
 
 #******************************************************************************************************
@@ -20,6 +20,8 @@ outputHermite = gauss_hermite(inputTJLF)
 satParams = get_sat_params(inputTJLF)
 ky_spect, nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
 fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+
+sum_ky_spectrum(inputTJLF, satParams, ky_spect, eigenvalue[1,:,:], fluxes)
 
 
 @profview tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
@@ -66,16 +68,16 @@ plot(ky_spect, particle_QL[:,1,1,1], label="Fortran")
 plot!(ky_spect, fluxes[1,1,1,:,1], label="Julia", title="particle flux")
 
 plot(ky_spect, energy_QL[:,1,1,1], label="Fortran")
-plot!(ky_spect, fluxes[2,1,1,:,1], label="Julia", title="energy flux")
+plot!(ky_spect, fluxes[1,1,1,:,2], label="Julia", title="energy flux")
 
 plot(ky_spect, exchange_QL[:,1,1,1], label="Fortran")
-plot!(ky_spect, fluxes[5,1,1,:,1], label="Julia", title="exchange flux")
+plot!(ky_spect, fluxes[1,1,1,:,5], label="Julia", title="exchange flux")
 
 plot(ky_spect, toroidal_stress_QL[:,1,1,1], label="Fortran", title="toroidal stress")
-plot!(ky_spect, fluxes[3,1,1,:,1], label="Julia", title="toroidal stress",linestyle=:dash)
+plot!(ky_spect, fluxes[1,1,1,:,3], label="Julia", title="toroidal stress",linestyle=:dash)
 
 plot(ky_spect, parallel_stress_QL[:,1,1,1], label="Fortran", title="parallel stress")
-plot!(ky_spect, fluxes[4,1,1,:,1], label="Julia", title="parallel stress",linestyle=:dash)
+plot!(ky_spect, fluxes[1,1,1,:,4], label="Julia", title="parallel stress",linestyle=:dash)
 
 
 # Get eigenvalue spectrum
