@@ -1,18 +1,22 @@
-#
-#     parameters:
-#     inputs - InputTJLF struct constructed using the input.TGLF file
-#     ky_mix - array of ky (mode number)
-#     gamma_mix - array of gamma (net growth rate)
-#
-#     outputs:
-#     vzf_mix - zonal flow mixing rate
-#     kymax_mix - ky value at the calculated vzf_mix
-#     jmax_mix - index of ky_mix array where vzf_mix is calculated
-#
-#     finds the maximum of gamma/ky spectrum at low-k values by going through the ky_mix
-#     array, then after finding the max, interpolate the value to improve accuracy
-#
-function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
+"""
+    function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    ky_mix::Vector{T}                   - vector of ky spectrum (mode number)
+    gamma_mix::Array{T}                 - array of gamma (net growth rate)
+
+outputs:
+    vzf_mix - zonal flow mixing rate
+    kymax_mix - ky value at the calculated vzf_mix
+    jmax_mix - index of ky_mix array where vzf_mix is calculated
+
+description:
+    finds the maximum of gamma/ky spectrum at low-k values by going through the ky_mix
+    array, then after finding the max, interpolate the value to improve accuracy
+"""
+function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_mix::Vector{T}, gamma_mix::Array{T}) where T<:Real
 
 
     sat_rule_in = inputs.SAT_RULE
@@ -160,11 +164,13 @@ end
 
 
 
-#
-#     helper function that returns either the smaller value if x is
-#     less than, larger value if x is greater than, or a linear
-#     interpolation of the two if x is within the bounds
-#
+"""
+    function mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where T<:Real
+
+description:
+    helper function that returns either the smaller value if x is less than, larger value if x is greater than, 
+    or a linear interpolation of the two if x is within the bounds
+"""
 function mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where T<:Real
 
     if (x < x_ITG)
@@ -178,10 +184,13 @@ function mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where 
     return y
 end
 
-#
-#     helper function that returns either the linear interpolated y value
-#     at a x0 value given the x and y arrays
-#
+"""
+    function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
+
+description:
+    helper function that returns either the linear interpolated y value
+    at a x0 value given the x and y arrays
+"""
 function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
     i = 1
     while (x[i] <= x0)
@@ -205,31 +214,35 @@ end
 # end
 
 
-#
-#     parameters:
-#     inputs                  - InputTJLF struct constructed using the input.TGLF file
-#     ky_spect                - array of ky (mode number)
-#     gp                      - array of gamma (net growth rate)
-#     QL_data                 - array of quasilinear weights
-#     expsub (opt)            - float for the exponent
-#     return_phi_params (opt) - boolean flag to change how much is output
-#
-#     outputs:
-#     phinorm           - intensity of the saturation rule
-#     QLA_P             - QLA particle value
-#     QLA_E             - QLA energy value
-#     QLA_O             - QLA value
-#
-#     takes in the input.tglf file, ky values, gammas, quasilinear weights, and
-#     some other optional parameters and returns the intensity value and QLA
-#     parameter values dependent on the 3 saturation rules
-#     called get_multiscale_spectrum in the Fortran
-#
+"""
+function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},ky_spect::Vector{T},gp::Array{T},QL_data::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
+    
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    ky_spect::Vector{T}                 - vector of ky spectrum (mode number)
+    gp::Array{T}                        - array of gamma (net growth rate)
+    QL_data::Array{T}                   - array of quasilinear weights
+    expsub::T (opt)                     - float for the exponent
+    return_phi_params::T (opt)          - boolean flag to change how much is output
+
+outputs: (FIX TO HAVE SAME RETURN TYPE)
+    phinorm           - intensity of the saturation rule
+    QLA_P             - QLA particle value
+    QLA_E             - QLA energy value
+    QLA_O             - QLA value
+
+description:
+    takes in the input.tglf file, ky values, gammas, quasilinear weights, and
+    some other optional parameters and returns the intensity value and QLA
+    parameter values dependent on the 3 saturation rules
+    called get_multiscale_spectrum in the Fortran
+"""
 function intensity_sat(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     ky_spect::Vector{T},
-    gp::Array{T},
+    gp::Matrix{T},
     QL_data::Array{T}, ### taken from the output file
     expsub::T=2.0,
     return_phi_params::Bool=false) where T<:Real
@@ -720,163 +733,109 @@ function intensity_sat(
 
 end
 
-#
-#     helper function that calculates the flux integrals given the index,
-#     and ky/QL values among other things
-#
-######### i think dky0 is sometimes a different type for some reason
-function flux_integrals(
-    i::Int,
-    ky::T,
-    dky0::K,
-    dky1::T,
-    particle::Array{T},
-    energy::Array{T},
-    toroidal_stress::Array{T},
-    parallel_stress::Array{T},
-    exchange::Array{T},
-    particle_flux_out,
-    energy_flux_out,
-    stress_tor_out,
-    stress_par_out,
-    exchange_out,
-    q_low_out,
-    taus_1=1.0,
-    mass_2=1.0,
-) where {T <: Real, K<: Real}
-    """
-    Compute the flux integrals
-    """
-    particle_flux_out .+= (
-        dky0 .* (i==1 ? 0 : particle[i - 1,:,:,:])
-        .+ dky1 .* particle[i,:,:,:]
-    )
-    energy_flux_out .+= (
-        dky0 .* (i==1 ? 0 : energy[i - 1,:,:,:])
-        .+ dky1 .* energy[i,:,:,:]
-    )
-    stress_tor_out .+= (
-        dky0 .* (i==1 ? 0 : toroidal_stress[i - 1,:,:,:])
-        .+ dky1 .* toroidal_stress[i,:,:,:]
-    )
-    stress_par_out .+= (
-        dky0 .* (i==1 ? 0 : parallel_stress[i - 1,:,:,:])
-        .+ dky1 .* parallel_stress[i,:,:,:]
-    )
-    exchange_out .+= (
-        dky0 .* (i==1 ? 0 : exchange[i - 1,:,:,:])
-        .+ dky1 .* exchange[i,:,:,:]
-    )
+"""
+    function flux_integrals(i::Int,ky::T,dky0::T,dky1::T,particle::Array{T},energy::Array{T},toroidal_stress::Array{T},parallel_stress::Array{T},exchange::Array{T},particle_flux_out,energy_flux_out,stress_tor_out,stress_par_out,exchange_out,q_low_out) where T <: Real
 
-    if ky * taus_1 * mass_2 <= 1
-        q_low_out .= (
-            energy_flux_out[:,:,1] + energy_flux_out[:,:,2]
-        )
+description:
+    helper function that calculates the flux integrals given the index,
+    and ky/QL values among other things
+"""
+######### i think dky0 is sometimes a different type for some reason #########
+function flux_integrals(inputs::InputTJLF, QL::Array{T,5}, QL_flux_out::Array{T,4},q_low_out::Matrix{T},
+    i::Int,ky::T,dky0::T,dky1::T) where T <: Real
+
+    # Compute the flux integrals
+    # particle
+    QL_flux_out[:,:,:,1] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,1])
+                             .+ dky1 .* QL[:,:,:,i,1])
+    # energy
+    QL_flux_out[:,:,:,2] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,2])
+                             .+ dky1 .* QL[:,:,:,i,2])
+    # torodial stress
+    QL_flux_out[:,:,:,3] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,3])
+                             .+ dky1 .* QL[:,:,:,i,3])
+    # torodial stress
+    QL_flux_out[:,:,:,4] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,4])
+                             .+ dky1 .* QL[:,:,:,i,4])
+    # exchange
+    QL_flux_out[:,:,:,5] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,5])
+                             .+ dky1 .* QL[:,:,:,i,5])
+
+    if ky * inputs.TAUS[1] * inputs.MASS[2] <= 1
+        # sum of first and second field of energy flux
+        q_low_out .= QL_flux_out[1,:,:,2] .+ QL_flux_out[2,:,:,2]
     end
-    return (
-        particle_flux_out,
-        energy_flux_out,
-        stress_tor_out,
-        stress_par_out,
-        exchange_out,
-        q_low_out,
-    )
+
+    return QL_flux_out, q_low_out
 end
 
 
 
 
-#
-#     parameters:
-#     inputs            - InputTJLF struct constructed using the input.TGLF file
-#     ky_spect          - array of ky (mode number)
-#     gp                - array of gamma (net growth rate)
-#     QL_data           - split into separate types of QL weights
-#     (optional)        - a lot of optional parameters that I don't use -DSUN
-#
-#     outputs:
-#     a dictionary with the flux integral values:
-#           "particle_flux_integral" =>particle_flux_out,
-#           "energy_flux_integral" => energy_flux_out,
-#           "toroidal_stresses_integral" => stress_tor_out,
-#           "parallel_stresses_integral" => stress_par_out,
-#           "exchange_flux_integral" => exchange_out,
-#
-#     takes in the input.tglf file, ky values, gammas, quasilinear weights, calls
-#     intensity_sat() which returns the QL intensity values, then calls
-#     flux_integrals() which numerically integrates the fluxes
-#
+"""
+    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},ky_spect::Vector{T},gp::Array{T},ave_p0::Vector{T},potential::Array{T},particle_QL::Array{T},energy_QL::Array{T},toroidal_stress_QL::Array{T},parallel_stress_QL::Array{T},exchange_QL::Array{T},etg_fact::T=1.25,c0::T=32.48,c1::T=0.534,exp1::T=1.547,cx_cy::T=0.56,alpha_x::T=1.15,)where T <: Real
 
+parameters:
+    inputs            - InputTJLF struct constructed using the input.TGLF file
+    ky_spect          - array of ky (mode number)
+    gp                - array of gamma (net growth rate)
+    QL_data           - split into separate types of QL weights
+    (optional)        - a lot of optional parameters that I don't use -DSUN
+
+outputs:
+    a dictionary with the flux integral values:
+          "particle_flux_integral" =>particle_flux_out,
+          "energy_flux_integral" => energy_flux_out,
+          "toroidal_stresses_integral" => stress_tor_out,
+          "parallel_stresses_integral" => stress_par_out,
+          "exchange_flux_integral" => exchange_out,
+
+    takes in the input.tglf file, ky values, gammas, quasilinear weights, calls
+    intensity_sat() which returns the QL intensity values, then calls
+    flux_integrals() which numerically integrates the fluxes
+"""
 function sum_ky_spectrum(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     ky_spect::Vector{T},
-    gp::Array{T},
-    ave_p0::Vector{T},
-    potential::Array{T},
-    particle_QL::Array{T},
-    energy_QL::Array{T},
-    toroidal_stress_QL::Array{T},
-    parallel_stress_QL::Array{T},
-    exchange_QL::Array{T},
+    gp::Matrix{T},
+    QL::Array{T,5},
     etg_fact::T=1.25,
     c0::T=32.48,
     c1::T=0.534,
     exp1::T=1.547,
     cx_cy::T=0.56,
-    alpha_x::T=1.15,
+    alpha_x::T=1.15
 )where T <: Real
 
     sat_rule_in = inputs.SAT_RULE
+    nf = 3 # get the number of fields
+    ns = inputs.NS # get the number of species
+    nm = inputs.NMODES # get the number of modes
+    nky = length(ky_spect)
 
-    NM = length(energy_QL[1, :, 1, 1])  # get the number of modes
-    NS = length(energy_QL[1, 1, :, 1])  # get the number of species
-    NF = length(energy_QL[1, 1, 1, :])  # get the number of fields
-    particle_flux_out = zeros((NM, NS, NF))
-    energy_flux_out = zeros((NM, NS, NF))
-    stress_tor_out = zeros((NM, NS, NF))
-    stress_par_out = zeros((NM, NS, NF))
-    exchange_out = zeros((NM, NS, NF))
-    q_low_out = zeros((NM, NS))
-
-
-    QL_data = cat(
-        dims=5, particle_QL, energy_QL, toroidal_stress_QL, parallel_stress_QL, exchange_QL
-    )
     # Multiply QL weights with desired intensity
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
-        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(
-            inputs, satParams, ky_spect, gp, QL_data
-        )
+        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, ky_spect, gp, QL)
     else
-        throw(error(
-            "sat_rule_in must be [1.0, 1, 'SAT1', 2.0, 2, 'SAT2', 3.0, 3, 'SAT3], not $sat_rule_in"
-            )
-        )
+        throw(error("sat_rule_in must be [1.0, 1, 'SAT1', 2.0, 2, 'SAT2', 3.0, 3, 'SAT3], not $sat_rule_in"))
     end
 
-    if size(particle_QL) == size(energy_QL) == size(toroidal_stress_QL) == size(parallel_stress_QL) == size(exchange_QL)
-        shapes = size(particle_QL)
-    else
-        error("QL matrices are different sizes!")
-    end
-
-    particle = zeros(shapes)
-    energy = zeros(shapes)
-    toroidal_stress = zeros(shapes)
-    parallel_stress = zeros(shapes)
-    exchange = zeros(shapes)
+    # Ql size (nf,ns,nm,nky,ntype)
+    # QLA_P and QLA_E are potentially vectors of size nm
+    # intensity factor size (nky, nm)
+    QL[:,:,:,:,1] = QL[:,:,:,:,1] .* reshape((QLA_P .* intensity_factor'),(1,1,nm,nky)) # particle
+    QL[:,:,:,:,2] = QL[:,:,:,:,2] .* reshape((QLA_E .* intensity_factor'),(1,1,nm,nky)) # energy
+    QL[:,:,:,:,3] = QL[:,:,:,:,3] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # toroidal stress
+    QL[:,:,:,:,4] = QL[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
+    QL[:,:,:,:,5] = QL[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
 
 
-    particle .= particle_QL .* (intensity_factor .* QLA_P')
-    energy .= energy_QL .* (intensity_factor .* QLA_E')
-    toroidal_stress .= toroidal_stress_QL .* (intensity_factor .* QLA_O)
-    parallel_stress .= parallel_stress_QL .* (intensity_factor .* QLA_O)
-    exchange .= exchange_QL .* (intensity_factor .* QLA_O)
-
-
-    dky0 = 0
-    ky0 = 0
+    # outputs
+    q_low_out = zeros((ns, nm))
+    QL_flux_out = zeros(Float64, nf, ns, nm, 5)
+    dky0 = 0.0
+    ky0 = 0.0
     for i in eachindex(ky_spect)
         ky = ky_spect[i]
         ky1 = ky
@@ -888,41 +847,12 @@ function sum_ky_spectrum(
             dky0 = ky0 * (ky1 * dky - 1.0)
         end
 
-        (
-            particle_flux_out,
-            energy_flux_out,
-            stress_tor_out,
-            stress_par_out,
-            exchange_out,
-            q_low_out,
-        ) = flux_integrals(
-            i,
-            ky,
-            dky0,
-            dky1,
-            particle,
-            energy,
-            toroidal_stress,
-            parallel_stress,
-            exchange,
-            particle_flux_out,
-            energy_flux_out,
-            stress_tor_out,
-            stress_par_out,
-            exchange_out,
-            q_low_out,
-        )
+        QL_flux_out, q_low_out = flux_integrals(inputs, QL, QL_flux_out, q_low_out,
+                                                i,ky,dky0,dky1)
+
         ky0 = ky1
     end
 
-    results = Dict(
-            "particle_flux_integral" =>particle_flux_out,
-            "energy_flux_integral" => energy_flux_out,
-            "toroidal_stresses_integral" => stress_tor_out,
-            "parallel_stresses_integral" => stress_par_out,
-            "exchange_flux_integral" => exchange_out,
-    )
-
-    return results
+    return QL_flux_out
 
 end
