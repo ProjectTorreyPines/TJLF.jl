@@ -25,6 +25,7 @@ function tjlf_TM(inputs::InputTJLF{T},
         fluxes = secondpass(inputs, satParams, outputHermite, ky_spect, firstPass_width, firstPass_eigenvalue)
 
         inputs.FIND_WIDTH = original_find_width
+        return fluxes, firstPass_eigenvalue, firstPass_width
     else
         # print("this is c")
         fluxes, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite, ky_spect, vexb_shear_s)
@@ -125,7 +126,7 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
 
     ### output values
     eigenvalue_spectrum_out = zeros(Float64, 2, nky, nmodes)
-    QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 5, ns, 3, nky, nmodes)
+    QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
 
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     for i = eachindex(ky_spect)
@@ -161,13 +162,11 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         if(unstable)
             eigenvalue_spectrum_out[1,i,1:nmodes_out] .= gamma_out[1:nmodes_out]
             eigenvalue_spectrum_out[2,i,1:nmodes_out] .= freq_out[1:nmodes_out]
-
-            QL_flux_spectrum_out[1,ns0:ns,1:3,i,1:nmodes] .= permutedims(particle_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes]
-            QL_flux_spectrum_out[2,ns0:ns,1:3,i,1:nmodes] .= permutedims(energy_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes]
-            QL_flux_spectrum_out[3,ns0:ns,1:3,i,1:nmodes] .= permutedims(stress_tor_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes]
-            QL_flux_spectrum_out[4,ns0:ns,1:3,i,1:nmodes] .= permutedims(stress_par_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes]
-            QL_flux_spectrum_out[5,ns0:ns,1:3,i,1:nmodes] .= permutedims(exchange_QL_out, [2,3,1])[ns0:ns,1:3,1:nmodes]
-
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
         end
     end
 
@@ -209,7 +208,7 @@ firstPass_eigenvalue::Array{T}) where T<:Real
     # initialize output arrays
 
     mask_save::Vector{Int} = zeros(Int, nky)
-    QL_flux_spectrum_out::Array{Float64} = zeros(Float64, 5, ns, 3, nky, nmodes)
+    QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
 
     maxmodes = 16 #### from tglf_modules
     gamma_reference_kx0 = zeros(Float64, maxmodes)
@@ -313,28 +312,33 @@ firstPass_eigenvalue::Array{T}) where T<:Real
             #     end #imax
             # end  # is
             # save flux_spectrum_out
-            for is = ns0:ns
-                for j = 1:3
-                    for imax = 1:nmodes_out
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
+            # for is = ns0:ns
+            #     for j = 1:3
+            #         for imax = 1:nmodes_out
                         # phi_bar = reduce*phi_bar_out[imax]
-                        pflux1 = particle_QL_out[imax,is,j]
-                        eflux1 = energy_QL_out[imax,is,j]
-                        stress_tor1 = stress_tor_QL_out[imax,is,j]
-                        stress_par1 = stress_par_QL_out[imax,is,j]
-                        exch1 = exchange_QL_out[imax,is,j]
-                        QL_flux_spectrum_out[1,is,j,i,imax] = pflux1
-                        QL_flux_spectrum_out[2,is,j,i,imax] = eflux1
-                        QL_flux_spectrum_out[3,is,j,i,imax] = stress_tor1
-                        QL_flux_spectrum_out[4,is,j,i,imax] = stress_par1
-                        QL_flux_spectrum_out[5,is,j,i,imax] = exch1
+                        # pflux1 = particle_QL_out[imax,is,j]
+                        # eflux1 = energy_QL_out[imax,is,j]
+                        # stress_tor1 = stress_tor_QL_out[imax,is,j]
+                        # stress_par1 = stress_par_QL_out[imax,is,j]
+                        # exch1 = exchange_QL_out[imax,is,j]
+                        # QL_flux_spectrum_out[j,is,imax,i,1] = pflux1
+                        # QL_flux_spectrum_out[j,is,imax,i,2] = eflux1
+                        # QL_flux_spectrum_out[j,is,imax,i,3] = stress_tor1
+                        # QL_flux_spectrum_out[j,is,imax,i,4] = stress_par1
+                        # QL_flux_spectrum_out[j,is,imax,i,5] = exch1
                         # flux_spectrum_out[1,is,j,i,imax] = phi_bar*pflux1
                         # flux_spectrum_out[2,is,j,i,imax] = phi_bar*eflux1
                         # flux_spectrum_out[3,is,j,i,imax] = phi_bar*stress_tor1
                         # flux_spectrum_out[4,is,j,i,imax] = phi_bar*stress_par1
                         # flux_spectrum_out[5,is,j,i,imax] = phi_bar*exch1
-                    end #imax
-                end # j
-            end  # is
+            #         end #imax
+            #     end # j
+            # end  # is
 
         end
 

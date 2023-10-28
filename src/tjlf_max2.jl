@@ -300,11 +300,11 @@ function tjlf_max2(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         maxmodes = 16 #### from tglf_modules
         gamma_out = zeros(Float64,maxmodes)
         freq_out = zeros(Float64,maxmodes)
-        particle_QL_out = fill(NaN, (maxmodes, ns, 3))
-        energy_QL_out = fill(NaN, (maxmodes, ns, 3))
-        stress_par_QL_out = fill(NaN, (maxmodes, ns, 3))
-        stress_tor_QL_out = fill(NaN, (maxmodes, ns, 3))
-        exchange_QL_out = fill(NaN, (maxmodes, ns, 3))
+        particle_QL_out = fill(NaN, (3, ns, maxmodes))
+        energy_QL_out = fill(NaN, (3, ns, maxmodes))
+        stress_par_QL_out = fill(NaN, (3, ns, maxmodes))
+        stress_tor_QL_out = fill(NaN, (3, ns, maxmodes))
+        exchange_QL_out = fill(NaN, (3, ns, maxmodes))
     end
 
 

@@ -189,22 +189,23 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         v_bar_out = zeros(Float64, maxmodes)
         ne_te_phase_out = zeros(Float64, maxmodes)
 
-        field_weight_out = zeros(ComplexF64, maxmodes, 3, nbasis)
-        particle_QL_out = zeros(Float64, maxmodes, ns, 3)
-        energy_QL_out = zeros(Float64, maxmodes, ns, 3)
-        stress_par_QL_out = zeros(Float64, maxmodes, ns, 3)
-        stress_tor_QL_out = zeros(Float64, maxmodes, ns, 3)
-        exchange_QL_out = zeros(Float64, maxmodes, ns, 3)
+        field_weight_out = zeros(ComplexF64, 3, nbasis, maxmodes)
 
-        N_QL_out = zeros(Float64, maxmodes, ns)
-        T_QL_out = zeros(Float64, maxmodes, ns)
-        U_QL_out = zeros(Float64, maxmodes, ns)
-        Q_QL_out = zeros(Float64, maxmodes, ns)
-        N_bar_out = zeros(Float64, maxmodes, ns)
-        T_bar_out = zeros(Float64, maxmodes, ns)
-        U_bar_out = zeros(Float64, maxmodes, ns)
-        Q_bar_out = zeros(Float64, maxmodes, ns)
-        Ns_Ts_phase_out = zeros(Float64, maxmodes, ns)
+        particle_QL_out = zeros(Float64, 3, ns, maxmodes)
+        energy_QL_out = zeros(Float64, 3, ns, maxmodes)
+        stress_par_QL_out = zeros(Float64, 3, ns, maxmodes)
+        stress_tor_QL_out = zeros(Float64, 3, ns, maxmodes)
+        exchange_QL_out = zeros(Float64, 3, ns, maxmodes)
+
+        N_QL_out = zeros(Float64, ns, maxmodes)
+        T_QL_out = zeros(Float64, ns, maxmodes)
+        U_QL_out = zeros(Float64, ns, maxmodes)
+        Q_QL_out = zeros(Float64, ns, maxmodes)
+        N_bar_out = zeros(Float64, ns, maxmodes)
+        T_bar_out = zeros(Float64, ns, maxmodes)
+        U_bar_out = zeros(Float64, ns, maxmodes)
+        Q_bar_out = zeros(Float64, ns, maxmodes)
+        Ns_Ts_phase_out = zeros(Float64, ns, maxmodes)
 
         wd_bar_out = zeros(Float64, nmodes_out)
         b0_bar_out = zeros(Float64, nmodes_out)
@@ -248,18 +249,19 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 kx_bar_out[imax] = kx_bar
                 kpar_bar_out[imax] = kpar_bar/(R_unit*q_unit*inputs.WIDTH)
 
-                field_weight_out[imax,:,:]  .= field_weight_QL_out
-                particle_QL_out[imax,:,:]   .= particle_weight
-                energy_QL_out[imax,:,:]     .= energy_weight
-                stress_par_QL_out[imax,:,:] .= stress_par_weight
-                stress_tor_QL_out[imax,:,:] .= stress_tor_weight
-                exchange_QL_out[imax,:,:]   .= exchange_weight
+                field_weight_out[:,:,imax]  .= field_weight_QL_out
 
-                N_QL_out[imax,:] .= N_weight
-                T_QL_out[imax,:] .= T_weight
-                U_QL_out[imax,:] .= U_weight
-                Q_QL_out[imax,:] .= Q_weight
-                Ns_Ts_phase_out[imax,:] .= Ns_Ts_phase
+                particle_QL_out[:,:,imax]   .= particle_weight
+                energy_QL_out[:,:,imax]     .= energy_weight
+                stress_par_QL_out[:,:,imax] .= stress_par_weight
+                stress_tor_QL_out[:,:,imax] .= stress_tor_weight
+                exchange_QL_out[:,:,imax]   .= exchange_weight
+
+                N_QL_out[:,imax] .= N_weight
+                T_QL_out[:,imax] .= T_weight
+                U_QL_out[:,imax] .= U_weight
+                Q_QL_out[:,imax] .= Q_weight
+                Ns_Ts_phase_out[:,imax] .= Ns_Ts_phase
 
                 ne_te_phase_out[imax] = Ne_Te_phase
 
@@ -272,41 +274,35 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     phi2_bar = v_bar_out[imax]/v_QL_out[imax]
                 end
 
-                phi_bar_out[imax] = phi2_bar
-                a_par_bar_out[imax] = phi2_bar*a_par_QL_out[imax]
-                b_par_bar_out[imax] = phi2_bar*b_par_QL_out[imax]
+                phi_bar_out .= phi2_bar
+                a_par_bar_out .= phi2_bar.*a_par_QL_out
+                b_par_bar_out .= phi2_bar.*b_par_QL_out
 
-                for is = ns0:ns
-                    N_bar_out[imax,is] = phi2_bar*N_QL_out[imax,is]
-                    T_bar_out[imax,is] = phi2_bar*T_QL_out[imax,is]
-                    U_bar_out[imax,is] = phi2_bar*U_QL_out[imax,is]
-                    Q_bar_out[imax,is] = phi2_bar*Q_QL_out[imax,is]
-                end
+                N_bar_out[ns0:ns, imax] = phi2_bar.*N_QL_out[ns0:ns, imax]
+                T_bar_out[ns0:ns, imax] = phi2_bar.*T_QL_out[ns0:ns, imax]
+                U_bar_out[ns0:ns, imax] = phi2_bar.*U_QL_out[ns0:ns, imax]
+                Q_bar_out[ns0:ns, imax] = phi2_bar.*Q_QL_out[ns0:ns, imax]
             end
         end
 
         # check for inward ballooing
+        sum_modB_bar = sum(v_bar_out.*modB_bar_out)
+        sum_v_bar = sum(v_bar_out)
+
         ft_test = 0.0
-        sum_modB_bar = 0.0
-        sum_v_bar = 0.0
-        for i = 1:nmodes_out
-            sum_modB_bar = sum_modB_bar + v_bar_out[i]*modB_bar_out[i]
-            sum_v_bar = sum_v_bar + v_bar_out[i]
-        end
         if(sum_v_bar>epsilon1) ft_test = sum_modB_bar/sum_v_bar end
         modB_min = abs(minimum(satParams.B_geo))
         ft_test = ft_test/modB_min
-
 
         return nmodes_out, gamma_out, freq_out,
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
     end
 
-    particle_QL_out = fill(NaN, (maxmodes, ns, 3))
-    energy_QL_out = fill(NaN, (maxmodes, ns, 3))
-    stress_par_QL_out = fill(NaN, (maxmodes, ns, 3))
-    stress_tor_QL_out = fill(NaN, (maxmodes, ns, 3))
-    exchange_QL_out = fill(NaN, (maxmodes, ns, 3))
+    particle_QL_out = fill(NaN, (3, ns, maxmodes))
+    energy_QL_out = fill(NaN, (3, ns, maxmodes))
+    stress_par_QL_out = fill(NaN, (3, ns, maxmodes))
+    stress_tor_QL_out = fill(NaN, (3, ns, maxmodes))
+    exchange_QL_out = fill(NaN, (3, ns, maxmodes))
 
     return nmodes_out, gamma_out, freq_out,
     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
@@ -448,29 +444,29 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     alpha_p_in = inputs.ALPHA_P
     freq_QL = im*eigenvalue
 
-    n = zeros(ComplexF64, ns,nbasis)
-    u_par = zeros(ComplexF64, ns,nbasis)
-    p_par = zeros(ComplexF64, ns,nbasis)
-    p_tot = zeros(ComplexF64, ns,nbasis)
-    q_par = zeros(ComplexF64, ns,nbasis)
-    q_tot = zeros(ComplexF64, ns,nbasis)
+    n = zeros(ComplexF64, nbasis,ns)
+    u_par = zeros(ComplexF64, nbasis,ns)
+    p_par = zeros(ComplexF64, nbasis,ns)
+    p_tot = zeros(ComplexF64, nbasis,ns)
+    q_par = zeros(ComplexF64, nbasis,ns)
+    q_tot = zeros(ComplexF64, nbasis,ns)
 
     for is = ns0:ns
         j = (is-ns0)*nroot*nbasis
         for i = 1:nbasis
-            n[is,i] = v[j+i]
-            u_par[is,i] = v[j+nbasis+i]
-            p_par[is,i] = v[j+nbasis*2+i]
-            p_tot[is,i] = v[j+nbasis*3+i]
-            q_par[is,i] = v[j+nbasis*4+i]
-            q_tot[is,i] = v[j+nbasis*5+i]
+            n[i,is] = v[j+i]
+            u_par[i,is] = v[j+nbasis+i]
+            p_par[i,is] = v[j+nbasis*2+i]
+            p_tot[i,is] = v[j+nbasis*3+i]
+            q_par[i,is] = v[j+nbasis*4+i]
+            q_tot[i,is] = v[j+nbasis*5+i]
             if(nroot>6)
-                n[is,i] = n[is,i] - v[j+nbasis*6+i] + v[j+nbasis*12+i]
-                u_par[is,i] = u_par[is,i] - v[j+nbasis*7+i]
-                p_par[is,i] = p_par[is,i] - v[j+nbasis*8+i] + v[j+nbasis*13+i]
-                p_tot[is,i] = p_tot[is,i] - v[j+nbasis*9+i] + v[j+nbasis*14+i]
-                q_par[is,i] = q_par[is,i] - v[j+nbasis*10+i]
-                q_tot[is,i] = q_tot[is,i] - v[j+nbasis*11+i]
+                n[i,is] = n[i,is] - v[j+nbasis*6+i] + v[j+nbasis*12+i]
+                u_par[i,is] = u_par[i,is] - v[j+nbasis*7+i]
+                p_par[i,is] = p_par[i,is] - v[j+nbasis*8+i] + v[j+nbasis*13+i]
+                p_tot[i,is] = p_tot[i,is] - v[j+nbasis*9+i] + v[j+nbasis*14+i]
+                q_par[i,is] = q_par[i,is] - v[j+nbasis*10+i]
+                q_tot[i,is] = q_tot[i,is] - v[j+nbasis*11+i]
             end
         end
     end
@@ -500,22 +496,22 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     psi = zeros(ComplexF64, nbasis)
     bsig = zeros(ComplexF64, nbasis)
     U0 = sum((alpha_mach_in*sign_It_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
-    phi .= sum(ave.p0inv * transpose(Diagonal((as.*zs)[ns0:ns]) * n[ns0:ns,:]), dims=2)
+    phi .= sum(ave.p0inv * (n[:,ns0:ns]*Diagonal((as.*zs)[ns0:ns])), dims=2)
     if(inputs.USE_BPER)
-        psi .= (betae_psi .*     sum(ave.b0inv * transpose(Diagonal((as.*zs.*vs)[ns0:ns])*u_par[ns0:ns,:]), dims=2))
+        psi .= (betae_psi .*     sum(ave.b0inv * (u_par[:,ns0:ns]*Diagonal((as.*zs.*vs)[ns0:ns])), dims=1))
         if(vpar_model_in==0)
-            phi .= phi .+   (U0*betae_psi)  .*sum(ave.bpinv * transpose(Diagonal((as.*zs.*vs)[ns0:ns])*u_par[ns0:ns,:]), dims=2)
-            psi .= psi .-   (U0*betae_psi)  .*sum(ave.bpinv * transpose(Diagonal((as.*zs)[ns0:ns]) * n[ns0:ns,:]), dims=2)
+            phi .= phi .+   (U0*betae_psi)  .* sum(ave.bpinv * (u_par[:,ns0:ns]*Diagonal((as.*zs.*vs)[ns0:ns])), dims=1)
+            psi .= psi .-   (U0*betae_psi)  .* sum(ave.bpinv * (n[:,ns0:ns]*Diagonal((as.*zs)[ns0:ns])), dims=1)
         end
     end
     if(inputs.USE_BPAR)
-        bsig .=  transpose((-betae_sig).*(as.*taus)[ns0:ns]) * (1.5.*p_tot[ns0:ns,:] .- 0.5.*p_par[ns0:ns,:])
+        bsig .=  -betae_sig .* (1.5.*p_tot[:,ns0:ns] .- 0.5.*p_par[:,ns0:ns]) * (as.*taus)[ns0:ns] 
     end
 
     # add the adiabatic terms to the total moments
-    n[ns0:ns,:] .= n[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* transpose(phi)) #### outer product to make matrix, idk why its this order tbh -DSUN
-    p_par[ns0:ns,:] .= p_par[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* transpose(phi))
-    p_tot[ns0:ns,:] .= p_tot[ns0:ns,:] .- ((zs./taus)[ns0:ns] .* transpose(phi))
+    n[:,ns0:ns] .= n[:,ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns])) #### outer product to make matrix, idk why its this order tbh -DSUN
+    p_par[:,ns0:ns] .= p_par[:,ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns]))
+    p_tot[:,ns0:ns] .= p_tot[:,ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns]))
 
     # compute phi_norm, psi_norm, sig_norm
     phi_norm = real(adjoint(phi) * phi)
@@ -524,7 +520,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     if(phi_norm<epsilon1) phi_norm = epsilon1 end
 
     #save the field weights
-    field_weight_QL_out = Matrix{ComplexF64}(undef, 3,nbasis)
+    field_weight_QL_out = Matrix{ComplexF64}(undef,3,nbasis)
     field_weight_QL_out[1,:] .= phi .* (im/√(phi_norm))
     field_weight_QL_out[2,:] .= psi .* (im/√(phi_norm))
     field_weight_QL_out[3,:] .= bsig.* (im/√(phi_norm))
@@ -544,8 +540,8 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
 
     # fill the stress moments
-    stress_par = zeros(ComplexF64, ns,nbasis,2)
-    stress_per = zeros(ComplexF64, ns,nbasis,2)
+    stress_par = zeros(ComplexF64, nbasis, ns, 2)
+    stress_per = zeros(ComplexF64, nbasis, ns, 2)
 
     stress_correction = 1.0
     if(sat_rule_in==0)
@@ -553,58 +549,58 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
         stress_correction = (imag(freq_QL).+2.0.*wp)./(imag(freq_QL).+wp)
     end
 
-    stress_par[ns0:ns,:,1] .= u_par[ns0:ns,:].*stress_correction
-    stress_par[ns0:ns,:,2] .= p_par[ns0:ns,:].*stress_correction
-    stress_per[ns0:ns,:,1] .= ((1.5 .*p_tot[ns0:ns,:] .- 0.5 .*p_par[ns0:ns,:]) * transpose((im*ky).*ave.kx))   # (is,j) x (j,i)
-    stress_per[ns0:ns,:,2] .= ((1.5 .*q_tot[ns0:ns,:] .- 0.5 .*q_par[ns0:ns,:]) * transpose((im*ky).*ave.kx))
+    stress_par[:,ns0:ns,1] .= u_par[:,ns0:ns].*stress_correction
+    stress_par[:,ns0:ns,2] .= p_par[:,ns0:ns].*stress_correction
+    stress_per[:,ns0:ns,1] .= ((im*ky).*ave.kx) * (1.5 .*p_tot[:,ns0:ns] .- 0.5 .*p_par[:,ns0:ns])   # (is,j) x (j,i)
+    stress_per[:,ns0:ns,2] .= ((im*ky).*ave.kx) * (1.5 .*q_tot[:,ns0:ns] .- 0.5 .*q_par[:,ns0:ns])
 
 
     # compute the quasilinear weights for the fluxes
-    particle_weight = zeros(Float64, ns, 3)
-    energy_weight = zeros(Float64, ns, 3)
-    stress_par_weight = zeros(Float64, ns, 3)
-    stress_tor_weight = zeros(Float64, ns, 3)
-    exchange_weight = zeros(Float64, ns, 3)
+    particle_weight = zeros(Float64, 3, ns)
+    energy_weight = zeros(Float64, 3, ns)
+    stress_par_weight = zeros(Float64, 3, ns)
+    stress_tor_weight = zeros(Float64, 3, ns)
+    exchange_weight = zeros(Float64, 3, ns)
 
     ### real() with an im in it is funky
     #### CHECK THIS PLEASE
-    particle_weight[ns0:ns,1]   .= real.(im.*n[ns0:ns,:]*conj(phi))
-    energy_weight[ns0:ns,1]     .= real.(im.*p_tot[ns0:ns,:]*conj(phi))
-    stress_par_weight[ns0:ns,1] .= real.(im.* (stress_par[ns0:ns,:,1]*ave.c_par_par')*conj(phi))
-    stress_tor_weight[ns0:ns,1] .= real.(im.* (stress_par[ns0:ns,:,1]*ave.c_tor_par'
-                                            .+ stress_per[ns0:ns,:,1]*ave.c_tor_per')*conj(phi))
-    exchange_weight[ns0:ns,1]   .= Diagonal(zs[ns0:ns]) * real.((im*freq_QL).* n[ns0:ns,:]*conj(phi))
+    particle_weight[1,ns0:ns]   .= vec(real.(im.*adjoint(phi)*n[:,ns0:ns]))
+    energy_weight[1,ns0:ns,1]     .= vec(real.(im.*adjoint(phi)*p_tot[:,ns0:ns]))
+    stress_par_weight[1,ns0:ns] .= vec(real.(im.* adjoint(phi)* (ave.c_par_par * stress_par[:,ns0:ns,1])))
+    stress_tor_weight[1,ns0:ns] .= vec(real.(im.* adjoint(phi)* (ave.c_tor_par * stress_par[:,ns0:ns,1]
+                                                              .+ ave.c_tor_per * stress_per[:,ns0:ns,1])))
+    exchange_weight[1,ns0:ns]   .= vec(real.((im*freq_QL).* adjoint(phi) * (n[:,ns0:ns])) * Diagonal(zs[ns0:ns]))
 
 
     if(inputs.USE_BPER)
-        particle_weight[ns0:ns,2]   .= - Diagonal(vs[ns0:ns])      * real.(im.* u_par[ns0:ns,:]*conj(psi))
-        energy_weight[ns0:ns,2]     .= - (Diagonal(vs[ns0:ns])     * real.(im.* q_tot[ns0:ns,:]*conj(psi))
-                                      .+ Diagonal((zs.*vs)[ns0:ns])* real.((im*freq_QL).* u_par[ns0:ns,:]*conj(psi)))
-        stress_par_weight[ns0:ns,2] .= - real.(im.* (stress_par[ns0:ns,:,2]*ave.c_par_par')*conj(psi))
-        stress_tor_weight[ns0:ns,2]     .= - real.(im.* (stress_par[ns0:ns,:,2]*ave.c_tor_par'
-                                                  .+ stress_per[ns0:ns,:,2]*ave.c_tor_per')*conj(psi))
+        particle_weight[ns0:ns,2]   .= - Diagonal(vs[ns0:ns])      * real.(im.* adjoint(psi) * u_par[:,ns0:ns])
+        energy_weight[ns0:ns,2]     .= - (Diagonal(vs[ns0:ns])     * real.(im.* adjoint(psi) * q_tot[:,ns0:ns])
+                                      .+ Diagonal((zs.*vs)[ns0:ns])* real.((im*freq_QL).* adjoint(psi) * u_par[:,ns0:ns]))
+        stress_par_weight[ns0:ns,2] .= - real.(im.* adjoint(psi) * (ave.c_par_par' * stress_par[:,ns0:ns,2]))
+        stress_tor_weight[ns0:ns,2]     .= - real.(im.* adjoint(psi) * (ave.c_tor_par' * stress_par[:,ns0:ns,2]
+                                                  .+ ave.c_tor_per' * stress_per[:,ns0:ns,2]))
     end
     if(inputs.USE_BPAR)
-        particle_weight[ns0:ns,3]   .= real.(im.* Diagonal((taus./zs)[ns0:ns]) *(1.5*p_tot[ns0:ns,:] .- 0.5*p_par[ns0:ns,:])*conj(bsig))
-        exchange_weight[ns0:ns,3]   .= Diagonal(taus[ns0:ns]) * real.(          (1.5*p_tot[ns0:ns,:] .- 0.5*p_par[ns0:ns,:])*conj((-im*freq_QL).*bsig))
+        particle_weight[ns0:ns,3]   .= real.(im.* adjoint(bsig) *(1.5*p_tot[:,ns0:ns] .- 0.5*p_par[:,ns0:ns]) * Diagonal((taus./zs)[ns0:ns]))
+        exchange_weight[ns0:ns,3]   .= real.(adjoint((-im*freq_QL).*bsig) * (1.5*p_tot[:,ns0:ns] .- 0.5*p_par[:,ns0:ns])) * Diagonal(taus[ns0:ns])
     end
 
-    particle_weight[ns0:ns,:]   .= ky.*       (Diagonal(as[ns0:ns])*particle_weight[ns0:ns,:])./phi_norm
-    energy_weight[ns0:ns,:]     .= (1.5*ky).* (Diagonal((as.*taus)[ns0:ns])*energy_weight[ns0:ns,:])./phi_norm
-    stress_par_weight[ns0:ns,:] .= ky.*       (Diagonal((as.*mass.*vs)[ns0:ns])*stress_par_weight[ns0:ns,:])./phi_norm
-    stress_tor_weight[ns0:ns,:] .= ky.*sign_It_in.*(Diagonal((mass.*as.*vs)[ns0:ns])*stress_tor_weight[ns0:ns,:])./phi_norm
-    exchange_weight[ns0:ns,:]   .= (Diagonal(as[ns0:ns])*exchange_weight[ns0:ns,:])./phi_norm
+    particle_weight[:,ns0:ns]   .= ky.*       (particle_weight[:,ns0:ns]*Diagonal(as[ns0:ns]))./phi_norm
+    energy_weight[:,ns0:ns]     .= (1.5*ky).* (energy_weight[:,ns0:ns]*Diagonal((as.*taus)[ns0:ns]))./phi_norm
+    stress_par_weight[:,ns0:ns] .= ky.*       (stress_par_weight[:,ns0:ns]*Diagonal((as.*mass.*vs)[ns0:ns]))./phi_norm
+    stress_tor_weight[:,ns0:ns] .= ky.*sign_It_in.*(stress_tor_weight[:,ns0:ns]*Diagonal((mass.*as.*vs)[ns0:ns]))./phi_norm
+    exchange_weight[:,ns0:ns]   .= (exchange_weight[:,ns0:ns]*Diagonal(as[ns0:ns]))./phi_norm
 
 
     #  add the vpar shifts to the total  moments
     if(vpar_model_in==0)
         vpar_s = (alpha_mach_in*sign_It_in).*vpar
-        n[ns0:ns,:] = (vpar_s.*zs./taus)[ns0:ns] .* transpose(psi) ### outer product is slightly weird
-        u_par[ns0:ns,:] = (-(vpar_s./vs).*(zs./taus))[ns0:ns] .* transpose(phi)
-        p_par[ns0:ns,:] = (vpar_s.*(zs./taus))[ns0:ns] .* transpose(psi)
-        p_tot[ns0:ns,:] = (vpar_s.*(zs./taus))[ns0:ns] .* transpose(psi)
-        q_par[ns0:ns,:] = (-3 .*(vpar_s./vs).*(zs./taus))[ns0:ns] .* transpose(phi)
-        q_tot[ns0:ns,:] = (-(5/3).*(vpar_s./vs).*(zs./taus))[ns0:ns] .* transpose(phi)
+        n[:,ns0:ns] = psi .* transpose((vpar_s.*zs./taus)[ns0:ns]) ### outer product is slightly weird
+        u_par[:,ns0:ns] = phi .* transpose((-(vpar_s./vs).*(zs./taus))[ns0:ns])
+        p_par[:,ns0:ns] = psi .* transpose((vpar_s.*(zs./taus))[ns0:ns])
+        p_tot[:,ns0:ns] = psi .* transpose((vpar_s.*(zs./taus))[ns0:ns])
+        q_par[:,ns0:ns] = phi .* transpose((-3 .*(vpar_s./vs).*(zs./taus))[ns0:ns])
+        q_tot[:,ns0:ns] = phi .* transpose((-(5/3).*(vpar_s./vs).*(zs./taus))[ns0:ns])
     end
 
 
@@ -615,29 +611,30 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     T_weight = zeros(Float64, ns)
     U_weight = zeros(Float64, ns)
     Q_weight = zeros(Float64, ns)
-    temp = Matrix{ComplexF64}(undef, ns, nbasis)
+    temp = Matrix{ComplexF64}(undef, nbasis, ns)
 
     temp .= p_tot .- n
-    N_weight .= sum(real(n     .* conj(n)), dims=2)./phi_norm
-    T_weight .= sum(real(temp  .* conj(temp)), dims=2)./phi_norm
-    U_weight .= sum(real(u_par .* conj(u_par)), dims=2)./phi_norm
-    Q_weight .= sum(real(q_tot .* conj(q_tot)), dims=2)./phi_norm
+    N_weight .= vec(sum(abs.(n).^2, dims=1))./phi_norm
+    T_weight .= vec(sum(abs.(temp).^2, dims=1))./phi_norm
+    U_weight .= vec(sum(abs.(u_par).^2, dims=1))./phi_norm
+    Q_weight .= vec(sum(abs.(q_tot).^2, dims=1))./phi_norm
     v_weight = vnorm/phi_norm
     a_par_weight = psi_norm/phi_norm
     b_par_weight = bsig_norm/phi_norm
 
 
     #compute electron density-temperature phase
-    Ne_Te_cos = real(adjoint(n[1,:])*temp[1,:])
-    Ne_Te_sin = imag(adjoint(n[1,:])*temp[1,:])
+    Ne_Te_cos = real(adjoint(n[:,1])*temp[:,1])
+    Ne_Te_sin = imag(adjoint(n[:,1])*temp[:,1])
     Ne_Te_phase = atan(Ne_Te_sin,Ne_Te_cos)
 
     #compute species density-temperature phase
     Ns_Ts_phase = zeros(Float64, ns)
     Ns_Ts_cos = zeros(Float64, ns)
     Ns_Ts_sin = zeros(Float64, ns)
-    Ns_Ts_cos .= sum(real(conj(n[ns0:ns,:]).*temp[ns0:ns,:]), dims=2)
-    Ns_Ts_sin .= sum(imag(conj(n[ns0:ns,:]).*temp[ns0:ns,:]), dims=2)
+    
+    Ns_Ts_cos .= vec(sum(real(conj(n[:,ns0:ns]).*temp[:,ns0:ns]), dims=1))
+    Ns_Ts_sin .= vec(sum(imag(conj(n[:,ns0:ns]).*temp[:,ns0:ns]), dims=1))
     Ns_Ts_phase .= atan.(Ns_Ts_sin,Ns_Ts_cos)
 
     return Ns_Ts_phase, Ne_Te_phase,
