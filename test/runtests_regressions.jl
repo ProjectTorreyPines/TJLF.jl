@@ -31,7 +31,6 @@ for baseDirectory in testFolders
         end
         
         inputTJLF = readInput(baseDirectory)
-        println(baseDirectory)
         fluxesJulia = TJLF.run(inputTJLF)
         
         @test isapprox(sum(fluxesJulia),sum(fluxesFortran), rtol=1e-6)

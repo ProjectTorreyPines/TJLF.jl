@@ -181,31 +181,29 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     # get the fluxes for the most unstable modes
     if(inputs.IFLUX)
         #  initalize output to zero
-        maxmodes = 16 #### from tglf_modules
+        phi_bar_out = zeros(Float64, nmodes_out)
+        a_par_bar_out = zeros(Float64, nmodes_out)
+        b_par_bar_out = zeros(Float64, nmodes_out)
+        v_bar_out = zeros(Float64, nmodes_out)
+        ne_te_phase_out = zeros(Float64, nmodes_out)
 
-        phi_bar_out = zeros(Float64, maxmodes)
-        a_par_bar_out = zeros(Float64, maxmodes)
-        b_par_bar_out = zeros(Float64, maxmodes)
-        v_bar_out = zeros(Float64, maxmodes)
-        ne_te_phase_out = zeros(Float64, maxmodes)
+        field_weight_out = zeros(ComplexF64, 3, nbasis, nmodes_out)
 
-        field_weight_out = zeros(ComplexF64, 3, nbasis, maxmodes)
+        particle_QL_out = zeros(Float64, 3, ns, nmodes_out)
+        energy_QL_out = zeros(Float64, 3, ns, nmodes_out)
+        stress_par_QL_out = zeros(Float64, 3, ns, nmodes_out)
+        stress_tor_QL_out = zeros(Float64, 3, ns, nmodes_out)
+        exchange_QL_out = zeros(Float64, 3, ns, nmodes_out)
 
-        particle_QL_out = zeros(Float64, 3, ns, maxmodes)
-        energy_QL_out = zeros(Float64, 3, ns, maxmodes)
-        stress_par_QL_out = zeros(Float64, 3, ns, maxmodes)
-        stress_tor_QL_out = zeros(Float64, 3, ns, maxmodes)
-        exchange_QL_out = zeros(Float64, 3, ns, maxmodes)
-
-        N_QL_out = zeros(Float64, ns, maxmodes)
-        T_QL_out = zeros(Float64, ns, maxmodes)
-        U_QL_out = zeros(Float64, ns, maxmodes)
-        Q_QL_out = zeros(Float64, ns, maxmodes)
-        N_bar_out = zeros(Float64, ns, maxmodes)
-        T_bar_out = zeros(Float64, ns, maxmodes)
-        U_bar_out = zeros(Float64, ns, maxmodes)
-        Q_bar_out = zeros(Float64, ns, maxmodes)
-        Ns_Ts_phase_out = zeros(Float64, ns, maxmodes)
+        N_QL_out = zeros(Float64, ns, nmodes_out)
+        T_QL_out = zeros(Float64, ns, nmodes_out)
+        U_QL_out = zeros(Float64, ns, nmodes_out)
+        Q_QL_out = zeros(Float64, ns, nmodes_out)
+        N_bar_out = zeros(Float64, ns, nmodes_out)
+        T_bar_out = zeros(Float64, ns, nmodes_out)
+        U_bar_out = zeros(Float64, ns, nmodes_out)
+        Q_bar_out = zeros(Float64, ns, nmodes_out)
+        Ns_Ts_phase_out = zeros(Float64, ns, nmodes_out)
 
         wd_bar_out = zeros(Float64, nmodes_out)
         b0_bar_out = zeros(Float64, nmodes_out)
@@ -274,16 +272,19 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     phi2_bar = v_bar_out[imax]/v_QL_out[imax]
                 end
 
-                phi_bar_out .= phi2_bar
-                a_par_bar_out .= phi2_bar.*a_par_QL_out
-                b_par_bar_out .= phi2_bar.*b_par_QL_out
-
-                N_bar_out[ns0:ns, imax] = phi2_bar.*N_QL_out[ns0:ns, imax]
-                T_bar_out[ns0:ns, imax] = phi2_bar.*T_QL_out[ns0:ns, imax]
-                U_bar_out[ns0:ns, imax] = phi2_bar.*U_QL_out[ns0:ns, imax]
-                Q_bar_out[ns0:ns, imax] = phi2_bar.*Q_QL_out[ns0:ns, imax]
+                phi_bar_out[imax] = phi2_bar
+                
             end
         end
+        a_par_bar_out .= phi_bar_out.*a_par_QL_out
+        b_par_bar_out .= phi_bar_out.*b_par_QL_out
+
+        phi_bar_out_diagonal = Diagonal(phi_bar_out)
+
+        N_bar_out[ns0:ns, :] = N_QL_out[ns0:ns, :] * phi_bar_out_diagonal
+        T_bar_out[ns0:ns, :] = T_QL_out[ns0:ns, :] * phi_bar_out_diagonal
+        U_bar_out[ns0:ns, :] = U_QL_out[ns0:ns, :] * phi_bar_out_diagonal
+        Q_bar_out[ns0:ns, :] = Q_QL_out[ns0:ns, :] * phi_bar_out_diagonal
 
         # check for inward ballooing
         sum_modB_bar = sum(v_bar_out.*modB_bar_out)
@@ -543,14 +544,15 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     stress_par = zeros(ComplexF64, nbasis, ns, 2)
     stress_per = zeros(ComplexF64, nbasis, ns, 2)
 
-    stress_correction = 1.0
+    stress_correction = fill(1.0, ns-ns0+1)
     if(sat_rule_in==0)
         wp = (ky*abs(alpha_p_in)) .* aveH.hp1[ns0:ns,1,1].*vpar_shear./vs
-        stress_correction = (imag(freq_QL).+2.0.*wp)./(imag(freq_QL).+wp)
+        stress_correction .= (imag(freq_QL).+2.0.*wp)./(imag(freq_QL).+wp)
     end
+    stress_correction = Diagonal(stress_correction)
 
-    stress_par[:,ns0:ns,1] .= u_par[:,ns0:ns].*stress_correction
-    stress_par[:,ns0:ns,2] .= p_par[:,ns0:ns].*stress_correction
+    stress_par[:,ns0:ns,1] .= u_par[:,ns0:ns]*stress_correction
+    stress_par[:,ns0:ns,2] .= p_par[:,ns0:ns]*stress_correction
     stress_per[:,ns0:ns,1] .= ((im*ky).*ave.kx) * (1.5 .*p_tot[:,ns0:ns] .- 0.5 .*p_par[:,ns0:ns])   # (is,j) x (j,i)
     stress_per[:,ns0:ns,2] .= ((im*ky).*ave.kx) * (1.5 .*q_tot[:,ns0:ns] .- 0.5 .*q_par[:,ns0:ns])
 

@@ -7,8 +7,9 @@ using .TJLF
 # Read input.tglf
 #******************************************************************************************************
 # location for the input.tglf file
-baseDirectory = "../outputs/test_TM/simple_test/"
+# baseDirectory = "../outputs/test_TM/simple_test/"
 # baseDirectory = "../outputs/test_TM/exb_shear0/"
+baseDirectory = "../outputs/tglf_regression/tglf06/"
 
 inputTJLF = readInput(baseDirectory)
 
@@ -24,13 +25,13 @@ fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 sum_ky_spectrum(inputTJLF, satParams, ky_spect, eigenvalue[1,:,:], fluxes)
 
 
-@profview tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
-@profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# @profview tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# @profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 # using Profile
 # @profile tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 # @codewarning
-using BenchmarkTools
-@btime tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# using BenchmarkTools
+# @btime tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
 
 #*******************************************************************************************************
@@ -40,8 +41,8 @@ using BenchmarkTools
 using Plots
 
 # calls the fortran code as an executable
-# path = "./Fortran/tglf"
-# run(`$(path) $baseDirectory`)
+path = "./Fortran/tglf"
+run(`$(path) $baseDirectory`)
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
