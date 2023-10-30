@@ -265,13 +265,14 @@ if(new_matrix)then
         do j1=1,nmodes_in
           gamma_out(j1) = get_gamma_net(gamma_out(j1))
         enddo
+        write(*,*) gamma_out
       elseif(vexb_shear_s.ne.0.0)then
 ! use spectral shift model for second pass
        do j1=1,nmodes_in
           gamma_out(j1) = gamma_reference_kx0(j1)
           freq_out(j1) = freq_reference_kx0(j1)
         enddo
-      endif
+    endif
 !      
 !  get the fluxes for the most unstable modes
       if(iflux_in)then
@@ -706,7 +707,7 @@ if(new_matrix)then
         vnorm = vnorm/ABS(as(1)*zs(1))   ! normalize to electron charge density
       endif
     !  write(*,*) "vnorm =",vnorm !DSUN
-    !  stop "LS 702"
+     stop "LS 702"
 !
 !  compute the electromagnetic potentials
 !

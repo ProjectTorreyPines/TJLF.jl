@@ -165,12 +165,10 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         end
     end
 
-
-
     # apply quench rule
     if(alpha_quench_in!=0.0)
         for j1 = 1:nmodes_in
-            gamma_out[j1] = get_gamma_net(inputs, gamma_out[j1],vexb_shear_s)
+            gamma_out[j1] = get_gamma_net(inputs,vexb_shear_s,gamma_out[j1])
         end
     # use spectral shift model for second pass
     elseif(vexb_shear_s!=0.0)
