@@ -69,7 +69,15 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     return ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG
 end
 
-
+function outer!(Y, x, dvec, is)
+    _, M, N = size(Y)
+    for j in 1:N
+        for i in 1:M
+            Y[is, i, j] = sum(dvec[k] * x[i, k] * conj(x[j, k]) for k in eachindex(dvec))
+        end
+    end
+    return Y
+end
 
 
 #*************************************************************
@@ -88,7 +96,6 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     b2x = outputGeo.b2x
     wx = outputHermite.wx
     h = outputHermite.h[1:nbasis,:]
-
 
     hxn = zeros(Float64, ns, nx)
     hxp1 = zeros(Float64, ns, nx)
@@ -124,15 +131,17 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             #***************************************************************
             bb = taus*mass*(ky/zs)^2
             b = bb*b0x[i]/b2x[i]
-            hxn[is,i]    = FLR_Hn(fth,b)
+            b2 = b ^ 2
+            b25 = b ^ 2.5
+            hxn[is,i]    = FLR_Hn(fth, b; b2, b25)
             hxp1[is,i]   = hxn[is,i]
-            hxp3[is,i]   = FLR_dHp3(fth,b) + hxn[is,i]
+            hxp3[is,i]   = FLR_dHp3(fth, b; b2, b25) + hxn[is,i]
             hxr11[is,i]  = 3.0 * hxp1[is,i]
-            hxr13[is,i]  = FLR_dHr13(fth,b) + (5/3)*hxp1[is,i]
-            hxr33[is,i]  = FLR_dHr33(fth,b) + (5/3)*hxp3[is,i]
-            hxw113[is,i] = FLR_dHw113(fth,b)+ (7/3)*hxr11[is,i]
-            hxw133[is,i] = FLR_dHw133(fth,b)+ (7/3)*hxr13[is,i]
-            hxw333[is,i] = FLR_dHw333(fth,b)+ (7/3)*hxr33[is,i]
+            hxr13[is,i]  = FLR_dHr13(fth, b; b2, b25) + (5/3)*hxp1[is,i]
+            hxr33[is,i]  = FLR_dHr33(fth, b; b2, b25) + (5/3)*hxp3[is,i]
+            hxw113[is,i] = FLR_dHw113(fth, b; b2, b25)+ (7/3)*hxr11[is,i]
+            hxw133[is,i] = FLR_dHw133(fth, b; b2, b25)+ (7/3)*hxr13[is,i]
+            hxw333[is,i] = FLR_dHw333(fth, b; b2, b25)+ (7/3)*hxr33[is,i]
 
             #***************************************************************
             #   compute the average g- bessel functions
@@ -141,64 +150,101 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
                 fts = outputGeo.fts
                 ftx::Float64 = fts[is]
                 ft2 = ftx^2
-                gxn[is,i]    = FLR_Hn(ftx,b)
-                gxp1[is,i]   = FLR_dHp1(ftx,b)  + ft2*gxn[is,i]
-                gxp3[is,i]   = FLR_dHp3(ftx,b)  + gxn[is,i]
-                gxr11[is,i]  = FLR_dHr11(ftx,b) + 3*ft2*gxp1[is,i]
-                gxr13[is,i]  = FLR_dHr13(ftx,b) + (5/3)*gxp1[is,i]
-                gxr33[is,i]  = FLR_dHr33(ftx,b) + (5/3)*gxp3[is,i]
-                gxw113[is,i] = FLR_dHw113(ftx,b)+ (7/3)*gxr11[is,i]
-                gxw133[is,i] = FLR_dHw133(ftx,b)+ (7/3)*gxr13[is,i]
-                gxw333[is,i] = FLR_dHw333(ftx,b)+ (7/3)*gxr33[is,i]
+                gxn[is,i]    = FLR_Hn(ftx, b; b2, b25)
+                gxp1[is,i]   = FLR_dHp1(ftx, b; b2, b25)  + ft2*gxn[is,i]
+                gxp3[is,i]   = FLR_dHp3(ftx, b; b2, b25)  + gxn[is,i]
+                gxr11[is,i]  = FLR_dHr11(ftx, b; b2, b25) + 3*ft2*gxp1[is,i]
+                gxr13[is,i]  = FLR_dHr13(ftx, b; b2, b25) + (5/3)*gxp1[is,i]
+                gxr33[is,i]  = FLR_dHr33(ftx, b; b2, b25) + (5/3)*gxp3[is,i]
+                gxw113[is,i] = FLR_dHw113(ftx, b; b2, b25)+ (7/3)*gxr11[is,i]
+                gxw133[is,i] = FLR_dHw133(ftx, b; b2, b25)+ (7/3)*gxr13[is,i]
+                gxw333[is,i] = FLR_dHw333(ftx, b; b2, b25)+ (7/3)*gxr33[is,i]
 
             end
         end
     end
 
+    dvec = outputHermite._dvec
     for is = ns0:ns
-        aveH.hn[is,:,:]    .= h[1:nbasis,:] * Diagonal(hxn[is,:]   .*wx)   * h'
-        aveH.hp1[is,:,:]   .= h[1:nbasis,:] * Diagonal(hxp1[is,:]  .*wx)   * h'
-        aveH.hp3[is,:,:]   .= h[1:nbasis,:] * Diagonal(hxp3[is,:]  .*wx)   * h'
-        aveH.hr11[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr11[is,:] .*wx)   * h'
-        aveH.hr13[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr13[is,:] .*wx)   * h'
-        aveH.hr33[is,:,:]  .= h[1:nbasis,:] * Diagonal(hxr33[is,:] .*wx)   * h'
-        aveH.hw113[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw113[is,:].*wx)   * h'
-        aveH.hw133[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw133[is,:].*wx)   * h'
-        aveH.hw333[is,:,:] .= h[1:nbasis,:] * Diagonal(hxw333[is,:].*wx)   * h'
+        @views dvec .= hxn[is,:] .* wx
+        outer!(aveH.hn, h, dvec, is)
+        @views dvec .= hxp1[is,:] .* wx
+        outer!(aveH.hp1, h, dvec, is)
+        @views dvec .= hxp3[is,:] .* wx
+        outer!(aveH.hp3, h, dvec, is)
+        @views dvec .= hxr11[is,:] .* wx
+        outer!(aveH.hr11, h, dvec, is)
+        @views dvec .= hxr13[is,:] .* wx
+        outer!(aveH.hr13, h, dvec, is)
+        @views dvec .= hxr33[is,:] .* wx
+        outer!(aveH.hr33, h, dvec, is)
+        @views dvec .= hxw113[is,:] .* wx
+        outer!(aveH.hw113, h, dvec, is)
+        @views dvec .= hxw133[is,:] .* wx
+        outer!(aveH.hw133, h, dvec, is)
+        @views dvec .= hxw333[is,:] .* wx
+        outer!(aveH.hw333, h, dvec, is)
 
         if(nroot>6)
-            aveG.gn[is,:,:]    .= h * Diagonal(gxn[is,:]   .*wx)   * h'
-            aveG.gp1[is,:,:]   .= h * Diagonal(gxp1[is,:]  .*wx)   * h'
-            aveG.gp3[is,:,:]   .= h * Diagonal(gxp3[is,:]  .*wx)   * h'
-            aveG.gr11[is,:,:]  .= h * Diagonal(gxr11[is,:] .*wx)   * h'
-            aveG.gr13[is,:,:]  .= h * Diagonal(gxr13[is,:] .*wx)   * h'
-            aveG.gr33[is,:,:]  .= h * Diagonal(gxr33[is,:] .*wx)   * h'
-            aveG.gw113[is,:,:] .= h * Diagonal(gxw113[is,:].*wx)   * h'
-            aveG.gw133[is,:,:] .= h * Diagonal(gxw133[is,:].*wx)   * h'
-            aveG.gw333[is,:,:] .= h * Diagonal(gxw333[is,:].*wx)   * h'
+            @views dvec .= gxn[is,:] .* wx
+            outer!(aveG.gn, h, dvec, is)
+            @views dvec .= gxp1[is,:] .* wx
+            outer!(aveG.gp1, h, dvec, is)
+            @views dvec .= gxp3[is,:] .* wx
+            outer!(aveG.gp3, h, dvec, is)
+            @views dvec .= gxr11[is,:] .* wx
+            outer!(aveG.gr11, h, dvec, is)
+            @views dvec .= gxr13[is,:] .* wx
+            outer!(aveG.gr13, h, dvec, is)
+            @views dvec .= gxr33[is,:] .* wx
+            outer!(aveG.gr33, h, dvec, is)
+            @views dvec .= gxw113[is,:] .* wx
+            outer!(aveG.gw113, h, dvec, is)
+            @views dvec .= gxw133[is,:] .* wx
+            outer!(aveG.gw133, h, dvec, is)
+            @views dvec .= gxw333[is,:] .* wx
+            outer!(aveG.gw333, h, dvec, is)
         end
     end
 
-    aveH.hn[abs.(aveH.hn) .< zero_cut] .= 0
-    aveH.hp1[abs.(aveH.hp1) .< zero_cut] .= 0
-    aveH.hp3[abs.(aveH.hp3) .< zero_cut] .= 0
-    aveH.hr11[abs.(aveH.hr11) .< zero_cut] .= 0
-    aveH.hr13[abs.(aveH.hr13) .< zero_cut] .= 0
-    aveH.hr33[abs.(aveH.hr33) .< zero_cut] .= 0
-    aveH.hw113[abs.(aveH.hw113) .< zero_cut] .= 0
-    aveH.hw133[abs.(aveH.hw133) .< zero_cut] .= 0
-    aveH.hw333[abs.(aveH.hw333) .< zero_cut] .= 0
+    cut = abs.(aveH.hn) .< zero_cut
+    aveH.hn[cut] .= 0
+    cut .= abs.(aveH.hp1) .< zero_cut
+    aveH.hp1[cut] .= 0
+    cut .= abs.(aveH.hp3) .< zero_cut
+    aveH.hp3[cut] .= 0
+    cut .= abs.(aveH.hr11) .< zero_cut
+    aveH.hr11[cut] .= 0
+    cut .= abs.(aveH.hr13) .< zero_cut
+    aveH.hr13[cut] .= 0
+    cut .= abs.(aveH.hr33) .< zero_cut
+    aveH.hr33[cut] .= 0
+    cut .= abs.(aveH.hw113) .< zero_cut
+    aveH.hw113[cut] .= 0
+    cut .= abs.(aveH.hw133) .< zero_cut
+    aveH.hw133[cut] .= 0
+    cut .= abs.(aveH.hw333) .< zero_cut
+    aveH.hw333[cut] .= 0
 
     if(nroot>6)
-        aveG.gn[abs.(aveG.gn) .< zero_cut] .= 0
-        aveG.gp1[abs.(aveG.gp1) .< zero_cut] .= 0
-        aveG.gp3[abs.(aveG.gp3) .< zero_cut] .= 0
-        aveG.gr11[abs.(aveG.gr11) .< zero_cut] .= 0
-        aveG.gr13[abs.(aveG.gr13) .< zero_cut] .= 0
-        aveG.gr33[abs.(aveG.gr33) .< zero_cut] .= 0
-        aveG.gw113[abs.(aveG.gw113) .< zero_cut] .= 0
-        aveG.gw133[abs.(aveG.gw133) .< zero_cut] .= 0
-        aveG.gw333[abs.(aveG.gw333) .< zero_cut] .= 0
+        cut .= abs.(aveG.gn) .< zero_cut
+        aveG.gn[cut] .= 0
+        cut .= abs.(aveG.gp1) .< zero_cut
+        aveG.gp1[cut] .= 0
+        cut .= abs.(aveG.gp3) .< zero_cut
+        aveG.gp3[cut] .= 0
+        cut .= abs.(aveG.gr11) .< zero_cut
+        aveG.gr11[cut] .= 0
+        cut .= abs.(aveG.gr13) .< zero_cut
+        aveG.gr13[cut] .= 0
+        cut .= abs.(aveG.gr33) .< zero_cut
+        aveG.gr33[cut] .= 0
+        cut .= abs.(aveG.gw113) .< zero_cut
+        aveG.gw113[cut] .= 0
+        cut .= abs.(aveG.gw133) .< zero_cut
+        aveG.gw133[cut] .= 0
+        cut .= abs.(aveG.gw333) .< zero_cut
+        aveG.gw333[cut] .= 0
     end
 
 end
@@ -294,16 +340,26 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
         end
     end
 
-    ave.wdh[abs.(ave.wdh) .< zero_cut] .= 0.0
-    ave.wdg[abs.(ave.wdg) .< zero_cut] .= 0.0
-    ave.b0[abs.(ave.b0) .< zero_cut] .= 0.0
-    ave.lnB[abs.(ave.lnB) .< zero_cut] .= 0.0
-    ave.p0inv[abs.(ave.p0inv) .< zero_cut] .= 0.0
-    ave.p0[abs.(ave.p0) .< zero_cut] .= 0.0
-    ave.kx[abs.(ave.kx) .< zero_cut] .= 0.0
-    ave.c_tor_par[abs.(ave.c_tor_par) .< zero_cut] .= 0.0
-    ave.c_tor_per[abs.(ave.c_tor_per) .< zero_cut] .= 0.0
-    ave.c_par_par[abs.(ave.c_par_par) .< zero_cut] .= 0.0
+    cut = abs.(ave.wdh) .< zero_cut
+    ave.wdh[cut] .= 0.0
+    cut .= abs.(ave.wdg) .< zero_cut
+    ave.wdg[cut] .= 0.0
+    cut .= abs.(ave.b0) .< zero_cut
+    ave.b0[cut] .= 0.0
+    cut .= abs.(ave.lnB) .< zero_cut
+    ave.lnB[cut] .= 0.0
+    cut .= abs.(ave.p0inv) .< zero_cut
+    ave.p0inv[cut] .= 0.0
+    cut .= abs.(ave.p0) .< zero_cut
+    ave.p0[cut] .= 0.0
+    cut .= abs.(ave.kx) .< zero_cut
+    ave.kx[cut] .= 0.0
+    cut .= abs.(ave.c_tor_par) .< zero_cut
+    ave.c_tor_par[cut] .= 0.0
+    cut .= abs.(ave.c_tor_per) .< zero_cut
+    ave.c_tor_per[cut] .= 0.0
+    cut .= abs.(ave.c_par_par) .< zero_cut
+    ave.c_par_par[cut] .= 0.0
 
     ave.gradB .= (ave.kpar*ave.lnB) .- (ave.lnB*ave.kpar)
 
@@ -344,8 +400,6 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
     end
 
 end
-
-
 
 #***************************************************************
 #   compute the matricies modwdh and modwdg
@@ -427,7 +481,24 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 end
 
 
+function mult1!(C, A, B, Ctmp, Atmp, is)
+    Atmp .= @view A[is,:,:]
+    mul!(Ctmp, Atmp, B)
+    C[is,:,:] .= Ctmp
+end
 
+function mult2!(C, A, B, Ctmp, Btmp, is)
+    Btmp .= @view B[is,:,:]
+    mul!(Ctmp, A, Btmp)
+    C[is,:,:] .= Ctmp
+end
+
+function mult3!(C, A, B, Ctmp, Atmp, Btmp, is)
+    Atmp .= @view A[is,:,:]
+    Btmp .= @view B[is,:,:]
+    mul!(Ctmp, Atmp, Btmp)
+    C[is,:,:] .= Ctmp
+end
 
 
 #***************************************************************
@@ -437,22 +508,28 @@ function h_ratios!(inputs::InputTJLF{T}, aveH::AveH{T}) where T<:Real
 
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveH.hn)
+    Ctmp = zeros(eltype(aveH.ht1), nbasis, nbasis)
+    Atmp = zeros(eltype(aveH.hp1), nbasis, nbasis)
+    Btmp = zeros(eltype(aveH.hn), nbasis, nbasis)
+
     # compute matrix ratios
     for is = ns0:ns
         hninv = inv(aveH.hn[is,:,:])
         hp1inv = inv(aveH.hp1[is,:,:])
         hp3inv = inv(aveH.hp3[is,:,:])
 
-        aveH.ht1[is,:,:] .= aveH.hp1[is,:,:] * hninv
-        aveH.ht3[is,:,:] .= aveH.hp3[is,:,:] * hninv
-        aveH.hu1[is,:,:] .= aveH.hr11[is,:,:] * hp1inv
-        aveH.hu3[is,:,:] .= aveH.hr13[is,:,:] * hp1inv
-        aveH.hu33[is,:,:] .= aveH.hr33[is,:,:] * hp3inv
+        mult1!(aveH.ht1, aveH.hp1, hninv, Ctmp, Atmp, is)
+        mult1!(aveH.ht3, aveH.hp3, hninv, Ctmp, Atmp, is)
+        mult1!(aveH.hu1, aveH.hr11, hp1inv, Ctmp, Atmp, is)
+        mult1!(aveH.hu3, aveH.hr13, hp1inv, Ctmp, Atmp, is)
+        mult1!(aveH.hu33, aveH.hr33, hp3inv, Ctmp, Atmp, is)
 
-        aveH.hu3ht1[is,:,:]  .= aveH.hu3[is,:,:]  * aveH.ht1[is,:,:]
-        aveH.hu33ht1[is,:,:] .= aveH.hu33[is,:,:] * aveH.ht1[is,:,:]
-        aveH.hu3ht3[is,:,:]  .= aveH.hu3[is,:,:]  * aveH.ht3[is,:,:]
-        aveH.hu33ht3[is,:,:] .= aveH.hu33[is,:,:] * aveH.ht3[is,:,:]
+        mult3!(aveH.hu3ht1, aveH.hu3, aveH.ht1, Ctmp, Atmp, Btmp, is)
+        mult3!(aveH.hu33ht1, aveH.hu33, aveH.ht1, Ctmp, Atmp, Btmp, is)
+        mult3!(aveH.hu3ht3, aveH.hu3, aveH.ht3, Ctmp, Atmp, Btmp, is)
+        mult3!(aveH.hu33ht3, aveH.hu33, aveH.ht3, Ctmp, Atmp, Btmp, is)
     end
 
 end
@@ -466,18 +543,24 @@ function ave_hp0!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T}) where T<:Real
 
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveH.hn)
+    Ctmp = zeros(eltype(aveH.hnp0), nbasis, nbasis)
+    Atmp = zeros(eltype(aveH.hn), nbasis, nbasis)
+    Btmp = zeros(eltype(aveH.hp1p0), nbasis, nbasis)
+
     # compute matrix products
     for is = ns0:ns
-        aveH.hnp0[is,:,:]    .= aveH.hn[is,:,:]*ave.p0inv
-        aveH.hp1p0[is,:,:]   .= aveH.hp1[is,:,:]*ave.p0inv
-        aveH.hp3p0[is,:,:]   .= aveH.hp3[is,:,:]*ave.p0inv
-        aveH.hr11p0[is,:,:]  .= aveH.hr11[is,:,:]*ave.p0inv
-        aveH.hr13p0[is,:,:]  .= aveH.hr13[is,:,:]*ave.p0inv
-        aveH.hr33p0[is,:,:]  .= aveH.hr33[is,:,:]*ave.p0inv
+        mult1!(aveH.hnp0, aveH.hn, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hp1p0, aveH.hp1, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hp3p0, aveH.hp3, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hr11p0, aveH.hr11, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hr13p0, aveH.hr13, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hr33p0, aveH.hr33, ave.p0inv, Ctmp, Atmp, is)
 
-        aveH.c_tor_par_hp1p0[is,:,:]  .= ave.c_tor_par * aveH.hp1p0[is,:,:]
-        aveH.c_tor_par_hr11p0[is,:,:] .= ave.c_tor_par * aveH.hr11p0[is,:,:]
-        aveH.c_tor_par_hr13p0[is,:,:] .= ave.c_tor_par * aveH.hr13p0[is,:,:]
+        mult2!(aveH.c_tor_par_hp1p0, ave.c_tor_par, aveH.hp1p0, Ctmp, Btmp, is)
+        mult2!(aveH.c_tor_par_hr11p0, ave.c_tor_par, aveH.hr11p0, Ctmp, Btmp, is)
+        mult2!(aveH.c_tor_par_hr13p0, ave.c_tor_par, aveH.hr13p0, Ctmp, Btmp, is)
     end
 
 end
@@ -490,17 +573,22 @@ function ave_hb0!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T}) where T<:Real
 
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveH.hn)
+    Ctmp = zeros(eltype(aveH.hnb0), nbasis, nbasis)
+    Atmp = zeros(eltype(aveH.hn), nbasis, nbasis)
+
     # compute matrix products
     for is = ns0:ns
-        aveH.hnb0[is,:,:]     .= aveH.hn[is,:,:] * ave.b0inv
-        aveH.hp1b0[is,:,:]    .= aveH.hp1[is,:,:] * ave.b0inv
-        aveH.hp3b0[is,:,:]    .= aveH.hp3[is,:,:] * ave.b0inv
-        aveH.hr11b0[is,:,:]   .= aveH.hr11[is,:,:] * ave.b0inv
-        aveH.hr13b0[is,:,:]   .= aveH.hr13[is,:,:] * ave.b0inv
-        aveH.hr33b0[is,:,:]   .= aveH.hr33[is,:,:] * ave.b0inv
-        aveH.hw113b0[is,:,:]  .= aveH.hw113[is,:,:] * ave.b0inv
-        aveH.hw133b0[is,:,:]  .= aveH.hw133[is,:,:] * ave.b0inv
-        aveH.hw333b0[is,:,:]  .= aveH.hw333[is,:,:] * ave.b0inv
+        mult1!(aveH.hnb0, aveH.hn, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hp1b0, aveH.hp1, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hp3b0, aveH.hp3, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hr11b0, aveH.hr11, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hr13b0, aveH.hr13, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hr33b0, aveH.hr33, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hw113b0, aveH.hw113, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hw133b0, aveH.hw133, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveH.hw333b0, aveH.hw333, ave.b0inv, Ctmp, Atmp, is)
     end
 end
 
@@ -509,24 +597,27 @@ end
 #***************************************************************
 #   compute the products ave_h*ave_bpinv
 #***************************************************************
+
 function ave_hbp!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T}) where T<:Real
 
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
+    _, nbasis, _ = size(aveH.hnbp)
+    Ctmp = zeros(eltype(aveH.hnbp), nbasis, nbasis)
+    Atmp = zeros(eltype(aveH.hn), nbasis, nbasis)
     for is = ns0:ns
-        aveH.hnbp[is,:,:]     .= aveH.hn[is,:,:] * ave.bpinv
-        aveH.hp1bp[is,:,:]    .= aveH.hp1[is,:,:] * ave.bpinv
-        aveH.hp3bp[is,:,:]    .= aveH.hp3[is,:,:] * ave.bpinv
-        aveH.hr11bp[is,:,:]   .= aveH.hr11[is,:,:] * ave.bpinv
-        aveH.hr13bp[is,:,:]   .= aveH.hr13[is,:,:] * ave.bpinv
-        aveH.hr33bp[is,:,:]   .= aveH.hr33[is,:,:] * ave.bpinv
-        aveH.hw113bp[is,:,:]  .= aveH.hw113[is,:,:] * ave.bpinv
-        aveH.hw133bp[is,:,:]  .= aveH.hw133[is,:,:] * ave.bpinv
-        aveH.hw333bp[is,:,:]  .= aveH.hw333[is,:,:] * ave.bpinv
+        mult1!(aveH.hnbp, aveH.hn, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveH.hp1bp, aveH.hp1, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveH.hp3bp, aveH.hp3, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveH.hr11bp, aveH.hr11, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveH.hr13bp, aveH.hr13, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveH.hr33bp, aveH.hr33, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveH.hw113bp, aveH.hw113, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveH.hw133bp, aveH.hw133, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveH.hw333bp, aveH.hw333, ave.bpinv, Ctmp, Atmp, is)
     end
 end
-
 
 #***************************************************************
 #   compute the products ave_wd*ave_h
@@ -538,38 +629,42 @@ function wd_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T}) w
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
+    _, nbasis, _ = size(aveWH.wdhp1p0)
+    Ctmp = zeros(eltype(aveWH.wdhp1p0), nbasis, nbasis)
+    Btmp = zeros(eltype(aveH.hr11p0), nbasis, nbasis)
+
     for is = ns0:ns
 
-        aveWH.wdhp1p0[is,:,:]  .= ave.wdh * aveH.hp1p0[is,:,:]
-        aveWH.wdhr11p0[is,:,:] .= ave.wdh * aveH.hr11p0[is,:,:]
-        aveWH.wdhr13p0[is,:,:] .= ave.wdh * aveH.hr13p0[is,:,:]
-        aveWH.wdht1[is,:,:]    .= ave.wdh * aveH.ht1[is,:,:]
-        aveWH.wdht3[is,:,:]    .= ave.wdh * aveH.ht3[is,:,:]
-        aveWH.wdhu1[is,:,:]    .= ave.wdh * aveH.hu1[is,:,:]
-        aveWH.wdhu3[is,:,:]    .= ave.wdh * aveH.hu3[is,:,:]
-        aveWH.wdhu3ht1[is,:,:] .= ave.wdh * aveH.hu3ht1[is,:,:]
-        aveWH.wdhu3ht3[is,:,:] .= ave.wdh * aveH.hu3ht3[is,:,:]
-        aveWH.wdhu33[is,:,:]   .= ave.wdh * aveH.hu33[is,:,:]
-        aveWH.wdhu33ht1[is,:,:].= ave.wdh * aveH.hu33ht1[is,:,:]
-        aveWH.wdhu33ht3[is,:,:].= ave.wdh * aveH.hu33ht3[is,:,:]
-        aveWH.modwdht1[is,:,:] .= ave.modwdh * aveH.ht1[is,:,:]
-        aveWH.modwdht3[is,:,:] .= ave.modwdh * aveH.ht3[is,:,:]
-        aveWH.modwdhu1[is,:,:] .= ave.modwdh * aveH.hu1[is,:,:]
-        aveWH.modwdhu3[is,:,:] .= ave.modwdh * aveH.hu3[is,:,:]
-        aveWH.modwdhu3ht1[is,:,:] .= ave.modwdh * aveH.hu3ht1[is,:,:]
-        aveWH.modwdhu3ht3[is,:,:] .= ave.modwdh * aveH.hu3ht3[is,:,:]
-        aveWH.modwdhu33[is,:,:]   .= ave.modwdh * aveH.hu33[is,:,:]
-        aveWH.modwdhu33ht1[is,:,:].= ave.modwdh * aveH.hu33ht1[is,:,:]
-        aveWH.modwdhu33ht3[is,:,:].= ave.modwdh * aveH.hu33ht3[is,:,:]
+        mult2!(aveWH.wdhp1p0, ave.wdh, aveH.hr11p0, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhr11p0, ave.wdh, aveH.hr11p0, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhr13p0, ave.wdh, aveH.hr13p0, Ctmp, Btmp, is)
+        mult2!(aveWH.wdht1, ave.wdh, aveH.ht1, Ctmp, Btmp, is)
+        mult2!(aveWH.wdht3, ave.wdh, aveH.ht3, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhu1, ave.wdh, aveH.hu1, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhu3, ave.wdh, aveH.hu3, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhu3ht1, ave.wdh, aveH.hu3ht1, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhu3ht3, ave.wdh, aveH.hu3ht3, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhu33, ave.wdh, aveH.hu33, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhu33ht1, ave.wdh, aveH.hu33ht1, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhu33ht3, ave.wdh, aveH.hu33ht3, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdht1, ave.modwdh, aveH.ht1, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdht3, ave.modwdh, aveH.ht3, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdhu1, ave.modwdh, aveH.hu1, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdhu3, ave.modwdh, aveH.hu3, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdhu3ht1, ave.modwdh, aveH.hu3ht1, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdhu3ht3, ave.modwdh, aveH.hu3ht3, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdhu33, ave.modwdh, aveH.hu33, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdhu33ht1, ave.modwdh, aveH.hu33ht1, Ctmp, Btmp, is)
+        mult2!(aveWH.modwdhu33ht3, ave.modwdh, aveH.hu33ht3, Ctmp, Btmp, is)
 
         if(use_bper_in)
-            aveWH.wdhp1b0[is,:,:]  .= ave.wdh * aveH.hp1b0[is,:,:]
-            aveWH.wdhr11b0[is,:,:] .= ave.wdh * aveH.hr11b0[is,:,:]
-            aveWH.wdhr13b0[is,:,:] .= ave.wdh * aveH.hr13b0[is,:,:]
+            mult2!(aveWH.wdhp1b0, ave.wdh, aveH.hp1b0, Ctmp, Btmp, is)
+            mult2!(aveWH.wdhr11b0, ave.wdh, aveH.hr11b0, Ctmp, Btmp, is)
+            mult2!(aveWH.wdhr13b0, ave.wdh, aveH.hr13b0, Ctmp, Btmp, is)
             if(vpar_model_in==0)
-                aveWH.wdhp1bp[is,:,:]  .= ave.wdh * aveH.hp1bp[is,:,:]
-                aveWH.wdhr11bp[is,:,:] .= ave.wdh * aveH.hr11bp[is,:,:]
-                aveWH.wdhr13bp[is,:,:] .= ave.wdh * aveH.hr13bp[is,:,:]
+                mult2!(aveWH.wdhp1bp, ave.wdh, aveH.hp1bp, Ctmp, Btmp, is)
+                mult2!(aveWH.wdhr11bp, ave.wdh, aveH.hr11bp, Ctmp, Btmp, is)
+                mult2!(aveWH.wdhr13bp, ave.wdh, aveH.hr13bp, Ctmp, Btmp, is)
             end
         end
     end
@@ -589,26 +684,31 @@ function kpar_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveKH::AveKH) wh
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
+    _, nbasis, _ = size(aveH.hnp0)
+    Ctmp = zeros(eltype(aveKH.kparhnp0), nbasis, nbasis)
+    Atmp = zeros(eltype(aveH.hnp0), nbasis, nbasis)
+    Btmp = zeros(eltype(ave.kpar_eff), nbasis, nbasis)
+
     for is = ns0:ns
-        aveKH.kparhnp0[is,:,:]  .= aveH.hnp0[is,:,:] * ave.kpar
-        aveKH.kparhp1p0[is,:,:] .= aveH.hp1p0[is,:,:] * ave.kpar
-        aveKH.kparhp3p0[is,:,:] .= aveH.hp3p0[is,:,:] * ave.kpar
-        aveKH.kparhu1[is,:,:]   .= aveH.hu1[is,:,:] * ave.kpar_eff[is,:,:]
-        aveKH.kparhu3[is,:,:]   .= aveH.hu3[is,:,:] * ave.kpar_eff[is,:,:]
-        aveKH.kparht1[is,:,:]   .= ave.kpar_eff[is,:,:] * aveH.ht1[is,:,:]
-        aveKH.kparht3[is,:,:]   .= ave.kpar_eff[is,:,:] * aveH.ht3[is,:,:]
-        aveKH.modkparhu1[is,:,:].= ave.modkpar_eff[is,:,:] * aveH.hu1[is,:,:]
-        aveKH.modkparhu3[is,:,:].= ave.modkpar_eff[is,:,:] * aveH.hu3[is,:,:]
+        mult1!(aveKH.kparhnp0, aveH.hnp0, ave.kpar, Ctmp, Atmp, is)
+        mult1!(aveKH.kparhp1p0, aveH.hp1p0, ave.kpar, Ctmp, Atmp, is)
+        mult1!(aveKH.kparhp3p0, aveH.hp3p0, ave.kpar, Ctmp, Atmp, is)
+        mult3!(aveKH.kparhu1, aveH.hu1, ave.kpar_eff, Ctmp, Atmp, Btmp, is)
+        mult3!(aveKH.kparhu3, aveH.hu3, ave.kpar_eff, Ctmp, Atmp, Btmp, is)
+        mult3!(aveKH.kparht1, ave.kpar_eff, aveH.ht1, Ctmp, Btmp, Atmp, is)
+        mult3!(aveKH.kparht3, ave.kpar_eff, aveH.ht3, Ctmp, Btmp, Atmp, is)
+        mult3!(aveKH.modkparhu1, ave.modkpar_eff, aveH.hu1, Ctmp, Btmp, Atmp, is)
+        mult3!(aveKH.modkparhu3, ave.modkpar_eff, aveH.hu3, Ctmp, Btmp, Atmp, is)
         if(use_bper_in)
-            aveKH.kparhp1b0[is,:,:]  .= aveH.hp1b0[is,:,:] * ave.kpar
-            aveKH.kparhr11b0[is,:,:] .= aveH.hr11b0[is,:,:] * ave.kpar
-            aveKH.kparhr13b0[is,:,:] .= aveH.hr13b0[is,:,:] * ave.kpar
+            mult1!(aveKH.kparhp1b0, aveH.hp1b0, ave.kpar, Ctmp, Atmp, is)
+            mult1!(aveKH.kparhr11b0, aveH.hr11b0, ave.kpar, Ctmp, Atmp, is)
+            mult1!(aveKH.kparhr13b0, aveH.hr13b0, ave.kpar, Ctmp, Atmp, is)
             if(vpar_model_in==0)
-                aveKH.kparhnbp[is,:,:]  .= aveH.hnbp[is,:,:] * ave.kpar
-                aveKH.kparhp3bp[is,:,:] .= aveH.hp3bp[is,:,:] * ave.kpar
-                aveKH.kparhp1bp[is,:,:] .= aveH.hp1bp[is,:,:] * ave.kpar
-                aveKH.kparhr11bp[is,:,:].= aveH.hr11bp[is,:,:] * ave.kpar
-                aveKH.kparhr13bp[is,:,:].= aveH.hr13bp[is,:,:] * ave.kpar
+                mult1!(aveKH.kparhnbp, aveH.hnbp, ave.kpar, Ctmp, Atmp, is)
+                mult1!(aveKH.kparhp3bp, aveH.hp3bp, ave.kpar, Ctmp, Atmp, is)
+                mult1!(aveKH.kparhp1bp, aveH.hp1bp, ave.kpar, Ctmp, Atmp, is)
+                mult1!(aveKH.kparhr11bp, aveH.hr11bp, ave.kpar, Ctmp, Atmp, is)
+                mult1!(aveKH.kparhr13bp, aveH.hr13bp, ave.kpar, Ctmp, Atmp, is)
             end
         end
     end
@@ -621,21 +721,28 @@ end
 function g_ratios!(inputs::InputTJLF{T}, aveG::AveG{T}) where T<:Real
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveG.gn)
+    Ctmp = zeros(eltype(aveG.gt1), nbasis, nbasis)
+    Atmp = zeros(eltype(aveG.gp1), nbasis, nbasis)
+    Btmp = zeros(eltype(aveG.gt1), nbasis, nbasis)
+
     # compute matrix ratios
     for is = ns0:ns
         gninv = inv(aveG.gn[is,:,:])
         gp1inv = inv(aveG.gp1[is,:,:])
         gp3inv = inv(aveG.gp3[is,:,:])
 
-        aveG.gt1[is,:,:]  .= aveG.gp1[is,:,:] *gninv
-        aveG.gt3[is,:,:]  .= aveG.gp3[is,:,:] *gninv
-        aveG.gu1[is,:,:]  .= aveG.gr11[is,:,:]*gp1inv
-        aveG.gu3[is,:,:]  .= aveG.gr13[is,:,:]*gp1inv
-        aveG.gu33[is,:,:] .= aveG.gr33[is,:,:]*gp3inv
-        aveG.gu3gt1[is,:,:]  .= aveG.gu3[is,:,:]*aveG.gt1[is,:,:]
-        aveG.gu3gt3[is,:,:]  .= aveG.gu3[is,:,:]*aveG.gt3[is,:,:]
-        aveG.gu33gt1[is,:,:] .= aveG.gu33[is,:,:]*aveG.gt1[is,:,:]
-        aveG.gu33gt3[is,:,:] .= aveG.gu33[is,:,:]*aveG.gt3[is,:,:]
+        mult1!(aveG.gt1, aveG.gp1, gninv, Ctmp, Atmp, is)
+        mult1!(aveG.gt3, aveG.gp3, gninv, Ctmp, Atmp, is)
+        mult1!(aveG.gu1, aveG.gr11, gp1inv, Ctmp, Atmp, is)
+        mult1!(aveG.gu3, aveG.gr13, gp1inv, Ctmp, Atmp, is)
+        mult1!(aveG.gu33, aveG.gr33, gp3inv, Ctmp, Atmp, is)
+
+        mult3!(aveG.gu3gt1, aveG.gu3, aveG.gt1, Ctmp, Atmp, Btmp, is)
+        mult3!(aveG.gu3gt3, aveG.gu3, aveG.gt3, Ctmp, Atmp, Btmp, is)
+        mult3!(aveG.gu33gt1, aveG.gu33, aveG.gt1, Ctmp, Atmp, Btmp, is)
+        mult3!(aveG.gu33gt3, aveG.gu33, aveG.gt3, Ctmp, Atmp, Btmp, is)
     end
 
 end
@@ -646,17 +753,23 @@ end
 function ave_gp0!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T}) where T<:Real
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
-    for is = ns0:ns
-        aveG.gnp0[is,:,:] .= aveG.gn[is,:,:]*ave.p0inv
-        aveG.gp1p0[is,:,:] .= aveG.gp1[is,:,:]*ave.p0inv
-        aveG.gp3p0[is,:,:] .= aveG.gp3[is,:,:]*ave.p0inv
-        aveG.gr11p0[is,:,:] .= aveG.gr11[is,:,:]*ave.p0inv
-        aveG.gr13p0[is,:,:] .= aveG.gr13[is,:,:]*ave.p0inv
-        aveG.gr33p0[is,:,:] .= aveG.gr33[is,:,:]*ave.p0inv
 
-        aveG.c_tor_par_gp1p0[is,:,:] .= ave.c_tor_par*aveG.gp1p0[is,:,:]
-        aveG.c_tor_par_gr11p0[is,:,:] .= ave.c_tor_par*aveG.gr11p0[is,:,:]
-        aveG.c_tor_par_gr13p0[is,:,:] .= ave.c_tor_par*aveG.gr13p0[is,:,:]
+    _, nbasis, _ = size(aveG.gnp0)
+    Ctmp = zeros(eltype(aveG.gnp0), nbasis, nbasis)
+    Atmp = zeros(eltype(aveG.gn), nbasis, nbasis)
+    Btmp = zeros(eltype(aveG.gp1p0), nbasis, nbasis)
+
+    for is = ns0:ns
+        mult1!(aveG.gnp0, aveG.gn, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gp1p0, aveG.gp1, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gp3p0, aveG.gp3, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gr11p0, aveG.gr11, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gr13p0, aveG.gr13, ave.p0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gr33p0, aveG.gr33, ave.p0inv, Ctmp, Atmp, is)
+
+        mult2!(aveG.c_tor_par_gp1p0, ave.c_tor_par, aveG.gp1p0, Ctmp, Btmp, is)
+        mult2!(aveG.c_tor_par_gr11p0, ave.c_tor_par, aveG.gr11p0, Ctmp, Btmp, is)
+        mult2!(aveG.c_tor_par_gr13p0, ave.c_tor_par, aveG.gr13p0, Ctmp, Btmp, is)
     end
 end
 
@@ -666,16 +779,21 @@ end
 function ave_gb0!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T}) where T<:Real
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveG.gnb0)
+    Ctmp = zeros(eltype(aveG.gnb0), nbasis, nbasis)
+    Atmp = zeros(eltype(aveG.gn), nbasis, nbasis)
+
     for is = ns0:ns
-        aveG.gnb0[is,:,:]    = aveG.gn[is,:,:]  *ave.b0inv
-        aveG.gp1b0[is,:,:]   = aveG.gp1[is,:,:] *ave.b0inv
-        aveG.gp3b0[is,:,:]   = aveG.gp3[is,:,:] *ave.b0inv
-        aveG.gr11b0[is,:,:]  = aveG.gr11[is,:,:]*ave.b0inv
-        aveG.gr13b0[is,:,:]  = aveG.gr13[is,:,:]*ave.b0inv
-        aveG.gr33b0[is,:,:]  = aveG.gr33[is,:,:]*ave.b0inv
-        aveG.gw113b0[is,:,:] = aveG.gw113[is,:,:]*ave.b0inv
-        aveG.gw133b0[is,:,:] = aveG.gw133[is,:,:]*ave.b0inv
-        aveG.gw333b0[is,:,:] = aveG.gw333[is,:,:]*ave.b0inv
+        mult1!(aveG.gnb0, aveG.gn, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gp1b0, aveG.gp1, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gp3b0, aveG.gp3, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gr11b0, aveG.gr11, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gr13b0, aveG.gr13, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gr33b0, aveG.gr33, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gw113b0, aveG.gw113, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gw133b0, aveG.gw133, ave.b0inv, Ctmp, Atmp, is)
+        mult1!(aveG.gw333b0, aveG.gw333, ave.b0inv, Ctmp, Atmp, is)
     end
 end
 
@@ -685,16 +803,21 @@ end
 function ave_gbp!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T}) where T<:Real
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveG.gnbp)
+    Ctmp = zeros(eltype(aveG.gnbp), nbasis, nbasis)
+    Atmp = zeros(eltype(aveG.gn), nbasis, nbasis)
+
     for is = ns0:ns
-        aveG.gnbp[is,:,:]    = aveG.gn[is,:,:]*ave.bpinv
-        aveG.gp1bp[is,:,:]   = aveG.gp1[is,:,:]*ave.bpinv
-        aveG.gp3bp[is,:,:]   = aveG.gp3[is,:,:]*ave.bpinv
-        aveG.gr11bp[is,:,:]  = aveG.gr11[is,:,:]*ave.bpinv
-        aveG.gr13bp[is,:,:]  = aveG.gr13[is,:,:]*ave.bpinv
-        aveG.gr33bp[is,:,:]  = aveG.gr33[is,:,:]*ave.bpinv
-        aveG.gw113bp[is,:,:] = aveG.gw113[is,:,:]*ave.bpinv
-        aveG.gw133bp[is,:,:] = aveG.gw133[is,:,:]*ave.bpinv
-        aveG.gw333bp[is,:,:] = aveG.gw333[is,:,:]*ave.bpinv
+        mult1!(aveG.gnbp, aveG.gn, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveG.gp1bp, aveG.gp1, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveG.gp3bp, aveG.gp3, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveG.gr11bp, aveG.gr11, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveG.gr13bp, aveG.gr13, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveG.gr33bp, aveG.gr33, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveG.gw113bp, aveG.gw113, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveG.gw133bp, aveG.gw133, ave.bpinv, Ctmp, Atmp, is)
+        mult1!(aveG.gw333bp, aveG.gw333, ave.bpinv, Ctmp, Atmp, is)
     end
 end
 
@@ -707,36 +830,41 @@ function wd_g!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveWG::AveWG{T}) w
     vpar_model_in = inputs.VPAR_MODEL
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveWG.wdgp1p0)
+    Ctmp = zeros(eltype(aveWG.wdgp1p0), nbasis, nbasis)
+    Btmp = zeros(eltype(aveG.gp1p0), nbasis, nbasis)
+
     for is = ns0:ns
-        aveWG.wdgp1p0[is,:,:] = ave.wdg*aveG.gp1p0[is,:,:]
-        aveWG.wdgr11p0[is,:,:] = ave.wdg*aveG.gr11p0[is,:,:]
-        aveWG.wdgr13p0[is,:,:] = ave.wdg*aveG.gr13p0[is,:,:]
-        aveWG.wdgu1[is,:,:] = ave.wdg*aveG.gu1[is,:,:]
-        aveWG.wdgu3[is,:,:] = ave.wdg*aveG.gu3[is,:,:]
-        aveWG.wdgu33[is,:,:] = ave.wdg*aveG.gu33[is,:,:]
-        aveWG.wdgt1[is,:,:]= ave.wdg*aveG.gt1[is,:,:]
-        aveWG.wdgt3[is,:,:]= ave.wdg*aveG.gt3[is,:,:]
-        aveWG.wdgu3gt1[is,:,:]= ave.wdg*aveG.gu3gt1[is,:,:]
-        aveWG.wdgu3gt3[is,:,:]= ave.wdg*aveG.gu3gt3[is,:,:]
-        aveWG.wdgu33gt1[is,:,:]= ave.wdg*aveG.gu33gt1[is,:,:]
-        aveWG.wdgu33gt3[is,:,:]= ave.wdg*aveG.gu33gt3[is,:,:]
-        aveWG.modwdgu1[is,:,:]= ave.modwdg*aveG.gu1[is,:,:]
-        aveWG.modwdgu3[is,:,:]= ave.modwdg*aveG.gu3[is,:,:]
-        aveWG.modwdgu33[is,:,:]= ave.modwdg*aveG.gu33[is,:,:]
-        aveWG.modwdgt1[is,:,:]= ave.modwdg*aveG.gt1[is,:,:]
-        aveWG.modwdgt3[is,:,:]= ave.modwdg*aveG.gt3[is,:,:]
-        aveWG.modwdgu3gt1[is,:,:]= ave.modwdg*aveG.gu3gt1[is,:,:]
-        aveWG.modwdgu3gt3[is,:,:]= ave.modwdg*aveG.gu3gt3[is,:,:]
-        aveWG.modwdgu33gt1[is,:,:]= ave.modwdg*aveG.gu33gt1[is,:,:]
-        aveWG.modwdgu33gt3[is,:,:]= ave.modwdg*aveG.gu33gt3[is,:,:]
+        mult2!(aveWG.wdgp1p0, ave.wdg, aveG.gp1p0, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgr11p0, ave.wdg, aveG.gr11p0, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgr13p0, ave.wdg, aveG.gr13p0, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgu1, ave.wdg, aveG.gu1, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgu3, ave.wdg, aveG.gu3, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgu33, ave.wdg, aveG.gu33, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgt1, ave.wdg, aveG.gt1, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgt3, ave.wdg, aveG.gt3, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgu3gt1, ave.wdg, aveG.gu3gt1, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgu3gt3, ave.wdg, aveG.gu3gt3, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgu33gt1, ave.wdg, aveG.gu33gt1, Ctmp, Btmp, is)
+        mult2!(aveWG.wdgu33gt3, ave.wdg, aveG.gu33gt3, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgu1, ave.modwdg, aveG.gu1, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgu3, ave.modwdg, aveG.gu3, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgu33, ave.modwdg, aveG.gu33, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgt1, ave.modwdg, aveG.gt1, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgt3, ave.modwdg, aveG.gt3, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgu3gt1, ave.modwdg, aveG.gu3gt1, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgu3gt3, ave.modwdg, aveG.gu3gt3, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgu33gt1, ave.modwdg, aveG.gu33gt1, Ctmp, Btmp, is)
+        mult2!(aveWG.modwdgu33gt3, ave.modwdg, aveG.gu33gt3, Ctmp, Btmp, is)
         if(use_bper_in)
-            aveWG.wdgp1b0[is,:,:]   =     ave.wdg*aveG.gp1b0[is,:,:]
-            aveWG.wdgr11b0[is,:,:] = ave.wdg*aveG.gr11b0[is,:,:]
-            aveWG.wdgr13b0[is,:,:] =  ave.wdg*aveG.gr13b0[is,:,:]
+            mult2!(aveWG.wdgp1b0, ave.wdg, aveG.gp1b0, Ctmp, Btmp, is)
+            mult2!(aveWG.wdgr11b0, ave.wdg, aveG.gr11b0, Ctmp, Btmp, is)
+            mult2!(aveWG.wdgr13b0, ave.wdg, aveG.gr13b0, Ctmp, Btmp, is)
             if(vpar_model_in==0)
-                aveWG.wdgp1bp[is,:,:] = ave.wdg*aveG.gp1bp[is,:,:]
-                aveWG.wdgr11bp[is,:,:] = ave.wdg*aveG.gr11bp[is,:,:]
-                aveWG.wdgr13bp[is,:,:] = ave.wdg*aveG.gr13bp[is,:,:]
+                mult2!(aveWG.wdgp1bp, ave.wdg, aveG.gp1bp, Ctmp, Btmp, is)
+                mult2!(aveWG.wdgr11bp, ave.wdg, aveG.gr11bp, Ctmp, Btmp, is)
+                mult2!(aveWG.wdgr13bp, ave.wdg, aveG.gr13bp, Ctmp, Btmp, is)
             end
         end
     end
@@ -753,26 +881,31 @@ function kpar_g!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveKG::AveKG) wh
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
+    _, nbasis, _ = size(aveKG.kpargnp0)
+    Ctmp = zeros(eltype(aveKG.kpargnp0), nbasis, nbasis)
+    Atmp = zeros(eltype(aveG.gnp0), nbasis, nbasis)
+    Btmp = zeros(eltype(ave.kpar_eff), nbasis, nbasis)
+
     for is = ns0:ns
-        aveKG.kpargnp0[is,:,:]  .= aveG.gnp0[is,:,:] * ave.kpar
-        aveKG.kpargp1p0[is,:,:] .= aveG.gp1p0[is,:,:] * ave.kpar
-        aveKG.kpargp3p0[is,:,:] .= aveG.gp3p0[is,:,:] * ave.kpar
-        aveKG.kpargu1[is,:,:]   .= aveG.gu1[is,:,:] * ave.kpar_eff[is,:,:]
-        aveKG.kpargu3[is,:,:]   .= aveG.gu3[is,:,:] * ave.kpar_eff[is,:,:]
-        aveKG.kpargt1[is,:,:]   .= ave.kpar_eff[is,:,:] * aveG.gt1[is,:,:]
-        aveKG.kpargt3[is,:,:]   .= ave.kpar_eff[is,:,:] * aveG.gt3[is,:,:]
-        aveKG.modkpargu1[is,:,:].= ave.modkpar_eff[is,:,:] * aveG.gu1[is,:,:]
-        aveKG.modkpargu3[is,:,:].= ave.modkpar_eff[is,:,:] * aveG.gu3[is,:,:]
+        mult1!(aveKG.kpargnp0, aveG.gnp0, ave.kpar, Ctmp, Atmp, is)
+        mult1!(aveKG.kpargp1p0, aveG.gp1p0, ave.kpar, Ctmp, Atmp, is)
+        mult1!(aveKG.kpargp3p0, aveG.gp3p0, ave.kpar, Ctmp, Atmp, is)
+        mult3!(aveKG.kpargu1, aveG.gu1, ave.kpar_eff, Ctmp, Atmp, Btmp, is)
+        mult3!(aveKG.kpargu3, aveG.gu3, ave.kpar_eff, Ctmp, Atmp, Btmp, is)
+        mult3!(aveKG.kpargt1, ave.kpar_eff, aveG.gt1, Ctmp, Btmp, Atmp, is)
+        mult3!(aveKG.kpargt3, ave.kpar_eff, aveG.gt3, Ctmp, Btmp, Atmp, is)
+        mult3!(aveKG.modkpargu1, ave.modkpar_eff, aveG.gu1, Ctmp, Btmp, Atmp, is)
+        mult3!(aveKG.modkpargu3, ave.modkpar_eff, aveG.gu3, Ctmp, Btmp, Atmp, is)
         if(use_bper_in)
-            aveKG.kpargp1b0[is,:,:]  .= aveG.gp1b0[is,:,:] * ave.kpar
-            aveKG.kpargr11b0[is,:,:] .= aveG.gr11b0[is,:,:] * ave.kpar
-            aveKG.kpargr13b0[is,:,:] .= aveG.gr13b0[is,:,:] * ave.kpar
+            mult1!(aveKG.kpargp1b0, aveG.gp1b0, ave.kpar, Ctmp, Atmp, is)
+            mult1!(aveKG.kpargr11b0, aveG.gr11b0, ave.kpar, Ctmp, Atmp, is)
+            mult1!(aveKG.kpargr13b0, aveG.gr13b0, ave.kpar, Ctmp, Atmp, is)
             if(vpar_model_in==0)
-                aveKG.kpargnbp[is,:,:]  .= aveG.gnbp[is,:,:] * ave.kpar
-                aveKG.kpargp3bp[is,:,:] .= aveG.gp3bp[is,:,:] * ave.kpar
-                aveKG.kpargp1bp[is,:,:] .= aveG.gp1bp[is,:,:] * ave.kpar
-                aveKG.kpargr11bp[is,:,:].= aveG.gr11bp[is,:,:] * ave.kpar
-                aveKG.kpargr13bp[is,:,:].= aveG.gr13bp[is,:,:] * ave.kpar
+                mult1!(aveKG.kpargnbp, aveG.gnbp, ave.kpar, Ctmp, Atmp, is)
+                mult1!(aveKG.kpargp3bp, aveG.gp3bp, ave.kpar, Ctmp, Atmp, is)
+                mult1!(aveKG.kpargp1bp, aveG.gp1bp, ave.kpar, Ctmp, Atmp, is)
+                mult1!(aveKG.kpargr11bp, aveG.gr11bp, ave.kpar, Ctmp, Atmp, is)
+                mult1!(aveKG.kpargr13bp, aveG.gr13bp, ave.kpar, Ctmp, Atmp, is)
             end
         end
     end

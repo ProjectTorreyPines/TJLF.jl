@@ -17,34 +17,34 @@ mutable struct InputTJLF{T<:Real}
     UNITS::String
 
     USE_TRANSPORT_MODEL::Union{Bool,Missing}
-    USE_BPER::Union{Bool,Missing} 
-    USE_BPAR::Union{Bool,Missing} 
-    USE_MHD_RULE::Union{Bool,Missing} 
-    USE_BISECTION::Union{Bool,Missing} 
-    USE_INBOARD_DETRAPPED::Union{Bool,Missing} 
-    USE_AVE_ION_GRID::Union{Bool,Missing} 
-    NEW_EIKONAL::Union{Bool,Missing} 
-    FIND_WIDTH::Union{Bool,Missing} 
-    IFLUX::Union{Bool,Missing} 
-    ADIABATIC_ELEC::Union{Bool,Missing} 
+    USE_BPER::Union{Bool,Missing}
+    USE_BPAR::Union{Bool,Missing}
+    USE_MHD_RULE::Union{Bool,Missing}
+    USE_BISECTION::Union{Bool,Missing}
+    USE_INBOARD_DETRAPPED::Union{Bool,Missing}
+    USE_AVE_ION_GRID::Union{Bool,Missing}
+    NEW_EIKONAL::Union{Bool,Missing}
+    FIND_WIDTH::Union{Bool,Missing}
+    IFLUX::Union{Bool,Missing}
+    ADIABATIC_ELEC::Union{Bool,Missing}
 
-    GEOMETRY_FLAG::Union{Int,Missing} 
-    SAT_RULE::Union{Int,Missing} 
-    NS::Union{Int,Missing} 
-    NMODES::Union{Int,Missing} 
-    NWIDTH::Union{Int,Missing} 
-    NBASIS_MAX::Union{Int,Missing} 
-    NBASIS_MIN::Union{Int,Missing} 
-    NXGRID::Union{Int,Missing} 
-    NKY::Union{Int,Missing} 
-    KYGRID_MODEL::Union{Int,Missing} 
-    XNU_MODEL::Union{Int,Missing} 
-    VPAR_MODEL::Union{Int,Missing} 
-    B_MODEL_SA::Union{Int,Missing} 
-    FT_MODEL_SA::Union{Int,Missing} 
-    VPAR_SHEAR_MODEL::Union{Int,Missing} 
-    IBRANCH::Union{Int,Missing} 
-    WRITE_WAVEFUNCTION_FLAG::Union{Int,Missing} 
+    GEOMETRY_FLAG::Union{Int,Missing}
+    SAT_RULE::Union{Int,Missing}
+    NS::Union{Int,Missing}
+    NMODES::Union{Int,Missing}
+    NWIDTH::Union{Int,Missing}
+    NBASIS_MAX::Union{Int,Missing}
+    NBASIS_MIN::Union{Int,Missing}
+    NXGRID::Union{Int,Missing}
+    NKY::Union{Int,Missing}
+    KYGRID_MODEL::Union{Int,Missing}
+    XNU_MODEL::Union{Int,Missing}
+    VPAR_MODEL::Union{Int,Missing}
+    B_MODEL_SA::Union{Int,Missing}
+    FT_MODEL_SA::Union{Int,Missing}
+    VPAR_SHEAR_MODEL::Union{Int,Missing}
+    IBRANCH::Union{Int,Missing}
+    WRITE_WAVEFUNCTION_FLAG::Union{Int,Missing}
 
     # SPECIES::Vector{Species{T}} = Vector{Species{T}}()
     ZS::Vector{T}
@@ -61,7 +61,7 @@ mutable struct InputTJLF{T<:Real}
     SIGN_BT::T
     SIGN_IT::T
     KY::T
-    
+
     VEXB::T
     VEXB_SHEAR::T
     BETAE::T
@@ -106,7 +106,7 @@ mutable struct InputTJLF{T<:Real}
     ALPHA_SA::T
     XWELL_SA::T
     THETA0_SA::T
-    
+
     DAMP_PSI::T
     DAMP_SIG::T
     WDIA_TRAPPED::T
@@ -122,7 +122,7 @@ mutable struct InputTJLF{T<:Real}
 
 
     function InputTJLF{T}(ns::Int) where T<:Real
-        
+
         new("",
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
@@ -146,7 +146,12 @@ struct OutputHermite{T<:Real}
     x::Vector{T}
     wx::Vector{T}
     h::Matrix{T}
-    
+    _dvec::Vector{T}
+end
+
+function OutputHermite(x, wx, h)
+    _dvec = similar(wx)
+    return OutputHermite(x, wx, h, _dvec)
 end
 
 ##########################################################
@@ -160,7 +165,7 @@ struct OutputGeometry{T<:Real}
     fts::Vector{T}
 
     kxx::Vector{T}
-    
+
     wdx::Vector{T}
     wdpx::Vector{T}
 
@@ -170,7 +175,7 @@ struct OutputGeometry{T<:Real}
     cx_tor_par::Vector{T}
     cx_tor_per::Vector{T}
     cx_par_par::Vector{T}
-    
+
 end
 
 struct SaturationParameters{T<:Real}
@@ -202,7 +207,7 @@ struct SaturationParameters{T<:Real}
     costheta_p_geo::Vector{T}
 
     theta::Vector{T}
-    
+
 end
 
 
@@ -234,8 +239,8 @@ mutable struct Ave{T<:Real}
 
     kpar::Matrix{T}
     modkpar::Matrix{T}
-    kpar_eff::Array{ComplexF64}
-    modkpar_eff::Array{ComplexF64}
+    kpar_eff::Array{ComplexF64,3}
+    modkpar_eff::Array{ComplexF64,3}
 
     function Ave{T}(ns::Int, nbasis::Int) where T<:Real
         kx = zeros(T, nbasis, nbasis)
@@ -272,55 +277,55 @@ end
 mutable struct AveH{T<:Real}
 
     # average h-bessel functions
-    hn::Array{T}
-    hp1::Array{T}
-    hp3::Array{T}
-    hr11::Array{T}
-    hr13::Array{T}
-    hr33::Array{T}
-    hw113::Array{T}
-    hw133::Array{T}
-    hw333::Array{T}
+    hn::Array{T,3}
+    hp1::Array{T,3}
+    hp3::Array{T,3}
+    hr11::Array{T,3}
+    hr13::Array{T,3}
+    hr33::Array{T,3}
+    hw113::Array{T,3}
+    hw133::Array{T,3}
+    hw333::Array{T,3}
 
-    ht1::Array{T}
-    ht3::Array{T}
-    hu1::Array{T}
-    hu3::Array{T}
-    hu33::Array{T}
-    hu3ht1::Array{T}
-    hu33ht1::Array{T}
-    hu3ht3::Array{T}
-    hu33ht3::Array{T}
+    ht1::Array{T,3}
+    ht3::Array{T,3}
+    hu1::Array{T,3}
+    hu3::Array{T,3}
+    hu33::Array{T,3}
+    hu3ht1::Array{T,3}
+    hu33ht1::Array{T,3}
+    hu3ht3::Array{T,3}
+    hu33ht3::Array{T,3}
 
-    hnp0::Array{T}
-    hp1p0::Array{T}
-    hp3p0::Array{T}
-    hr11p0::Array{T}
-    hr13p0::Array{T}
-    hr33p0::Array{T}
-    c_tor_par_hp1p0::Array{T}
-    c_tor_par_hr11p0::Array{T}
-    c_tor_par_hr13p0::Array{T}
+    hnp0::Array{T,3}
+    hp1p0::Array{T,3}
+    hp3p0::Array{T,3}
+    hr11p0::Array{T,3}
+    hr13p0::Array{T,3}
+    hr33p0::Array{T,3}
+    c_tor_par_hp1p0::Array{T,3}
+    c_tor_par_hr11p0::Array{T,3}
+    c_tor_par_hr13p0::Array{T,3}
 
-    hnb0::Array{T}
-    hp1b0::Array{T}
-    hp3b0::Array{T}
-    hr11b0::Array{T}
-    hr13b0::Array{T}
-    hr33b0::Array{T}
-    hw113b0::Array{T}
-    hw133b0::Array{T}
-    hw333b0::Array{T}
+    hnb0::Array{T,3}
+    hp1b0::Array{T,3}
+    hp3b0::Array{T,3}
+    hr11b0::Array{T,3}
+    hr13b0::Array{T,3}
+    hr33b0::Array{T,3}
+    hw113b0::Array{T,3}
+    hw133b0::Array{T,3}
+    hw333b0::Array{T,3}
 
-    hnbp::Array{T}
-    hp1bp::Array{T}
-    hp3bp::Array{T}
-    hr11bp::Array{T}
-    hr13bp::Array{T}
-    hr33bp::Array{T}
-    hw113bp::Array{T}
-    hw133bp::Array{T}
-    hw333bp::Array{T}
+    hnbp::Array{T,3}
+    hp1bp::Array{T,3}
+    hp3bp::Array{T,3}
+    hr11bp::Array{T,3}
+    hr13bp::Array{T,3}
+    hr33bp::Array{T,3}
+    hw113bp::Array{T,3}
+    hw133bp::Array{T,3}
+    hw333bp::Array{T,3}
 
     function AveH{T}(ns::Int, nbasis::Int) where T<:Real
         hn = zeros(T, ns, nbasis, nbasis)
@@ -384,36 +389,36 @@ end
 
 mutable struct AveWH{T<:Real}
 
-    wdhp1p0::Array{T}
-    wdhr11p0::Array{T}
-    wdhr13p0::Array{T}
-    wdht1::Array{T}
-    wdht3::Array{T}
-    wdhu1::Array{T}
-    wdhu3::Array{T}
-    wdhu3ht1::Array{T}
-    wdhu3ht3::Array{T}
-    wdhu33::Array{T}
-    wdhu33ht1::Array{T}
-    wdhu33ht3::Array{T}
+    wdhp1p0::Array{T,3}
+    wdhr11p0::Array{T,3}
+    wdhr13p0::Array{T,3}
+    wdht1::Array{T,3}
+    wdht3::Array{T,3}
+    wdhu1::Array{T,3}
+    wdhu3::Array{T,3}
+    wdhu3ht1::Array{T,3}
+    wdhu3ht3::Array{T,3}
+    wdhu33::Array{T,3}
+    wdhu33ht1::Array{T,3}
+    wdhu33ht3::Array{T,3}
 
-    modwdht1::Array{T}
-    modwdht3::Array{T}
-    modwdhu1::Array{T}
-    modwdhu3::Array{T}
-    modwdhu3ht1::Array{T}
-    modwdhu3ht3::Array{T}
-    modwdhu33::Array{T}
-    modwdhu33ht1::Array{T}
-    modwdhu33ht3::Array{T}
+    modwdht1::Array{T,3}
+    modwdht3::Array{T,3}
+    modwdhu1::Array{T,3}
+    modwdhu3::Array{T,3}
+    modwdhu3ht1::Array{T,3}
+    modwdhu3ht3::Array{T,3}
+    modwdhu33::Array{T,3}
+    modwdhu33ht1::Array{T,3}
+    modwdhu33ht3::Array{T,3}
 
-    wdhp1b0::Array{T}
-    wdhr11b0::Array{T}
-    wdhr13b0::Array{T}
+    wdhp1b0::Array{T,3}
+    wdhr11b0::Array{T,3}
+    wdhr13b0::Array{T,3}
 
-    wdhp1bp::Array{T}
-    wdhr11bp::Array{T}
-    wdhr13bp::Array{T}
+    wdhp1bp::Array{T,3}
+    wdhr11bp::Array{T,3}
+    wdhr13bp::Array{T,3}
 
     function AveWH{T}(ns::Int, nbasis::Int) where T<:Real
         wdhp1p0 = zeros(T, ns, nbasis, nbasis)
@@ -461,25 +466,25 @@ end
 
 mutable struct AveKH
 
-    kparhnp0::Array{ComplexF64}
-    kparhp1p0::Array{ComplexF64}
-    kparhp3p0::Array{ComplexF64}
-    kparhu1::Array{ComplexF64}
-    kparhu3::Array{ComplexF64}
-    kparht1::Array{ComplexF64}
-    kparht3::Array{ComplexF64}
-    modkparhu1::Array{ComplexF64}
-    modkparhu3::Array{ComplexF64}
+    kparhnp0::Array{ComplexF64,3}
+    kparhp1p0::Array{ComplexF64,3}
+    kparhp3p0::Array{ComplexF64,3}
+    kparhu1::Array{ComplexF64,3}
+    kparhu3::Array{ComplexF64,3}
+    kparht1::Array{ComplexF64,3}
+    kparht3::Array{ComplexF64,3}
+    modkparhu1::Array{ComplexF64,3}
+    modkparhu3::Array{ComplexF64,3}
 
-    kparhp1b0::Array{ComplexF64}
-    kparhr11b0::Array{ComplexF64}
-    kparhr13b0::Array{ComplexF64}
+    kparhp1b0::Array{ComplexF64,3}
+    kparhr11b0::Array{ComplexF64,3}
+    kparhr13b0::Array{ComplexF64,3}
 
-    kparhnbp::Array{ComplexF64}
-    kparhp3bp::Array{ComplexF64}
-    kparhp1bp::Array{ComplexF64}
-    kparhr11bp::Array{ComplexF64}
-    kparhr13bp::Array{ComplexF64}
+    kparhnbp::Array{ComplexF64,3}
+    kparhp3bp::Array{ComplexF64,3}
+    kparhp1bp::Array{ComplexF64,3}
+    kparhr11bp::Array{ComplexF64,3}
+    kparhr13bp::Array{ComplexF64,3}
 
     function AveKH(ns::Int, nbasis::Int)
         kparhnp0 = zeros(ComplexF64, ns, nbasis, nbasis)
@@ -495,7 +500,7 @@ mutable struct AveKH
         kparhp1b0 = zeros(ComplexF64, ns, nbasis, nbasis)
         kparhr11b0 = zeros(ComplexF64, ns, nbasis, nbasis)
         kparhr13b0 = zeros(ComplexF64, ns, nbasis, nbasis)
-                
+
         kparhnbp = zeros(ComplexF64, ns, nbasis, nbasis)
         kparhp3bp = zeros(ComplexF64, ns, nbasis, nbasis)
         kparhp1bp = zeros(ComplexF64, ns, nbasis, nbasis)
@@ -514,55 +519,55 @@ end
 mutable struct AveG{T<:Real}
 
     # average g-bessel functions
-    gn::Array{T}
-    gp1::Array{T}
-    gp3::Array{T}
-    gr11::Array{T}
-    gr13::Array{T}
-    gr33::Array{T}
-    gw113::Array{T}
-    gw133::Array{T}
-    gw333::Array{T}
+    gn::Array{T,3}
+    gp1::Array{T,3}
+    gp3::Array{T,3}
+    gr11::Array{T,3}
+    gr13::Array{T,3}
+    gr33::Array{T,3}
+    gw113::Array{T,3}
+    gw133::Array{T,3}
+    gw333::Array{T,3}
 
-    gt1::Array{T}
-    gt3::Array{T}
-    gu1::Array{T}
-    gu3::Array{T}
-    gu33::Array{T}
-    gu3gt1::Array{T}
-    gu3gt3::Array{T}
-    gu33gt1::Array{T}
-    gu33gt3::Array{T}
+    gt1::Array{T,3}
+    gt3::Array{T,3}
+    gu1::Array{T,3}
+    gu3::Array{T,3}
+    gu33::Array{T,3}
+    gu3gt1::Array{T,3}
+    gu3gt3::Array{T,3}
+    gu33gt1::Array{T,3}
+    gu33gt3::Array{T,3}
 
-    gnp0::Array{T}
-    gp1p0::Array{T}
-    gp3p0::Array{T}
-    gr11p0::Array{T}
-    gr13p0::Array{T}
-    gr33p0::Array{T}
-    c_tor_par_gp1p0::Array{T}
-    c_tor_par_gr11p0::Array{T}   
-    c_tor_par_gr13p0::Array{T}
+    gnp0::Array{T,3}
+    gp1p0::Array{T,3}
+    gp3p0::Array{T,3}
+    gr11p0::Array{T,3}
+    gr13p0::Array{T,3}
+    gr33p0::Array{T,3}
+    c_tor_par_gp1p0::Array{T,3}
+    c_tor_par_gr11p0::Array{T,3}
+    c_tor_par_gr13p0::Array{T,3}
 
-    gnb0::Array{T}
-    gp1b0::Array{T}
-    gp3b0::Array{T}
-    gr11b0::Array{T}
-    gr13b0::Array{T}
-    gr33b0::Array{T}
-    gw113b0::Array{T}
-    gw133b0::Array{T}
-    gw333b0::Array{T}
+    gnb0::Array{T,3}
+    gp1b0::Array{T,3}
+    gp3b0::Array{T,3}
+    gr11b0::Array{T,3}
+    gr13b0::Array{T,3}
+    gr33b0::Array{T,3}
+    gw113b0::Array{T,3}
+    gw133b0::Array{T,3}
+    gw333b0::Array{T,3}
 
-    gnbp::Array{T}
-    gp1bp::Array{T}
-    gp3bp::Array{T}
-    gr11bp::Array{T}
-    gr13bp::Array{T}
-    gr33bp::Array{T}
-    gw113bp::Array{T}
-    gw133bp::Array{T}
-    gw333bp::Array{T}
+    gnbp::Array{T,3}
+    gp1bp::Array{T,3}
+    gp3bp::Array{T,3}
+    gr11bp::Array{T,3}
+    gr13bp::Array{T,3}
+    gr33bp::Array{T,3}
+    gw113bp::Array{T,3}
+    gw133bp::Array{T,3}
+    gw333bp::Array{T,3}
 
     function AveG{T}(ns::Int, nbasis::Int) where T<:Real
         gn = zeros(T, ns, nbasis, nbasis)
@@ -592,7 +597,7 @@ mutable struct AveG{T<:Real}
         gr13p0 = zeros(T, ns, nbasis, nbasis)
         gr33p0 = zeros(T, ns, nbasis, nbasis)
         c_tor_par_gp1p0 = zeros(T, ns, nbasis, nbasis)
-        c_tor_par_gr11p0 = zeros(T, ns, nbasis, nbasis)   
+        c_tor_par_gr11p0 = zeros(T, ns, nbasis, nbasis)
         c_tor_par_gr13p0 = zeros(T, ns, nbasis, nbasis)
 
         gnb0 = zeros(T, ns, nbasis, nbasis)
@@ -628,36 +633,36 @@ end
 
 mutable struct AveWG{T<:Real}
 
-    wdgp1p0::Array{T}
-    wdgr11p0::Array{T}
-    wdgr13p0::Array{T}
-    wdgu1::Array{T}
-    wdgu3::Array{T}
-    wdgu33::Array{T}
-    wdgt1::Array{T}
-    wdgt3::Array{T}
-    wdgu3gt1::Array{T}
-    wdgu3gt3::Array{T}
-    wdgu33gt1::Array{T}
-    wdgu33gt3::Array{T}
+    wdgp1p0::Array{T,3}
+    wdgr11p0::Array{T,3}
+    wdgr13p0::Array{T,3}
+    wdgu1::Array{T,3}
+    wdgu3::Array{T,3}
+    wdgu33::Array{T,3}
+    wdgt1::Array{T,3}
+    wdgt3::Array{T,3}
+    wdgu3gt1::Array{T,3}
+    wdgu3gt3::Array{T,3}
+    wdgu33gt1::Array{T,3}
+    wdgu33gt3::Array{T,3}
 
-    modwdgu1::Array{T}
-    modwdgu3::Array{T}
-    modwdgu33::Array{T}
-    modwdgt1::Array{T}
-    modwdgt3::Array{T}
-    modwdgu3gt1::Array{T}
-    modwdgu3gt3::Array{T}
-    modwdgu33gt1::Array{T}
-    modwdgu33gt3::Array{T}
+    modwdgu1::Array{T,3}
+    modwdgu3::Array{T,3}
+    modwdgu33::Array{T,3}
+    modwdgt1::Array{T,3}
+    modwdgt3::Array{T,3}
+    modwdgu3gt1::Array{T,3}
+    modwdgu3gt3::Array{T,3}
+    modwdgu33gt1::Array{T,3}
+    modwdgu33gt3::Array{T,3}
 
-    wdgp1b0::Array{T}
-    wdgr11b0::Array{T}
-    wdgr13b0::Array{T}
+    wdgp1b0::Array{T,3}
+    wdgr11b0::Array{T,3}
+    wdgr13b0::Array{T,3}
 
-    wdgp1bp::Array{T}
-    wdgr11bp::Array{T}
-    wdgr13bp::Array{T}
+    wdgp1bp::Array{T,3}
+    wdgr11bp::Array{T,3}
+    wdgr13bp::Array{T,3}
 
     function AveWG{T}(ns::Int, nbasis::Int) where T<:Real
         wdgp1p0 = zeros(T, ns, nbasis, nbasis)
@@ -702,25 +707,25 @@ end
 
 mutable struct AveKG
 
-    kpargnp0::Array{ComplexF64}
-    kpargp1p0::Array{ComplexF64}
-    kpargp3p0::Array{ComplexF64}
-    kpargu1::Array{ComplexF64}
-    kpargu3::Array{ComplexF64}
-    kpargt1::Array{ComplexF64}
-    kpargt3::Array{ComplexF64}
-    modkpargu1::Array{ComplexF64}
-    modkpargu3::Array{ComplexF64}
+    kpargnp0::Array{ComplexF64,3}
+    kpargp1p0::Array{ComplexF64,3}
+    kpargp3p0::Array{ComplexF64,3}
+    kpargu1::Array{ComplexF64,3}
+    kpargu3::Array{ComplexF64,3}
+    kpargt1::Array{ComplexF64,3}
+    kpargt3::Array{ComplexF64,3}
+    modkpargu1::Array{ComplexF64,3}
+    modkpargu3::Array{ComplexF64,3}
 
-    kpargp1b0::Array{ComplexF64}
-    kpargr11b0::Array{ComplexF64}
-    kpargr13b0::Array{ComplexF64}
+    kpargp1b0::Array{ComplexF64,3}
+    kpargr11b0::Array{ComplexF64,3}
+    kpargr13b0::Array{ComplexF64,3}
 
-    kpargnbp::Array{ComplexF64}
-    kpargp3bp::Array{ComplexF64}
-    kpargp1bp::Array{ComplexF64}
-    kpargr11bp::Array{ComplexF64}
-    kpargr13bp::Array{ComplexF64}
+    kpargnbp::Array{ComplexF64,3}
+    kpargp3bp::Array{ComplexF64,3}
+    kpargp1bp::Array{ComplexF64,3}
+    kpargr11bp::Array{ComplexF64,3}
+    kpargr13bp::Array{ComplexF64,3}
 
     function AveKG(ns::Int, nbasis::Int)
         kpargnp0 = zeros(ComplexF64, ns, nbasis, nbasis)
@@ -736,7 +741,7 @@ mutable struct AveKG
         kpargp1b0 = zeros(ComplexF64, ns, nbasis, nbasis)
         kpargr11b0 = zeros(ComplexF64, ns, nbasis, nbasis)
         kpargr13b0 = zeros(ComplexF64, ns, nbasis, nbasis)
-                
+
         kpargnbp = zeros(ComplexF64, ns, nbasis, nbasis)
         kpargp3bp = zeros(ComplexF64, ns, nbasis, nbasis)
         kpargp1bp = zeros(ComplexF64, ns, nbasis, nbasis)

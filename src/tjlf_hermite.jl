@@ -101,5 +101,5 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
         end
     end
 
-    return OutputHermite{Float64}(x,wx,h)
+    return OutputHermite(x,wx,h)
 end
