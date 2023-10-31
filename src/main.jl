@@ -9,7 +9,7 @@ using .TJLF
 # location for the input.tglf file
 # baseDirectory = "../outputs/test_TM/simple_test/"
 # baseDirectory = "../outputs/test_TM/exb_shear0/"
-baseDirectory = "../outputs/tglf_regression/tglf06/"
+baseDirectory = "../outputs/tglf_regression/tglf05/"
 
 inputTJLF = readInput(baseDirectory)
 
@@ -41,8 +41,8 @@ sum_ky_spectrum(inputTJLF, satParams, ky_spect, eigenvalue[1,:,:], fluxes)
 using Plots
 
 # calls the fortran code as an executable
-path = "./Fortran/tglf"
-run(`$(path) $baseDirectory`)
+# path = "./Fortran/tglf"
+# run(`$(path) $baseDirectory`)
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
@@ -58,26 +58,22 @@ for line in lines[7:length(lines)]
 
 end
 QLw = reshape(ql, (ntype, nky, nmodes, nfield, nspecies))
-QL_data = permutedims(QLw,(2,3,5,4,1))
-particle_QL = QL_data[:, :, :, :, 1]
-energy_QL = QL_data[:, :, :, :, 2]
-toroidal_stress_QL = QL_data[:, :, :, :, 3]
-parallel_stress_QL = QL_data[:, :, :, :, 4]
-exchange_QL = QL_data[:, :, :, :, 5]
+QL_data = permutedims(QLw,(4,5,3,2,1)) # (nf,ns,nm,nky,ntype)
 
-plot(ky_spect, particle_QL[:,1,1,1], label="Fortran")
+# (nf,ns,nm,nky,ntype)
+plot(ky_spect, QL_data[1,1,1,:,1], label="Fortran")
 plot!(ky_spect, fluxes[1,1,1,:,1], label="Julia", title="particle flux")
 
-plot(ky_spect, energy_QL[:,1,1,1], label="Fortran")
-plot!(ky_spect, fluxes[1,1,1,:,2], label="Julia", title="energy flux")
+plot(ky_spect, QL_data[2,1,1,:,2], label="Fortran")
+plot!(ky_spect, fluxes[2,1,1,:,2], label="Julia", title="energy flux")
 
-plot(ky_spect, exchange_QL[:,1,1,1], label="Fortran")
+plot(ky_spect, QL_data[1,1,1,:,5], label="Fortran")
 plot!(ky_spect, fluxes[1,1,1,:,5], label="Julia", title="exchange flux")
 
-plot(ky_spect, toroidal_stress_QL[:,1,1,1], label="Fortran", title="toroidal stress")
-plot!(ky_spect, fluxes[1,1,1,:,3], label="Julia", title="toroidal stress",linestyle=:dash)
+plot(ky_spect, QL_data[2,2,1,:,3], label="Fortran", title="toroidal stress")
+plot!(ky_spect, fluxes[2,2,1,:,3], label="Julia", title="toroidal stress",linestyle=:dash)
 
-plot(ky_spect, parallel_stress_QL[:,1,1,1], label="Fortran", title="parallel stress")
+plot(ky_spect, QL_data[1,1,1,:,4], label="Fortran", title="parallel stress")
 plot!(ky_spect, fluxes[1,1,1,:,4], label="Julia", title="parallel stress",linestyle=:dash)
 
 

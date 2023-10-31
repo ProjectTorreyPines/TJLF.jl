@@ -707,7 +707,7 @@ if(new_matrix)then
         vnorm = vnorm/ABS(as(1)*zs(1))   ! normalize to electron charge density
       endif
     !  write(*,*) "vnorm =",vnorm !DSUN
-     stop "LS 702"
+    !  stop "LS 702"
 !
 !  compute the electromagnetic potentials
 !
@@ -898,9 +898,11 @@ if(new_matrix)then
           exchange_weight(is,j) = as(is)*exchange_weight(is,j)/phi_norm
         enddo
       enddo
-    !   write(*,*) particle_weight
-    !   write(*,*) ave_c_tor_per
-    !   stop "LS 895"
+    !   if(ky.ge.0.7)then
+    !     write(*,*) vnorm
+    !     write(*,*)"phi_norm =",phi_norm !DSUN
+    !   write(*,*) stress_tor_weight
+    !   endif
 !
 !   add the vpar shifts to the total  moments
 !

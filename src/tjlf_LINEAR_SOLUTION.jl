@@ -497,10 +497,10 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     U0 = sum((alpha_mach_in*sign_It_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
     phi .= sum(ave.p0inv * (n[:,ns0:ns]*Diagonal((as.*zs)[ns0:ns])), dims=2)
     if(inputs.USE_BPER)
-        psi .= (betae_psi .*     sum(ave.b0inv * (u_par[:,ns0:ns]*Diagonal((as.*zs.*vs)[ns0:ns])), dims=1))
+        psi .= (betae_psi .*     sum(ave.b0inv * (u_par[:,ns0:ns]*Diagonal((as.*zs.*vs)[ns0:ns])), dims=2))
         if(vpar_model_in==0)
-            phi .= phi .+   (U0*betae_psi)  .* sum(ave.bpinv * (u_par[:,ns0:ns]*Diagonal((as.*zs.*vs)[ns0:ns])), dims=1)
-            psi .= psi .-   (U0*betae_psi)  .* sum(ave.bpinv * (n[:,ns0:ns]*Diagonal((as.*zs)[ns0:ns])), dims=1)
+            phi .= phi .+   (U0*betae_psi)  .* sum(ave.bpinv * (u_par[:,ns0:ns]*Diagonal((as.*zs.*vs)[ns0:ns])), dims=2)
+            psi .= psi .-   (U0*betae_psi)  .* sum(ave.bpinv * (n[:,ns0:ns]*Diagonal((as.*zs)[ns0:ns])), dims=2)
         end
     end
     if(inputs.USE_BPAR)
@@ -565,7 +565,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     ### real() with an im in it is funky
     #### CHECK THIS PLEASE
     particle_weight[1,ns0:ns]   .= vec(real.(im.*adjoint(phi)*n[:,ns0:ns]))
-    energy_weight[1,ns0:ns,1]     .= vec(real.(im.*adjoint(phi)*p_tot[:,ns0:ns]))
+    energy_weight[1,ns0:ns]     .= vec(real.(im.*adjoint(phi)*p_tot[:,ns0:ns]))
     stress_par_weight[1,ns0:ns] .= vec(real.(im.* adjoint(phi)* (ave.c_par_par * stress_par[:,ns0:ns,1])))
     stress_tor_weight[1,ns0:ns] .= vec(real.(im.* adjoint(phi)* (ave.c_tor_par * stress_par[:,ns0:ns,1]
                                                               .+ ave.c_tor_per * stress_per[:,ns0:ns,1])))
@@ -573,16 +573,16 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
 
     if(inputs.USE_BPER)
-        particle_weight[ns0:ns,2]   .= - Diagonal(vs[ns0:ns])      * real.(im.* adjoint(psi) * u_par[:,ns0:ns])
-        energy_weight[ns0:ns,2]     .= - (Diagonal(vs[ns0:ns])     * real.(im.* adjoint(psi) * q_tot[:,ns0:ns])
-                                      .+ Diagonal((zs.*vs)[ns0:ns])* real.((im*freq_QL).* adjoint(psi) * u_par[:,ns0:ns]))
-        stress_par_weight[ns0:ns,2] .= - real.(im.* adjoint(psi) * (ave.c_par_par' * stress_par[:,ns0:ns,2]))
-        stress_tor_weight[ns0:ns,2]     .= - real.(im.* adjoint(psi) * (ave.c_tor_par' * stress_par[:,ns0:ns,2]
-                                                  .+ ave.c_tor_per' * stress_per[:,ns0:ns,2]))
+        particle_weight[2,ns0:ns]   .= - vec(real.(im.* adjoint(psi) * u_par[:,ns0:ns]) * Diagonal(vs[ns0:ns]))
+        energy_weight[2,ns0:ns]     .= - vec(real.(im.* adjoint(psi) * q_tot[:,ns0:ns]) * Diagonal(vs[ns0:ns]))
+        exchange_weight[2,ns0:ns]   .= - vec(real.((im*freq_QL).* adjoint(psi) * u_par[:,ns0:ns]) * Diagonal((zs.*vs)[ns0:ns]))
+        stress_par_weight[2,ns0:ns] .= - vec(real.(im.* adjoint(psi) * (ave.c_par_par * stress_par[:,ns0:ns,2])))
+        stress_tor_weight[2,ns0:ns] .= - vec(real.(im.* adjoint(psi) * (ave.c_tor_par * stress_par[:,ns0:ns,2]
+                                                  .+ ave.c_tor_per * stress_per[:,ns0:ns,2])))
     end
     if(inputs.USE_BPAR)
-        particle_weight[ns0:ns,3]   .= real.(im.* adjoint(bsig) *(1.5*p_tot[:,ns0:ns] .- 0.5*p_par[:,ns0:ns]) * Diagonal((taus./zs)[ns0:ns]))
-        exchange_weight[ns0:ns,3]   .= real.(adjoint((-im*freq_QL).*bsig) * (1.5*p_tot[:,ns0:ns] .- 0.5*p_par[:,ns0:ns])) * Diagonal(taus[ns0:ns])
+        particle_weight[3,ns0:ns]   .= vec(real.(im.* adjoint(bsig) *(1.5*p_tot[:,ns0:ns] .- 0.5*p_par[:,ns0:ns]) * Diagonal((taus./zs)[ns0:ns])))
+        exchange_weight[3,ns0:ns]   .= vec(real.(adjoint((-im*freq_QL).*bsig) * (1.5*p_tot[:,ns0:ns] .- 0.5*p_par[:,ns0:ns])) * Diagonal(taus[ns0:ns]))
     end
 
     particle_weight[:,ns0:ns]   .= ky.*       (particle_weight[:,ns0:ns]*Diagonal(as[ns0:ns]))./phi_norm

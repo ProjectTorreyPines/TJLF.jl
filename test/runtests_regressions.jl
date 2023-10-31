@@ -10,8 +10,7 @@ tests = readdir(directory)
 
 # 03 is s-alpha geometry
 # 05 is ns = 3
-# 09 is use_bper = true
-excludeFolders = ["tglf03", "tglf05", "tglf09"]
+excludeFolders = ["tglf03", "tglf05"]
 testFolders = [joinpath(directory,item) for item in readdir(directory) if isdir(joinpath(directory,item)) && item ∉ excludeFolders]
 
 for baseDirectory in testFolders
