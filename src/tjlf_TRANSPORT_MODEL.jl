@@ -262,7 +262,11 @@ firstPass_eigenvalue::Array{T}) where T<:Real
         end
 
         unstable = true
-        gamma_max = max(gamma_out[1],gamma_out[2]) # this covers ibranch=-1,0
+        if inputs.IBRANCH==0
+            gamma_max = max(gamma_out[1],gamma_out[2])
+        else
+            gamma_max = max(gamma_out[1],0.0)
+        end
         if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
 
 
