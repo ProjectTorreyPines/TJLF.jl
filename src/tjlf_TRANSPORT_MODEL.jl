@@ -205,14 +205,12 @@ firstPass_eigenvalue::Array{T}) where T<:Real
     ### change input value
     inputs.IFLUX = true
 
-    # initialize output arrays
-
     mask_save::Vector{Int} = zeros(Int, nky)
-    QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
 
-    maxmodes = 16 #### from tglf_modules
-    gamma_reference_kx0 = zeros(Float64, maxmodes)
-    freq_reference_kx0 = zeros(Float64, maxmodes)
+    # initialize output arrays
+    QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
+    gamma_reference_kx0 = similar(firstPass_eigenvalue[1,1,:])
+    freq_reference_kx0 = similar(firstPass_eigenvalue[2,1,:])
     kx0_e = xgrid_functions_geo(inputs,satParams,ky_spect,firstPass_eigenvalue[1,:,:])
 
     for i = eachindex(ky_spect)

@@ -64,14 +64,14 @@ QL_data = permutedims(QLw,(4,5,3,2,1)) # (nf,ns,nm,nky,ntype)
 plot(ky_spect, QL_data[1,1,1,:,1], label="Fortran")
 plot!(ky_spect, fluxes[1,1,1,:,1], label="Julia", title="particle flux")
 
-plot(ky_spect, QL_data[2,1,1,:,2], label="Fortran")
-plot!(ky_spect, fluxes[2,1,1,:,2], label="Julia", title="energy flux")
+plot(ky_spect, QL_data[1,1,1,:,2], label="Fortran")
+plot!(ky_spect, fluxes[1,1,1,:,2], label="Julia", title="energy flux")
 
 plot(ky_spect, QL_data[1,1,1,:,5], label="Fortran")
 plot!(ky_spect, fluxes[1,1,1,:,5], label="Julia", title="exchange flux")
 
-plot(ky_spect, QL_data[2,2,1,:,3], label="Fortran", title="toroidal stress")
-plot!(ky_spect, fluxes[2,2,1,:,3], label="Julia", title="toroidal stress",linestyle=:dash)
+plot(ky_spect, QL_data[1,1,1,:,3], label="Fortran", title="toroidal stress")
+plot!(ky_spect, fluxes[1,1,1,:,3], label="Julia", title="toroidal stress",linestyle=:dash)
 
 plot(ky_spect, QL_data[1,1,1,:,4], label="Fortran", title="parallel stress")
 plot!(ky_spect, fluxes[1,1,1,:,4], label="Julia", title="parallel stress",linestyle=:dash)

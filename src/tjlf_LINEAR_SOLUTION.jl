@@ -100,8 +100,13 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     maxmodes = 16 #### from tglf_modules
     jmax = zeros(Int, maxmodes)
-    gamma_out = zeros(Float64, maxmodes)
-    freq_out = zeros(Float64, maxmodes)
+    if ismissing(gamma_reference_kx0)
+        gamma_out = zeros(Float64, maxmodes)
+        freq_out = zeros(Float64, maxmodes)
+    else
+        gamma_out = similar(gamma_reference_kx0)
+        freq_out = similar(freq_reference_kx0)
+    end
 
     if(inputs.IBRANCH==0)
         di = zeros(Int, iur)
