@@ -1,3 +1,29 @@
+"""
+    function tjlf_max2(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_s::T, vexb_shear_s::T) where T<:Real
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    ky_spect::Vector{T}                 - vector of ky spectrum (mode number)
+    vexb_shear_s::T                     - e x b shear value (=VEXB_SHEAR*SIGN_IT)
+
+outputs: (FIX TO HAVE SAME RETURN TYPE)
+    nmodes_out                          - number of most unstable modes calculated
+    gamma_nb_min_out                    - most unstable gamma value
+    gamma_out                           - array of growth rate eigenvalue calculated
+    freq_out                            - array of frequency eigenvalue calculated
+    particle_QL_out                     - particle QL flux
+    energy_QL_out                       - energy QL flux
+    stress_tor_QL_out                   - torodial stress QL flux
+    stress_par_QL_out                   - parallel stress QL flux
+    exchange_QL_out                     - exchange QL flux
+
+description:
+    finds the width using the WIDTH from the InputTJLF as an initial guess,
+    returns the number of unstable modes, the eigenvalues, and QL fluxes after 
+    getting the proper width value
+"""
 function tjlf_max2(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_s::T, vexb_shear_s::T) where T<:Real
 
     ### saturation parameters
