@@ -7,9 +7,7 @@ using .TJLF
 # Read input.tglf
 #******************************************************************************************************
 # location for the input.tglf file
-# baseDirectory = "../outputs/test_TM/simple_test/"
-# baseDirectory = "../outputs/test_TM/exb_shear0/"
-baseDirectory = "../outputs/tglf_regression/tglf05/"
+baseDirectory = "../outputs/test_TM/simple_test/"
 
 inputTJLF = readInput(baseDirectory)
 
@@ -24,6 +22,9 @@ fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 
 sum_ky_spectrum(inputTJLF, satParams, ky_spect, eigenvalue[1,:,:], fluxes)
 
+#*******************************************************************************************************
+#   profiling
+#*******************************************************************************************************
 
 # @profview tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
 # @profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)

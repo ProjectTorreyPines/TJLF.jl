@@ -215,7 +215,7 @@ end
 
 
 """
-function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},ky_spect::Vector{T},gp::Array{T},QL_data::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
+    function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},ky_spect::Vector{T},gp::Array{T},QL_data::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
