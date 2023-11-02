@@ -1,6 +1,23 @@
-#  Main transport model subroutine.
-#  Calls linear TGLF over a spectrum of ky's and computes spectral integrals of
-#  field, intensity and fluxes.
+"""
+    function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},ky_spect::Vector{T}) where T<:Real
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    ky_spect::Vector{T}                 - ky spectrum calculated in tjlf_kygrid.jl
+
+outputs:
+    fluxes                              - 5d array of QL fluxes (field, species, mode, ky, type),
+                                          type: (particle, energy, torodial stress, parallel stress, exchange)
+    firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
+                                          type: (gamma, frequency)
+
+description:
+    Main transport model subroutine.
+    Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity and fluxes.
+"""
+
 function tjlf_TM(inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     outputHermite::OutputHermite{T},
@@ -51,7 +68,23 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 
-# calculate the widths and eigenvalues with vexb_shear = 0.0
+"""
+    function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}) where T<:Real
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    ky_spect::Vector{T}                 - ky spectrum calculated in tjlf_kygrid.jl
+
+outputs:
+    fluxes                              - 5d array of QL fluxes (field, species, mode, ky, type),
+                                          type: (particle, energy, torodial stress, parallel stress, exchange)
+    firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
+                                          type: (gamma, frequency)
+
+description:
+    calculate the widths and eigenvalues with vexb_shear = 0.0
+"""
 function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}) where T<:Real
 
     nmodes = inputs.NMODES
@@ -64,7 +97,7 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
     original_width = inputs.WIDTH
 
     ### output values
-    eigenvalue_spectrum_out = zeros(Float64, 2, nky, nmodes)
+    eigenvalue_spectrum_out = zeros(Float64, nmodes, nky, 2)
     firstPass_width = Vector{Float64}(undef,nky)
 
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
@@ -100,8 +133,8 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
 
         if(unstable)
-            eigenvalue_spectrum_out[1,i,1:nmodes_out] .= gamma_out[1:nmodes_out]
-            eigenvalue_spectrum_out[2,i,1:nmodes_out] .= freq_out[1:nmodes_out]
+            eigenvalue_spectrum_out[1:nmodes_out,i,1] .= gamma_out[1:nmodes_out]
+            eigenvalue_spectrum_out[1:nmodes_out,i,2] .= freq_out[1:nmodes_out]
 
         end
     end
@@ -109,8 +142,23 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
     return firstPass_width, eigenvalue_spectrum_out
 
 end
+"""
+    function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}) where T<:Real
 
-# calculate both eigenvalues and fluxes on firstpass if vexb_shear = 0 or alpha_quench != 0
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    ky_spect::Vector{T}                 - ky spectrum calculated in tjlf_kygrid.jl
+
+outputs:
+    QL_flux_spectrum_out                - 5d array of QL fluxes (field, species, mode, ky, type),
+                                          type: (particle, energy, torodial stress, parallel stress, exchange)
+    eigenvalue_spectrum_out              - 3d array of eigenvalues (mode, ky, type)
+                                          type: (gamma, frequency)
+
+description:
+    calculate both eigenvalues and fluxes on firstpass if vexb_shear = 0 or alpha_quench != 0, no secondpass
+"""
 function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}, vexb_shear_s::T) where T<:Real
 
     nmodes = inputs.NMODES
@@ -125,7 +173,7 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
     original_width = inputs.WIDTH
 
     ### output values
-    eigenvalue_spectrum_out = zeros(Float64, 2, nky, nmodes)
+    eigenvalue_spectrum_out = zeros(Float64, nmodes, nky, 2)
     QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
 
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
@@ -160,8 +208,8 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
 
         if(unstable)
-            eigenvalue_spectrum_out[1,i,1:nmodes_out] .= gamma_out[1:nmodes_out]
-            eigenvalue_spectrum_out[2,i,1:nmodes_out] .= freq_out[1:nmodes_out]
+            eigenvalue_spectrum_out[1:nmodes_out,i,1] .= gamma_out[1:nmodes_out]
+            eigenvalue_spectrum_out[1:nmodes_out,i,2] .= freq_out[1:nmodes_out]
             QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
             QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
             QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
@@ -180,12 +228,28 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
+"""
+    function secondpass(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},ky_spect::Vector{T},firstPass_width::Vector{T},firstPass_eigenvalue::Array{T,3}) 
 
-# calculate the fluxes using the width and eigenvalues from the first pass as reference
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    ky_spect::Vector{T}                 - ky spectrum calculated in tjlf_kygrid.jl
+    firstPass_width::Vector{T}          - vector of widths found in the first pass
+    firstPass_eigenvalue::Array{T,3}    - array of eigenvalues found in first pass
+
+outputs:
+    QL_flux_spectrum_out                - 5d array of QL fluxes (field, species, mode, ky, type),
+                                          type: (particle, energy, torodial stress, parallel stress, exchange)
+
+description:
+    calculate the fluxes using the width and eigenvalues from the first pass as reference
+"""
 function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
 ky_spect::Vector{T},
 firstPass_width::Vector{T},
-firstPass_eigenvalue::Array{T}) where T<:Real
+firstPass_eigenvalue::Array{T,3}) where T<:Real
 
     ### input values
     sat_rule_in = inputs.SAT_RULE
@@ -209,16 +273,16 @@ firstPass_eigenvalue::Array{T}) where T<:Real
 
     # initialize output arrays
     QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
-    gamma_reference_kx0 = similar(firstPass_eigenvalue[1,1,:])
-    freq_reference_kx0 = similar(firstPass_eigenvalue[2,1,:])
+    gamma_reference_kx0 = similar(firstPass_eigenvalue[:,1,1])
+    freq_reference_kx0 = similar(firstPass_eigenvalue[:,1,2])
     kx0_e = xgrid_functions_geo(inputs,satParams,ky_spect,firstPass_eigenvalue[1,:,:])
 
     for i = eachindex(ky_spect)
         ky = ky_spect[i]
 
         if(new_eikonal_in)
-            gamma_reference_kx0 .= firstPass_eigenvalue[1,i,:]
-            freq_reference_kx0 .= firstPass_eigenvalue[2,i,:]
+            gamma_reference_kx0 .= firstPass_eigenvalue[:,i,1]
+            freq_reference_kx0 .= firstPass_eigenvalue[:,i,2]
             inputs.WIDTH = firstPass_width[i]
             nbasis = nbasis_max_in
             # println("this is 3")
