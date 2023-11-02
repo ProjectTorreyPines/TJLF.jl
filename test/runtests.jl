@@ -274,7 +274,7 @@ for dir_name in tests
 
         fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
         gammaJulia = eigenvalue[1,:,1]
-        freqJulia = eigenvalue[2,:,1]
+        freqJulia = eigenvalue[1,:,2]
 
         for i in eachindex(fluxes[1,1,1,:,1])
                 @test isapprox(particle_QL[i,1,1,1], fluxes[1,1,1,i,1], rtol=1e-6)
