@@ -69,14 +69,14 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
 
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     for i = eachindex(ky_spect)
-        ky_s = ky_spect[i]
+        ky = ky_spect[i]
 
         if(new_eikonal_in) # not sure what this is -DSUN
             if(find_width_in) # find the width
                 # println("this is 1")
                 nmodes_out, gamma_nb_min_out,
                 gamma_out, freq_out,
-                _,_,_,_,_ = tjlf_max2(inputs, satParams, outputHermite, ky_s, 0.0)
+                _,_,_,_,_ = tjlf_max2(inputs, satParams, outputHermite, ky, 0.0)
 
                 firstPass_width[i] = inputs.WIDTH
                 ### reset value
@@ -214,7 +214,7 @@ firstPass_eigenvalue::Array{T}) where T<:Real
     kx0_e = xgrid_functions_geo(inputs,satParams,ky_spect,firstPass_eigenvalue[1,:,:])
 
     for i = eachindex(ky_spect)
-        ky_s = ky_spect[i]
+        ky = ky_spect[i]
 
         if(new_eikonal_in)
             gamma_reference_kx0 .= firstPass_eigenvalue[1,i,:]
@@ -228,7 +228,7 @@ firstPass_eigenvalue::Array{T}) where T<:Real
             energy_QL_out,
             stress_tor_QL_out,
             stress_par_QL_out,
-            exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky_s, nbasis, vexb_shear_s,
+            exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s,
                                 kx0_e[i], gamma_reference_kx0, freq_reference_kx0)
 
             gamma_nb_min_out = gamma_out[1]
@@ -272,7 +272,7 @@ firstPass_eigenvalue::Array{T}) where T<:Real
 
         if(unstable)
             # println("DSUN")
-            gamma_cutoff = 0.1*ky_s/R_unit
+            gamma_cutoff = 0.1*ky/R_unit
             rexp = 1.0
             reduce = 1.0
             if(nbasis_max_in != nbasis_min_in)
@@ -295,7 +295,7 @@ firstPass_eigenvalue::Array{T}) where T<:Real
             #     field_spectrum_out[2,i,imax] = reduce*phi_bar_out[imax]
             #     field_spectrum_out[3,i,imax] = reduce*a_par_bar_out[imax]
             #     field_spectrum_out[4,i,imax] = reduce*b_par_bar_out[imax]
-            #     if(ky_s <= 1.0 && gamma_out[imax] > gmax)
+            #     if(ky <= 1.0 && gamma_out[imax] > gmax)
             #         gmax=gamma_out[imax]
             #         fmax=freq_out[imax]
             #     end

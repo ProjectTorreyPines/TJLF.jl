@@ -1,15 +1,17 @@
-#
-#     parameters:
-#     inputs - InputTJLF struct constructed using the input.TGLF file
-#
-#     outputs:
-#     ky_spectrum - array of floats that form the ky grid
-#     nky - size of the ky_spectrum array
-#
-#     the input file provides the type of kygrid to create (values 1 to 5)
-#     and this function creates it accordingly
-#
+"""
+    function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Tuple{Vector{T}, Int} where T<:Real
 
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    grad_r0::T                          - value from SaturationParameters struct from tjlf_geometry.jl
+
+outputs:
+    ky_spectrum                         - array of floats that form the ky grid
+    nky                                 - size of the ky_spectrum array
+
+description:
+    the input file provides the type of kygrid to create (values 1 to 5) and this function creates it accordingly
+"""
 function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Tuple{Vector{T}, Int} where T<:Real
 
     ### values from input

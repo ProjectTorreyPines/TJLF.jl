@@ -1,6 +1,19 @@
-# export xgrid_functions_geo, get_sat_params, mercier_luc, miller_geo
+"""
+    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_spect::Vector{T}, gammas::Matrix{T}, small::T=0.00000001) where T<:Real
 
-function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky::Vector{T}, gammas::Matrix{T},
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    ky_spect::Vector{T}                 - ky spectrum
+    gammas::Matrix{T}                   - growth rate eigenvalues
+
+outputs:
+    kx0_e                               - value of kx0_e given the gamma value
+
+description:
+    calculate kx0_e given the growthrate during second pass of TM
+"""
+function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_spect::Vector{T}, gammas::Matrix{T},
     small::T=0.00000001) where T<:Real
     sign_IT = inputs.SIGN_IT
     vexb_shear = inputs.VEXB_SHEAR
@@ -26,8 +39,8 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         vexb_shear_s = vexb_shear * sign_IT
         vexb_shear_kx0 = alpha_e_in*vexb_shear_s
 
-        kyi = ky.*(vs_2*mass_2/abs(zs_2))
-        wE = zeros(Float64, length(ky))
+        kyi = ky_spect.*(vs_2*mass_2/abs(zs_2))
+        wE = zeros(Float64, length(ky_spect))
 
         if(units_in=="GYRO")
             kx0_factor = abs(grad_r0^2/B_geo0)
@@ -47,11 +60,11 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
                     (0.25.*wE.*tanh.((0.69.*wE).^6)))
         elseif(sat_rule_in==2 || sat_rule_in==3)
             a0=1.6
-            vzf_out, kymax_out, _ = get_zonal_mixing(inputs, satParams, ky, gamma_reference_kx0)
+            vzf_out, kymax_out, _ = get_zonal_mixing(inputs, satParams, ky_spect, gamma_reference_kx0)
             if(abs(kymax_out*vzf_out*vexb_shear_kx0) > small)
-                kx0_e = -(0.32*vexb_shear_kx0).*((ky./kymax_out).^0.3)./(ky.*vzf_out)
+                kx0_e = -(0.32*vexb_shear_kx0).*((ky_spect./kymax_out).^0.3)./(ky_spect.*vzf_out)
             else
-                kx0_e = zeros(Float64,length(ky))
+                kx0_e = zeros(Float64,length(ky_spect))
             end
         end
 
@@ -72,7 +85,21 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     return kx0_e
 end
 
+"""
+    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, kx0_e::T=0.0,mts::T=5.0, ms::Int=128, small::T=0.00000001)
 
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    ky::T                               - ky value
+
+outputs:
+    OutputGeometry{Float64}()           - OutputGeometry struct for different WIDTHS value
+
+description:
+    create the OutputGeometry struct for the specific WIDTHS value
+"""
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T},
     ky::T, kx0_e::T=0.0,
     mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
@@ -339,12 +366,20 @@ end
 
 
 
+"""
+    function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
 
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+
+outputs:
+    SaturationParameters{Float64}()     - SaturationParameters struct calculated
+
+description:
+    compute the geometric coefficients on the x-grid
+"""
 #### LINES 220-326, 478 in tglf_geometry.f90
 function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
-    #******************************************************************************#************************
-    # PURPOSE: compute the geometric coefficients on the x-grid
-    #******************************************************************************#************************
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC

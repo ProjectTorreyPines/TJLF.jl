@@ -1,3 +1,18 @@
+"""
+    function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+
+outputs:
+    OutputHermite(x,wx,h)               - OutputHermite struct
+
+description:
+    computes abscisca's and weights for Gauss- Hermite integration adapted from Numerical Recipes in Fortran Pg.147
+    reversed order of roots so that x(m) is largest and x(1) is smallest only the positive roots are found and stored
+    #--------------------------------------------------------------
+    initializes the hermite basis functions and ten point Gauss-Hermite integration with absissas x and weights w.
+"""
 function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
 
     eps=3.0E-14
@@ -8,11 +23,6 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     nx = 2*inputs.NXGRID -1
     h0 = 1.0/π^0.25
     m = Int((nx+1)/2) ### NXGRID
-
-    #     computes abscisca's and weights for Gauss- Hermite integration
-    #     adapted from Numerical Recipes in Fortran Pg.147
-    #     reversed order of roots so that x(m) is largest and x(1) is smallest
-    #     only the positive roots are found and stored
 
     y = Vector{Float64}(undef, m)
     wy = Vector{Float64}(undef, m)
@@ -63,11 +73,8 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     x[m] = 0.0
     wx[m] = 2.0*wx[m]
 
+    #--------------------------------------------------------------
 
-    #     initializes the hermite basis functions and
-    #     ten point Gauss-Hermite integration with absissas x
-    #     and weights w.
-    #
     #     The hermite basis functions of the wave function are
     #       H(1,i) = 1.0
     #       H(2,i) = 2.0*x(i)

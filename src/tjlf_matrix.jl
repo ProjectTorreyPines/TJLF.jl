@@ -1,3 +1,26 @@
+"""
+    function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int)
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    outputGeo::OutputGeometry{T}        - OutputGeometry struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    ky:T                                - value of ky
+    nbasis::T                           - number of basis for matrix dimension
+
+outputs:
+    ave
+    aveH
+    aveWH
+    aveKH
+    aveG
+    aveWG
+    aveKG
+
+description:
+    calculates components used for the eigenmatrix with helper functions that calculate the finite larmor radius
+    integral and hermite basis averages
+"""
 function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},
                     ky::T,
                     nbasis::Int) where T<:Real

@@ -1,8 +1,30 @@
-#***********************************************************************
-#  TGLF Linear Stability driver computes all quasilinear quantities
-#  for a single ky
-#
-#***********************************************************************
+"""
+    function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T,kx0_e::T = 0.0,gamma_reference_kx0::Union{Vector{T},Missing} = missing,freq_reference_kx0::Union{Vector{T},Missing} = missing)
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    ky::T                               - ky value
+    nbasis::Int                         - number of basis for matrix dimension
+    vexb_shear_s::T                     - e x b shear value (=VEXB_SHEAR*SIGN_IT)
+    kx0_e::T = 0.0                      - kx0_e value calculated on second pass with eigen values from first pass
+    gamma_reference_kx0 = missing       - gamma vector if second pass
+    freq_reference_kx0 = missing        - freq vector if second pass
+
+outputs:
+    nmodes_out                          - number of most unstable modes calculated
+    gamma_out                           - array of growth rate eigenvalue calculated
+    freq_out                            - array of frequency eigenvalue calculated
+    particle_QL_out                     - particle QL flux
+    energy_QL_out                       - energy QL flux
+    stress_tor_QL_out                   - torodial stress QL flux
+    stress_par_QL_out                   - parallel stress QL flux
+    exchange_QL_out                     - exchange QL flux
+
+description:
+    TGLF Linear Stability driver computes all quasilinear quantities for a single ky
+"""
 function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
             ky::T,
             nbasis::Int,
@@ -348,7 +370,12 @@ end
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
+"""
+    function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, kp::T, gp::T) where T<:Real
 
+description:
+    helper function to get intensity coefficent given the saturation rule
+"""
 function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, kp::T, gp::T) where T<:Real
 
     nmodes_in = inputs.NMODES
@@ -422,8 +449,13 @@ end
 
 #--------------------------------------------------------------
 
-#compute the quasilinear weights for a single eigenmode
-#with eigenvector v. All of the QL weights are normalized to phi_norm
+"""
+    function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T}, ky::T, nbasis::Int, eigenvalue::K, v::Vector{K}) where T<:Real where K<:Complex
+
+description:
+    helper function to compute the quasilinear weights for a single eigenmode with eigenvector v.
+    All of the QL weights are normalized to phi_norm
+"""
 function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     ky::T, nbasis::Int, eigenvalue::K, v::Vector{K}) where T<:Real where K<:Complex
 

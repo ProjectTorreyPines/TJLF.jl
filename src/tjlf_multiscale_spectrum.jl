@@ -1,22 +1,22 @@
 """
-    function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_mix::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
+    function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_spect::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    ky_mix::Vector{T}                   - vector of ky spectrum (mode number)
+    ky_spect::Vector{T}                 - vector of ky spectrum (mode number)
     gamma_mix::Array{T}                 - array of gamma (net growth rate)
 
 outputs:
     vzf_mix - zonal flow mixing rate
     kymax_mix - ky value at the calculated vzf_mix
-    jmax_mix - index of ky_mix array where vzf_mix is calculated
+    jmax_mix - index of ky_spect array where vzf_mix is calculated
 
 description:
-    finds the maximum of gamma/ky spectrum at low-k values by going through the ky_mix
+    finds the maximum of gamma/ky spectrum at low-k values by going through the ky_spect
     array, then after finding the max, interpolate the value to improve accuracy
 """
-function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_mix::Vector{T}, gamma_mix::Array{T}) where T<:Real
+function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_spect::Vector{T}, gamma_mix::Array{T}) where T<:Real
 
 
     sat_rule_in = inputs.SAT_RULE
@@ -28,7 +28,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
 
     rho_ion =  √(taus_2*mass_2) / abs(zs_2)
 
-    # find the local maximum of gamma_mix/ky_mix with the largest gamma_mix/ky_mix^2
+    # find the local maximum of gamma_mix/ky_spect with the largest gamma_mix/ky_spect^2
     kycut = 0.8/rho_ion
     kymin = 0.0
 
@@ -45,17 +45,17 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
 
     # find the low and high ky peaks of gamma/ky
 
-    # go through ky_mix except for last value
+    # go through ky_spect except for last value
     # if next val is >= kymin and curr val is less than kycut save it
     # update testmax and max index if necessary
 
     ##### What should i initialize j1 to???
     j1 = nothing
-    for j in 1:length(ky_mix)-1
-        if((ky_mix[j+1] >= kymin) && (ky_mix[j] <= kycut))
+    for j in 1:length(ky_spect)-1
+        if((ky_spect[j+1] >= kymin) && (ky_spect[j] <= kycut))
             # save index in case no max
             j1=j
-            testmax1 = gamma_mix[j]/ky_mix[j]
+            testmax1 = gamma_mix[j]/ky_spect[j]
             # find maxes
             if(testmax1 > testmax)
                 testmax = testmax1
@@ -73,7 +73,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
 
     # no unstable modes in range set kymax index to end of range
     # this is cut of at j1 since a maximum may not exist in the low-k range
-    kymax1 = ky_mix[jmax_mix]
+    kymax1 = ky_spect[jmax_mix]
     gammamax1 = gamma_mix[jmax_mix]
 
 
@@ -83,31 +83,31 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     if(kymax1<kymin)
         kymax1 = kymin
         gammamax1 = (gamma_mix[1]
-            + (gamma_mix[2]-gamma_mix[1])*(kymin-ky_mix[1])/(ky_mix[2]-ky_mix[1]))
+            + (gamma_mix[2]-gamma_mix[1])*(kymin-ky_spect[1])/(ky_spect[2]-ky_spect[1]))
     end
     # determine kymax1 and gammamax1 bounded by the tree points f0,f1,f2
     # use a quadratic fit: f = a + b x + c x^2    to f = gamma/ky centered at jmax1
     # scale it to be quadratic where x goes from 0 to 1
     if(jmax_mix>1 && jmax_mix < j1)
         jmax1 = jmax_mix
-        f0 = gamma_mix[jmax1-1] / ky_mix[jmax1-1]
-        f1 = gamma_mix[jmax1] / ky_mix[jmax1]
-        f2 = gamma_mix[jmax1+1] / ky_mix[jmax1+1]
-        deltaky = ky_mix[jmax1+1] - ky_mix[jmax1-1]
-        x1 = (ky_mix[jmax1] - ky_mix[jmax1-1])/deltaky
+        f0 = gamma_mix[jmax1-1] / ky_spect[jmax1-1]
+        f1 = gamma_mix[jmax1] / ky_spect[jmax1]
+        f2 = gamma_mix[jmax1+1] / ky_spect[jmax1+1]
+        deltaky = ky_spect[jmax1+1] - ky_spect[jmax1-1]
+        x1 = (ky_spect[jmax1] - ky_spect[jmax1-1])/deltaky
         a = f0
         b = (f1 - f0*(1-x1*x1)-f2*x1*x1)/(x1-x1*x1)
         c = f2 - f0 - b
 
         # if f0>f1 then f1 is not a local maximum
         if(f0 > f1)
-            kymax1 = ky_mix[jmax1-1]
+            kymax1 = ky_spect[jmax1-1]
             gammamax1 = f0*kymax1
 
             #interpolate to find the value of gammamax1 at kymin
             if(kymax1 < kymin)
                 kymax1 = kymin
-                xmin = (kymin - ky_mix[jmax1-1])/deltaky
+                xmin = (kymin - ky_spect[jmax1-1])/deltaky
                 gammamax1 = (a + b*xmin + c*xmin*xmin)*kymin
             end
         end
@@ -118,13 +118,13 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
             xmax = -b/(2.0*c)
             xmin = 0.0
 
-            if(ky_mix[jmax1-1]<kymin)
-                xmin = (kymin - ky_mix[jmax1-1])/deltaky
+            if(ky_spect[jmax1-1]<kymin)
+                xmin = (kymin - ky_spect[jmax1-1])/deltaky
             end
 
             # if xmax >= 1    use f2 as the maximum
             if(xmax >= 1.0)
-                kymax1 = ky_mix[jmax1+1]
+                kymax1 = ky_spect[jmax1+1]
                 gammamax1 = f2*kymax1
             elseif(xmax < xmin)
                 # use the quadratic fit to determine gammamax1 at kymin
@@ -133,14 +133,14 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
                     gammamax1 = (a + b*xmin + c*xmin*xmin)*kymin
                 # if xmax<=0 use f0 as the maximum
                 else
-                    kymax1 = ky_mix[jmax1-1]
+                    kymax1 = ky_spect[jmax1-1]
                     gammamax1 = f0*kymax1
                 end
 
             # the conditions f0<f1<f2 and xmin<xmax<1 are satisfied
             # use the quadratic fit to determine gammamax1 and kymax1
             else
-                kymax1 = ky_mix[jmax1-1] + deltaky*xmax
+                kymax1 = ky_spect[jmax1-1] + deltaky*xmax
                 gammamax1 = (a + b*xmax + c*xmax*xmax)*kymax1
             end #xmax tests
 
