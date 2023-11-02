@@ -173,52 +173,47 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
 
     #  GLF toroidal closure coefficients
+    v1_r = uv_constants.v[1]
+    v1_i = uv_constants.v[2]
+    v2_r = uv_constants.v[3]
+    v2_i = uv_constants.v[4]
+    v3_r = uv_constants.v[5]
+    v3_i = uv_constants.v[6]
+    v4_r = uv_constants.v[7]
+    v4_i = uv_constants.v[8]
+    v5_r = uv_constants.v[9]
+    v5_i = uv_constants.v[10]
+    v6_r = uv_constants.v[11]
+    v6_i = uv_constants.v[12]
+    v7_r = uv_constants.v[13]
+    v7_i = uv_constants.v[14]
+    v8_r = uv_constants.v[15]
+    v8_i = uv_constants.v[16]
+    v9_r = uv_constants.v[17]
+    v9_i = uv_constants.v[18]
+    v10_r = uv_constants.v[19]
+    v10_i = uv_constants.v[20]
 
-    v,vb = get_v()
-
-    v1_r = v[1]
-    v1_i = v[2]
-    v2_r = v[3]
-    v2_i = v[4]
-    v3_r = v[5]
-    v3_i = v[6]
-    v4_r = v[7]
-    v4_i = v[8]
-    v5_r = v[9]
-    v5_i = v[10]
-    v6_r = v[11]
-    v6_i = v[12]
-    v7_r = v[13]
-    v7_i = v[14]
-    v8_r = v[15]
-    v8_i = v[16]
-    v9_r = v[17]
-    v9_i = v[18]
-    v10_r = v[19]
-    v10_i = v[20]
-
-    vb1_r = vb[1]
-    vb1_i = vb[2]
-    vb2_r = vb[3]
-    vb2_i = vb[4]
-    vb3_r = vb[5]
-    vb3_i = vb[6]
-    vb4_r = vb[7]
-    vb4_i = vb[8]
-    vb5_r = vb[9]
-    vb5_i = vb[10]
-    vb6_r = vb[11]
-    vb6_i = vb[12]
-    vb7_r = vb[13]
-    vb7_i = vb[14]
-    vb8_r = vb[15]
-    vb8_i = vb[16]
-    vb9_r = vb[17]
-    vb9_i = vb[18]
-    vb10_r = vb[19]
-    vb10_i = vb[20]
-    empty!(v)
-    empty!(vb)
+    vb1_r = uv_constants.vb[1]
+    vb1_i = uv_constants.vb[2]
+    vb2_r = uv_constants.vb[3]
+    vb2_i = uv_constants.vb[4]
+    vb3_r = uv_constants.vb[5]
+    vb3_i = uv_constants.vb[6]
+    vb4_r = uv_constants.vb[7]
+    vb4_i = uv_constants.vb[8]
+    vb5_r = uv_constants.vb[9]
+    vb5_i = uv_constants.vb[10]
+    vb6_r = uv_constants.vb[11]
+    vb6_i = uv_constants.vb[12]
+    vb7_r = uv_constants.vb[13]
+    vb7_i = uv_constants.vb[14]
+    vb8_r = uv_constants.vb[15]
+    vb8_i = uv_constants.vb[16]
+    vb9_r = uv_constants.vb[17]
+    vb9_i = uv_constants.vb[18]
+    vb10_r = uv_constants.vb[19]
+    vb10_i = uv_constants.vb[20]
 
     # GLF parallel closure coefficients
     bpar_HP = 3 + (32 - 9π)/(3π - 8)
@@ -462,6 +457,10 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     #*************************************************************
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
+    if(nroot>6)
+        v = Vector{Float64}(undef, 20)
+        vb = Vector{Float64}(undef, 20)
+    end
     for is = ns0:ns
         rlnsIS::Float64 = inputs.RLNS[is]
         rltsIS::Float64 = inputs.RLTS[is]
@@ -478,7 +477,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         ft4 = ft*ft3
         ft5 = ft*ft4
         if(nroot>6)
-            v,vb = get_u(ft)
+            index = Int(floor(20*ft))+1
+            if(index==21) index=20 end
+            df = (ft-uv_constants.fm[index])/(uv_constants.fm[index+1]-uv_constants.fm[index])
+
+            v .= uv_constants.vm[:,index] .+ uv_constants.vm_diff[:,index].*df
+            vb .= uv_constants.vbm[:,index] .+ uv_constants.vbm_diff[:,index].*df
+            
             u1_r = v[1]
             u1_i = v[2]
             u2_r = v[3]
@@ -541,8 +546,6 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             ub7_i = ub7_i*ft2
             ub9_r = ub9_r/ft2
             ub9_i = ub9_i/ft2
-            empty!(v)
-            empty!(vb)
         end
 
         #*************************************************************
