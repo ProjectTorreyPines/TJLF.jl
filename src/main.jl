@@ -93,7 +93,7 @@ for k in 1:nmodes
 end
 
 gammaJulia = eigenvalue[1,:,1]
-freqJulia = eigenvalue[2,:,1]
+freqJulia = eigenvalue[1,:,2]
 
 plot(ky_spect, freq, label="Fortran")
 plot!(ky_spect, freqJulia, label="Julia", title="Frequency",linestyle=:dash)
