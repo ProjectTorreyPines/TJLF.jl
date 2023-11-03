@@ -258,9 +258,8 @@ firstPass_eigenvalue::Array{T,3}) where T<:Real
     new_eikonal_in = inputs.NEW_EIKONAL
     nbasis_max_in = inputs.NBASIS_MAX
     nbasis_min_in = inputs.NBASIS_MIN
-    nxgrid_in = inputs.NXGRID
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
-    nx = 2*nxgrid_in - 1
+    nx = 2*inputs.NXGRID - 1
     nky = length(ky_spect)
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
     ### saturation values
