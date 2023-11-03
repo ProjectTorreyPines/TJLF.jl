@@ -1,6 +1,9 @@
 module TJLF
 
 using LinearAlgebra
+import LinearAlgebra.LAPACK.ggev!
+# using Arpack
+# using SparseArrays
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
