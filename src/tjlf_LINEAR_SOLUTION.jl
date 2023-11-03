@@ -116,7 +116,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             max_freq = max(max_freq,test)
         end
         max_freq *= filter_in*abs(ky)
-
+        # if imaginary part > max freq, flip sign of real part
         rr .*= ifelse.((rr.>0.0)  .&  (abs.(ri).>max_freq), -1 , 1)
     end
 
