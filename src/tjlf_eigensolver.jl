@@ -468,14 +468,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         massIS::Float64 = inputs.MASS[is]
         vsIS::Float64 = √(tausIS / massIS)
         zsIS::Float64 = inputs.ZS[is]
-        asIS::Float64 = inputs.AS[is]
 
-        ### i hate it here
-        ft = outputGeo.fts[is]
-        ft2 = ft*ft
-        ft3 = ft*ft2
-        ft4 = ft*ft3
-        ft5 = ft*ft4
         if(nroot>6)
             index = Int(floor(20*ft))+1
             if(index==21) index=20 end
@@ -483,7 +476,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
             v .= uv_constants.vm[:,index] .+ uv_constants.vm_diff[:,index].*df
             vb .= uv_constants.vbm[:,index] .+ uv_constants.vbm_diff[:,index].*df
-            
+
             u1_r = v[1]
             u1_i = v[2]
             u2_r = v[3]
@@ -2665,47 +2658,27 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             end # end of ib loop
         end # end of jb loop
     end # end of is loop
+    #*************************************************************
+    # find the eigenvalues and eigenvectors
+    #*************************************************************
 
-#*************************************************************
-#..find the eigenvalues and eigenvectors
-#*************************************************************
-
-
-    # println(amat)
-    # (alpha, beta, vl, vr) = ggev!('N','N',copy(amat),copy(bmat))
-
-
-    # zomega = zeros(ComplexF64, iur)
-    # rr = zeros(Float64, iur)
-    # ri = zeros(Float64, iur)
-    # #### not sure what vr and vi are for
-    # vr = zeros(iur, iur)
-    # vi = zeros(iur, iur)
-    # for j1 = 1:iur
-
-    #     beta2 = real(conj(beta[j1])*beta[j1])
-    #     if(beta2!=0.0)
-    #         zomega[j1] = alpha[j1]*conj(beta[j1])/beta2
-    #     else
-    #         zomega[j1]=0.0
-    #     end
-
-    #     rr[j1] = real(zomega[j1])
-    #     ri[j1] = imag(zomega[j1])
-    #     # filter out numerical instabilities that sometimes occur
-    #     # with high mode frequency
-    #     if(inputs.FILTER>0.0)
-            # if(rr[j1]>0.0 && abs(ri[j1])>max_freq)
-            #     rr[j1]=-rr[j1]
-            # end
-    #     end
-    #     #### not sure what this is used for
-    #     for j2 = 1:iur
-    #         vr[j1,j2] = 0.0
-    #         vi[j1,j2] = 0.0
-    #     end
+    # print("ggev: ")
+    # @time begin
+    (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
     # end
-    solution = eigen(amat, bmat)
-    return solution.values, solution.vectors
+    return alpha./beta, vr
+
+    ### slower
+    # print("eigen: ")
+    # @time begin
+    # solution = eigen(amat, bmat)
+    # end
+    # return solution.values, solution.vectors
+    
+    ### slower
+    # amat = sparse(amat)
+    # bmat = sparse(bmat)
+    # λ, ϕ = eigs(amat,bmat,nev=iur-2)
+    # return λ, ϕ
 
 end
