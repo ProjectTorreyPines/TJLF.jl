@@ -12,7 +12,7 @@ outputs:
 description:
     the input file provides the type of kygrid to create (values 1 to 5) and this function creates it accordingly
 """
-function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Tuple{Vector{T}, Int} where T<:Real
+function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:Real
 
     ### values from input
     units_in = inputs.UNITS
@@ -117,7 +117,7 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Tuple{Vector{T}, Int
         end
 
     elseif(spectrum_type == 3)   # ky_min=ky_in spectrum similar to APS07
-        ky_max = 1.0*ky_factor/rho_ion
+        ky_max = ky_factor/rho_ion
         nky1 = Int(floor(ky_max/ky_in)) - 1
         nky2 = 1
         nky = nky1 + nky2
@@ -228,6 +228,38 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Tuple{Vector{T}, Int
         # end
     end
 
-    return ky_spectrum, nky
+    return ky_spectrum
+
+end
+
+
+"""
+    function get_ky_spectrum_size(nky::Int,kygrid_model::Int)::Int
+
+parameters:
+    nky::Int                            - nky from input file
+    kygrid_model::Int                   - kygrid_model from input file
+
+outputs:
+    size of the ky_spectrum array
+
+description:
+    called before creation of InputTJLF struct to get the size of ky_spectrum
+"""
+function get_ky_spectrum_size(nky::Int,kygrid_model::Int)::Int
+
+    if kygrid_model == 0
+        return nky
+    elseif kygrid_model == 1
+        return nky + 9
+    elseif kygrid_model == 2
+        return nky + 15
+    elseif kygrid_model == 3
+        error("apparently kygrid_model 3 not very popular -DSUN")
+    elseif kygrid_model == 4
+        return nky + 12
+    else
+        error("apparently no one uses kygrid_model 5, it is also sus -DSUN")
+    end
 
 end

@@ -134,9 +134,12 @@ for dir_name in tests
         #   start running stuff
         #*******************************************************************************************************
 
-
         satParams = get_sat_params(inputTJLF)
-        kx0epy = xgrid_functions_geo(inputTJLF, satParams, ky_spect,  Matrix(gammas))
+
+        inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
+        @test isapprox(ky_spect, inputTJLF.KY_SPECTRUM, rtol=1e-6)
+
+        kx0epy = xgrid_functions_geo(inputTJLF, satParams, Matrix(gammas))
         @test isapprox(kx0epy, kx0_e, rtol=1e-3)
         @test isapprox(inputComparison["SAT_geo0_out"], satParams.SAT_geo0, rtol=1e-6)
         @test isapprox(inputComparison["SAT_geo1_out"], satParams.SAT_geo1, rtol=1e-6)
@@ -149,10 +152,11 @@ for dir_name in tests
             @test isapprox(inputComparison["B_geo0_out"], satParams.B_geo[1], rtol=1e-6)
         end
 
-        # sat_1 = sum_ky_spectrum(inputTJLF, satParams, ky_spect, gammas, QL_data)
+        QL_flux_out = sum_ky_spectrum(inputTJLF, satParams, gammas, QL_data)
         # julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
-        # expected_sat1 = fluxes[2,:]
-        # @test isapprox(julia_sat1, expected_sat1, rtol=1e-3)
+        julia_sat1 = sum(sum(QL_flux_out, dims = 1)[1,:,:,:], dims = 2)[:,1,2]
+        expected_sat1 = fluxes[2,:]
+        @test isapprox(julia_sat1, expected_sat1, rtol=1e-3)
     end
 end
 
@@ -196,9 +200,8 @@ for dir_name in tests
         #*******************************************************************************************************
         
         satParams = get_sat_params(inputTJLF)
-        Julia_ky_spect, Julia_nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
+        Julia_ky_spect = get_ky_spectrum(inputTJLF, satParams.grad_r0)
         @test isapprox(Julia_ky_spect, ky_spect, rtol=1e-6)
-        @test isapprox(Julia_nky, nky)
 
     end
 
@@ -270,9 +273,9 @@ for dir_name in tests
 
         outputHermite = gauss_hermite(inputTJLF)
         satParams = get_sat_params(inputTJLF)
-        ky_spect, nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
+        inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
 
-        fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+        fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
         gammaJulia = eigenvalue[1,:,1]
         freqJulia = eigenvalue[1,:,2]
 

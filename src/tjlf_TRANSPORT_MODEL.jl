@@ -1,11 +1,10 @@
 """
-    function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},ky_spect::Vector{T}) where T<:Real
+    function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
-    ky_spect::Vector{T}                 - ky spectrum calculated in tjlf_kygrid.jl
 
 outputs:
     fluxes                              - 5d array of QL fluxes (field, species, mode, ky, type),
@@ -18,10 +17,7 @@ description:
     Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity and fluxes.
 """
 
-function tjlf_TM(inputs::InputTJLF{T},
-    satParams::SaturationParameters{T},
-    outputHermite::OutputHermite{T},
-    ky_spect::Vector{T}) where T<:Real
+function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
 
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
@@ -34,23 +30,23 @@ function tjlf_TM(inputs::InputTJLF{T},
         
         # println("this is a")
         inputs.IFLUX = false # do not compute QL on first pass
-        firstPass_width, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite, ky_spect)
+        firstPass_width, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite)
 
         # println("this is b")
         inputs.FIND_WIDTH = false
         inputs.IFLUX = original_iflux # compute QL on second pass
-        fluxes = secondpass(inputs, satParams, outputHermite, ky_spect, firstPass_width, firstPass_eigenvalue)
+        fluxes = secondpass(inputs, satParams, outputHermite, firstPass_width, firstPass_eigenvalue)
 
         inputs.FIND_WIDTH = original_find_width
         return fluxes, firstPass_eigenvalue, firstPass_width
     else
         # print("this is c")
-        fluxes, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite, ky_spect, vexb_shear_s)
+        fluxes, firstPass_eigenvalue = onepass(inputs, satParams, outputHermite, vexb_shear_s)
     end
 
     return fluxes, firstPass_eigenvalue
 
-    # sum_ky_spectrum(inputs, ky_spect, eigenvalue_spectrum_out[1,:,:],
+    # sum_ky_spectrum(inputs, eigenvalue_spectrum_out[1,:,:],
     #             ave_p0,potential,
     #             particle_QL,
     #             energy_QL,
@@ -69,12 +65,11 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 
 """
-    function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}) where T<:Real
+    function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    ky_spect::Vector{T}                 - ky spectrum calculated in tjlf_kygrid.jl
 
 outputs:
     fluxes                              - 5d array of QL fluxes (field, species, mode, ky, type),
@@ -85,13 +80,14 @@ outputs:
 description:
     calculate the widths and eigenvalues with vexb_shear = 0.0
 """
-function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}) where T<:Real
+function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
     nmodes = inputs.NMODES
     new_eikonal_in = inputs.NEW_EIKONAL
     find_width_in = inputs.FIND_WIDTH
     nbasis_max_in = inputs.NBASIS_MAX
     nmodes = inputs.NMODES
+    ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
 
     original_width = inputs.WIDTH
@@ -143,12 +139,11 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
 
 end
 """
-    function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}) where T<:Real
+    function onepass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    ky_spect::Vector{T}                 - ky spectrum calculated in tjlf_kygrid.jl
 
 outputs:
     QL_flux_spectrum_out                - 5d array of QL fluxes (field, species, mode, ky, type),
@@ -159,7 +154,7 @@ outputs:
 description:
     calculate both eigenvalues and fluxes on firstpass if vexb_shear = 0 or alpha_quench != 0, no secondpass
 """
-function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky_spect::Vector{T}, vexb_shear_s::T) where T<:Real
+function onepass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, vexb_shear_s::T) where T<:Real
 
     nmodes = inputs.NMODES
     new_eikonal_in = inputs.NEW_EIKONAL
@@ -168,6 +163,7 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
     nmodes = inputs.NMODES
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
 
     original_width = inputs.WIDTH
@@ -229,13 +225,12 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 """
-    function secondpass(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},ky_spect::Vector{T},firstPass_width::Vector{T},firstPass_eigenvalue::Array{T,3}) 
+    function secondpass(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},firstPass_width::Vector{T},firstPass_eigenvalue::Array{T,3}) 
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
-    ky_spect::Vector{T}                 - ky spectrum calculated in tjlf_kygrid.jl
     firstPass_width::Vector{T}          - vector of widths found in the first pass
     firstPass_eigenvalue::Array{T,3}    - array of eigenvalues found in first pass
 
@@ -247,9 +242,8 @@ description:
     calculate the fluxes using the width and eigenvalues from the first pass as reference
 """
 function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
-ky_spect::Vector{T},
-firstPass_width::Vector{T},
-firstPass_eigenvalue::Array{T,3}) where T<:Real
+    firstPass_width::Vector{T},
+    firstPass_eigenvalue::Array{T,3}) where T<:Real
 
     ### input values
     sat_rule_in = inputs.SAT_RULE
@@ -260,6 +254,7 @@ firstPass_eigenvalue::Array{T,3}) where T<:Real
     nbasis_min_in = inputs.NBASIS_MIN
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     nx = 2*inputs.NXGRID - 1
+    ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
     ### saturation values
@@ -274,7 +269,7 @@ firstPass_eigenvalue::Array{T,3}) where T<:Real
     QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
     gamma_reference_kx0 = similar(firstPass_eigenvalue[:,1,1])
     freq_reference_kx0 = similar(firstPass_eigenvalue[:,1,2])
-    kx0_e = xgrid_functions_geo(inputs,satParams,ky_spect,firstPass_eigenvalue[1,:,:])
+    kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[1,:,:])
 
     for i = eachindex(ky_spect)
         ky = ky_spect[i]

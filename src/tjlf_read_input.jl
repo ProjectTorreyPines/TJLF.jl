@@ -19,19 +19,29 @@ function readInput(baseDirectory::String)
 
     # finds the # of species to create Vectors later
     ns = -1
+    nky = -1
+    kygrid_model = -1
     for line in lines[1:length(lines)]
         line = split(line, "\n")
         line = split(line[1],"=")
         if line[1] == "NS"
             ns = parse(Int, strip(line[2]))
-            break
+        elseif line[1] == "NKY"
+            nky = parse(Int, strip(line[2]))
+        elseif line[1] == "KYGRID_MODEL"
+            kygrid_model = parse(Int, strip(line[2]))
         end
     end
     # make sure ns is defined
-    @assert ns!=-1
+    @assert ns!=-1 "did not find NS"
+    @assert nky!=-1 "did not find NKY"
+    @assert kygrid_model!=-1 "did not find KYGRID_MODEL"
+    @assert kygrid_model>=0 && kygrid_model <=5 "KYGRID_MODEL must be Int between 0 and 5"
+
+    nky = get_ky_spectrum_size(nky,kygrid_model)
 
     # create InputTJLF struct
-    inputTJLF = InputTJLF{Float64}(ns)
+    inputTJLF = InputTJLF{Float64}(ns,nky)
 
     # go through each line of the input.tglf file
     for line in lines[1:length(lines)]
@@ -112,6 +122,9 @@ function readInput(baseDirectory::String)
             @assert !isnan(field_value) "did not properly populate inputTJLF for $field_name = $field_value"
         end
     end
+
+    inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
+    inputTJLF.KY_SPECTRUM .= NaN
 
     return inputTJLF
 

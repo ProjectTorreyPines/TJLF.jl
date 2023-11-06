@@ -1,10 +1,9 @@
 """
-    function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_spect::AbstractVector{T}, gamma_mix::AbstractArray{T}) where T<:Real
+    function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_mix::AbstractArray{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    ky_spect::Vector{T}                 - vector of ky spectrum (mode number)
     gamma_mix::Array{T}                 - array of gamma (net growth rate)
 
 outputs:
@@ -16,10 +15,10 @@ description:
     finds the maximum of gamma/ky spectrum at low-k values by going through the ky_spect
     array, then after finding the max, interpolate the value to improve accuracy
 """
-function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ky_spect::Vector{T}, gamma_mix::Array{T}) where T<:Real
-
+function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_mix::Array{T}) where T<:Real
 
     sat_rule_in = inputs.SAT_RULE
+    ky_spect = inputs.KY_SPECTRUM
     alpha_zf = inputs.ALPHA_ZF
 
     zs_2 = inputs.ZS[2]
@@ -215,12 +214,11 @@ end
 
 
 """
-    function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},ky_spect::Vector{T},gp::Array{T},QL_data::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
+    function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gp::Array{T},QL_data::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    ky_spect::Vector{T}                 - vector of ky spectrum (mode number)
     gp::Array{T}                        - array of gamma (net growth rate)
     QL_data::Array{T}                   - array of quasilinear weights
     expsub::T (opt)                     - float for the exponent
@@ -241,7 +239,6 @@ description:
 function intensity_sat(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
-    ky_spect::Vector{T},
     gp::Matrix{T},
     QL_data::Array{T}, ### taken from the output file
     expsub::T=2.0,
@@ -270,6 +267,7 @@ function intensity_sat(
     nmodes = inputs.NMODES
     rho_ion = √(taus_2*mass_2)/ abs(zs_2)
     small = 10^-10
+    ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
 
     SAT_geo0_out = satParams.SAT_geo0
@@ -278,7 +276,7 @@ function intensity_sat(
     Bt0_out = satParams.Bt0
     b_geo0_out = satParams.B_geo[1]
     grad_r0_out = satParams.grad_r0
-    kx0_e = xgrid_functions_geo(inputs, satParams, ky_spect,  gp)
+    kx0_e = xgrid_functions_geo(inputs, satParams,  gp)
 
 
     if length(size(gp)) > 1
@@ -287,7 +285,7 @@ function intensity_sat(
         gammas1 = gp
     end
 
-    vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, ky_spect, gammas1)
+    vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, gammas1)
 
     # model fit parameters
     # Miller geometry values igeo=1
@@ -443,7 +441,7 @@ function intensity_sat(
     end
 
     if(sat_rule_in==1)
-        vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, ky_spect, gamma_net)
+        vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, gamma_net)
     else
         vzf_out_fp = vzf_out # used for recreation of first pass for SAT3
         vzf_out = vzf_out*gamma_net[jmax_out]/max(gammas1[jmax_out], small)
@@ -773,11 +771,10 @@ end
 
 
 """
-    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},ky_spect::Vector{T},gp::Array{T},ave_p0::Vector{T},potential::Array{T},particle_QL::Array{T},energy_QL::Array{T},toroidal_stress_QL::Array{T},parallel_stress_QL::Array{T},exchange_QL::Array{T},etg_fact::T=1.25,c0::T=32.48,c1::T=0.534,exp1::T=1.547,cx_cy::T=0.56,alpha_x::T=1.15,)where T <: Real
+    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gp::Array{T},ave_p0::Vector{T},potential::Array{T},particle_QL::Array{T},energy_QL::Array{T},toroidal_stress_QL::Array{T},parallel_stress_QL::Array{T},exchange_QL::Array{T},etg_fact::T=1.25,c0::T=32.48,c1::T=0.534,exp1::T=1.547,cx_cy::T=0.56,alpha_x::T=1.15,)where T <: Real
 
 parameters:
     inputs            - InputTJLF struct constructed using the input.TGLF file
-    ky_spect          - array of ky (mode number)
     gp                - array of gamma (net growth rate)
     QL_data           - split into separate types of QL weights
     (optional)        - a lot of optional parameters that I don't use -DSUN
@@ -797,7 +794,6 @@ outputs:
 function sum_ky_spectrum(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
-    ky_spect::Vector{T},
     gp::Matrix{T},
     QL::Array{T,5},
     etg_fact::T=1.25,
@@ -812,11 +808,12 @@ function sum_ky_spectrum(
     nf = 3 # get the number of fields
     ns = inputs.NS # get the number of species
     nm = inputs.NMODES # get the number of modes
+    ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
 
     # Multiply QL weights with desired intensity
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
-        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, ky_spect, gp, QL)
+        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gp, QL)
     else
         throw(error("sat_rule_in must be [1.0, 1, 'SAT1', 2.0, 2, 'SAT2', 3.0, 3, 'SAT3], not $sat_rule_in"))
     end
