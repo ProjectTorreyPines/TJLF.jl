@@ -17,22 +17,22 @@ inputTJLF = readInput(baseDirectory)
 
 outputHermite = gauss_hermite(inputTJLF)
 satParams = get_sat_params(inputTJLF)
-ky_spect, nky = get_ky_spectrum(inputTJLF, satParams.grad_r0)
-fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
+fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
 
-sum_ky_spectrum(inputTJLF, satParams, ky_spect, eigenvalue[1,:,:], fluxes)
+sum_ky_spectrum(inputTJLF, satParams, eigenvalue[1,:,:], fluxes)
 
 #*******************************************************************************************************
 #   profiling
 #*******************************************************************************************************
 
-# @profview tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
-# @profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# @profview tjlf_TM(inputTJLF, satParams, outputHermite)
+# @profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite)
 # using Profile
-# @profile tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# @profile tjlf_TM(inputTJLF, satParams, outputHermite)
 # @codewarning
 # using BenchmarkTools
-# @btime tjlf_TM(inputTJLF, satParams, outputHermite, ky_spect)
+# @btime tjlf_TM(inputTJLF, satParams, outputHermite)
 
 
 #*******************************************************************************************************
@@ -62,20 +62,20 @@ QLw = reshape(ql, (ntype, nky, nmodes, nfield, nspecies))
 QL_data = permutedims(QLw,(4,5,3,2,1)) # (nf,ns,nm,nky,ntype)
 
 # (nf,ns,nm,nky,ntype)
-plot(ky_spect, QL_data[1,1,1,:,1], label="Fortran")
-plot!(ky_spect, fluxes[1,1,1,:,1], label="Julia", title="particle flux")
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,1], label="Fortran")
+plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,1], label="Julia", title="particle flux")
 
-plot(ky_spect, QL_data[1,1,1,:,2], label="Fortran")
-plot!(ky_spect, fluxes[1,1,1,:,2], label="Julia", title="energy flux")
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,2], label="Fortran")
+plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,2], label="Julia", title="energy flux")
 
-plot(ky_spect, QL_data[1,1,1,:,5], label="Fortran")
-plot!(ky_spect, fluxes[1,1,1,:,5], label="Julia", title="exchange flux")
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,5], label="Fortran")
+plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,5], label="Julia", title="exchange flux")
 
-plot(ky_spect, QL_data[1,1,1,:,3], label="Fortran", title="toroidal stress")
-plot!(ky_spect, fluxes[1,1,1,:,3], label="Julia", title="toroidal stress",linestyle=:dash)
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,3], label="Fortran", title="toroidal stress")
+plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,3], label="Julia", title="toroidal stress",linestyle=:dash)
 
-plot(ky_spect, QL_data[1,1,1,:,4], label="Fortran", title="parallel stress")
-plot!(ky_spect, fluxes[1,1,1,:,4], label="Julia", title="parallel stress",linestyle=:dash)
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,4], label="Fortran", title="parallel stress")
+plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,4], label="Julia", title="parallel stress",linestyle=:dash)
 
 
 # Get eigenvalue spectrum
@@ -95,7 +95,7 @@ end
 gammaJulia = eigenvalue[1,:,1]
 freqJulia = eigenvalue[1,:,2]
 
-plot(ky_spect, freq, label="Fortran")
-plot!(ky_spect, freqJulia, label="Julia", title="Frequency",linestyle=:dash)
-plot(ky_spect, gamma, label="Fortran")
-plot!(ky_spect, gammaJulia, label="Julia", title="Growth Rate",linestyle=:dash)
+plot(inputTJLF.KY_SPECTRUM, freq, label="Fortran")
+plot!(inputTJLF.KY_SPECTRUM, freqJulia, label="Julia", title="Frequency",linestyle=:dash)
+plot(inputTJLF.KY_SPECTRUM, gamma, label="Fortran")
+plot!(inputTJLF.KY_SPECTRUM, gammaJulia, label="Julia", title="Growth Rate",linestyle=:dash)

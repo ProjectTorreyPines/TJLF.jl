@@ -469,6 +469,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         vsIS::Float64 = √(tausIS / massIS)
         zsIS::Float64 = inputs.ZS[is]
 
+        ### i hate it here (this is necessary)
+        ft = outputGeo.fts[is]  # electrons
+        ft2 = ft^2
+        ft3 = ft^3
+        ft4 = ft^4
+        ft5 = ft^5
+
         if(nroot>6)
             index = Int(floor(20*ft))+1
             if(index==21) index=20 end
@@ -2664,16 +2671,16 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
     # print("ggev: ")
     # @time begin
-    (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
+    # (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
     # end
-    return alpha./beta, vr
+    # return alpha./beta, vr
 
     ### slower
     # print("eigen: ")
     # @time begin
-    # solution = eigen(amat, bmat)
+    solution = eigen!(amat, bmat)
     # end
-    # return solution.values, solution.vectors
+    return solution.values, solution.vectors
     
     ### slower
     # amat = sparse(amat)

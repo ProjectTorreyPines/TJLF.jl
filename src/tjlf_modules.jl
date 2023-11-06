@@ -58,6 +58,9 @@ mutable struct InputTJLF{T<:Real}
     VNS_SHEAR::Vector{T}
     VTS_SHEAR::Vector{T}
 
+    WIDTH_SPECTRUM::Vector{T}
+    KY_SPECTRUM::Vector{T}
+
     SIGN_BT::T
     SIGN_IT::T
     KY::T
@@ -121,12 +124,13 @@ mutable struct InputTJLF{T<:Real}
     NN_MAX_ERROR::T
 
 
-    function InputTJLF{T}(ns::Int) where T<:Real
+    function InputTJLF{T}(ns::Int,nky::Int) where T<:Real
 
         new("",
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),
+        Vector{T}(undef,nky),Vector{T}(undef,nky),
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
