@@ -2662,16 +2662,23 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # find the eigenvalues and eigenvectors
     #*************************************************************
 
+    ### not supported
+    # print("kyrlov: ")
+    # @time begin
+    # _, _ = geneigsolve((amat,bmat))
+    # end
+
+    ### about the same but less allocations
     # print("ggev: ")
     # @time begin
     (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
     # end
     return alpha./beta, vr
 
-    ### slower
+    ### about the same
     # print("eigen: ")
     # @time begin
-    # solution = eigen(amat, bmat)
+    # solution = eigen!(amat, bmat)
     # end
     # return solution.values, solution.vectors
     
