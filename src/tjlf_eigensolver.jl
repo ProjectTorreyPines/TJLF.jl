@@ -2678,16 +2678,20 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     ### about the same but less allocations
     # print("ggev: ")
     # @time begin
-    # (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
+    if inputs.IFLUX
+        (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
+    else
+        (alpha, beta, _, vr) = ggev!('N','N',amat,bmat)
+    end
     # end
-    # return alpha./beta, vr
+    return alpha./beta, vr
 
     ### about the same
     # print("eigen: ")
     # @time begin
-    solution = eigen!(amat, bmat)
+    # solution = eigen!(amat, bmat)
     # end
-    return solution.values, solution.vectors
+    # return solution.values, solution.vectors
     
     ### slower
     # amat = sparse(amat)

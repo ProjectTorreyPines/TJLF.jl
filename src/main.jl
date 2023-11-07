@@ -41,13 +41,13 @@ end
 #   profiling
 #*******************************************************************************************************
 
-@profview tjlf_TM(inputTJLF, satParams, outputHermite)
+# @profview tjlf_TM(inputTJLF, satParams, outputHermite)
 # @profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite)
 # using Profile
 # @profile tjlf_TM(inputTJLF, satParams, outputHermite)
 # @codewarning
-# using BenchmarkTools
-# @btime tjlf_TM(inputTJLF, satParams, outputHermite)
+using BenchmarkTools
+@btime tjlf_TM(inputTJLF2, satParams, outputHermite)
 
 
 #*******************************************************************************************************
