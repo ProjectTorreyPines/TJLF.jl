@@ -2,7 +2,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
                         nbasis::Int, ky::T,
-                        amat::Matrix{K},bmat::Matrix{K})::Tuple{Vector{ComplexF64},Array{ComplexF64}} where T<:Real where K<:Complex
+                        amat::Matrix{K},bmat::Matrix{K})::Tuple{Vector{ComplexF64},Vector{ComplexF64}} where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2669,6 +2669,16 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # find the eigenvalues and eigenvectors
     #*************************************************************
 
+    ### only calculate the eigenvalues
+    if inputs.IFLUX
+        amat_copy = copy(amat)
+        bmat_copy = copy(bmat)
+        (alpha, beta, _, _) = ggev!('N','N',amat_copy,bmat_copy)
+    else
+        (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
+    end
+    return alpha,beta
+
     ### not supported
     # print("kyrlov: ")
     # @time begin
@@ -2678,13 +2688,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     ### about the same but less allocations
     # print("ggev: ")
     # @time begin
-    if inputs.IFLUX
-        (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
-    else
-        (alpha, beta, _, vr) = ggev!('N','N',amat,bmat)
-    end
+    # if inputs.IFLUX
+    #     (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
+    # else
+    #     (alpha, beta, _, vr) = ggev!('N','N',amat,bmat)
     # end
-    return alpha./beta, vr
+    # end
+    # return alpha./beta, vr
 
     ### about the same
     # print("eigen: ")

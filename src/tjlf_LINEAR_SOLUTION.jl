@@ -100,7 +100,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky, amat,bmat)
+    alpha, beta = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky, amat,bmat)
+    eigenvalues = alpha./beta
 
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
@@ -240,8 +241,17 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         kx_bar_out = zeros(Float64, nmodes_out)
         kpar_bar_out = zeros(Float64, nmodes_out)
 
+        # used for computing eigenvector
+        zmat = similar(amat)
+        small::ComplexF64 = 1.0e-13
         for imax = 1:nmodes_out
             if(jmax[imax]>0)
+                # calculate eigenvector
+                v = fill(small,iur)
+                zmat = beta[jmax[imax]].*amat .- (small.+alpha[jmax[imax]]).*bmat
+                gesv!(zmat,v)
+                # calculate eigenvector with Arpack.jl, very slightly slower
+                # _, v = eigs(amat,bmat,nev=1,sigma=eigenvalues[jmax[imax]])
 
                 Ns_Ts_phase,
                 Ne_Te_phase,
@@ -262,7 +272,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 energy_weight,
                 stress_par_weight,
                 stress_tor_weight,
-                exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalues[jmax[imax]], v[:,jmax[imax]])
+                exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalues[jmax[imax]], v[:,1])
                 #### probably outputs
                 wd_bar_out[imax] = wd_bar
                 b0_bar_out[imax] = b0_bar
