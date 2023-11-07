@@ -774,18 +774,13 @@ end
     function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gp::Array{T},ave_p0::Vector{T},potential::Array{T},particle_QL::Array{T},energy_QL::Array{T},toroidal_stress_QL::Array{T},parallel_stress_QL::Array{T},exchange_QL::Array{T},etg_fact::T=1.25,c0::T=32.48,c1::T=0.534,exp1::T=1.547,cx_cy::T=0.56,alpha_x::T=1.15,)where T <: Real
 
 parameters:
-    inputs            - InputTJLF struct constructed using the input.TGLF file
-    gp                - array of gamma (net growth rate)
-    QL_data           - split into separate types of QL weights
-    (optional)        - a lot of optional parameters that I don't use -DSUN
+    inputs              - InputTJLF struct constructed using the input.TGLF file
+    gp                  - array of gamma (net growth rate)
+    QL_data             - split into separate types of QL weights
+    (optional)          - a lot of optional parameters that I don't use -DSUN
 
 outputs:
-    a dictionary with the flux integral values:
-          "particle_flux_integral" =>particle_flux_out,
-          "energy_flux_integral" => energy_flux_out,
-          "toroidal_stresses_integral" => stress_tor_out,
-          "parallel_stresses_integral" => stress_par_out,
-          "exchange_flux_integral" => exchange_out,
+    QL_flux_out         - flux integral of the QL weights (field, species, mode, type)
 
     takes in the input.tglf file, ky values, gammas, quasilinear weights, calls
     intensity_sat() which returns the QL intensity values, then calls
