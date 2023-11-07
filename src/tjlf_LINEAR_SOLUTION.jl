@@ -33,7 +33,6 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             gamma_reference_kx0::Union{Vector{T},Missing} = missing,
             freq_reference_kx0::Union{Vector{T},Missing} = missing) where T <: Real
 
-    small = 1.0e-13
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
     ns = inputs.NS

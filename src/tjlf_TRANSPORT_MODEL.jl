@@ -22,27 +22,35 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
 
+    original_iflux = inputs.IFLUX
+    original_width = inputs.WIDTH
+
     # compute the flux spectrum
-    if(alpha_quench_in==0.0 && vexb_shear_s != 0.0)
+
+    if alpha_quench_in!=0.0 || vexb_shear_s==0.0 # do not calculate spectral shift
+        # print("this is c")
+        fluxes, firstPass_eigenvalue = onePass(inputs, satParams, outputHermite, vexb_shear_s)
+
+    elseif !inputs.FIND_WIDTH # calculate spectral shift with predetermined width spectrum
+        # get the gammas to calculate the spectral shift on second pass
+        inputs.IFLUX = false
+        firstPass_eigenvalue = widthPass(inputs, satParams, outputHermite)
+
+        inputs.IFLUX = original_iflux
+        fluxes = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue)
+
+    else # calculate the spectral shift and the width spectrum
         #  spectral shift model double pass
-        original_find_width = inputs.FIND_WIDTH
-        original_iflux = inputs.IFLUX
-        
         # println("this is a")
         inputs.IFLUX = false # do not compute QL on first pass
-        firstPass_width, firstPass_eigenvalue = firstpass(inputs, satParams, outputHermite)
+        firstPass_eigenvalue = firstPass(inputs, satParams, outputHermite)
 
         # println("this is b")
-        inputs.FIND_WIDTH = false
         inputs.IFLUX = original_iflux # compute QL on second pass
-        fluxes = secondpass(inputs, satParams, outputHermite, firstPass_width, firstPass_eigenvalue)
-
-        inputs.FIND_WIDTH = original_find_width
-        return fluxes, firstPass_eigenvalue, firstPass_width
-    else
-        # print("this is c")
-        fluxes, firstPass_eigenvalue = onepass(inputs, satParams, outputHermite, vexb_shear_s)
+        fluxes = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue)
     end
+
+    inputs.WIDTH = original_width
 
     return fluxes, firstPass_eigenvalue
 
@@ -63,13 +71,13 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
-
 """
-    function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+    function firstPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
 
 outputs:
     fluxes                              - 5d array of QL fluxes (field, species, mode, ky, type),
@@ -80,13 +88,10 @@ outputs:
 description:
     calculate the widths and eigenvalues with vexb_shear = 0.0
 """
-function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+function firstPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
     nmodes = inputs.NMODES
     new_eikonal_in = inputs.NEW_EIKONAL
-    find_width_in = inputs.FIND_WIDTH
-    nbasis_max_in = inputs.NBASIS_MAX
-    nmodes = inputs.NMODES
     ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
 
@@ -94,32 +99,20 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
 
     ### output values
     eigenvalue_spectrum_out = zeros(Float64, nmodes, nky, 2)
-    firstPass_width = Vector{Float64}(undef,nky)
 
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     for i = eachindex(ky_spect)
         ky = ky_spect[i]
 
         if(new_eikonal_in) # not sure what this is -DSUN
-            if(find_width_in) # find the width
-                # println("this is 1")
-                nmodes_out, gamma_nb_min_out,
-                gamma_out, freq_out,
-                _,_,_,_,_ = tjlf_max2(inputs, satParams, outputHermite, ky, 0.0)
+            # println("this is 1")
+            nmodes_out, gamma_nb_min_out,
+            gamma_out, freq_out,
+            _,_,_,_,_ = tjlf_max2(inputs, satParams, outputHermite, ky, 0.0)
 
-                firstPass_width[i] = inputs.WIDTH
-                ### reset value
-                inputs.WIDTH = original_width
-
-            else # use width from input file
-                # println("this is 2")
-                error("not implemented yet")
-                nbasis = nbasis_max_in
-                tjlf_LS()
-                firstPass_width[i] = inputs.WIDTH
-                gamma_nb_min_out = gamma_out[1]
-            end
-
+            inputs.WIDTH_SPECTRUM[i] = inputs.WIDTH
+            ### reset value
+            inputs.WIDTH = original_width
         else
             error("NOT IMPLEMENTED YET -DSUN")
         end
@@ -131,19 +124,27 @@ function firstpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         if(unstable)
             eigenvalue_spectrum_out[1:nmodes_out,i,1] .= gamma_out[1:nmodes_out]
             eigenvalue_spectrum_out[1:nmodes_out,i,2] .= freq_out[1:nmodes_out]
-
         end
     end
 
-    return firstPass_width, eigenvalue_spectrum_out
+    return eigenvalue_spectrum_out
 
 end
+
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+
 """
-    function onepass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+    function onePass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
 
 outputs:
     QL_flux_spectrum_out                - 5d array of QL fluxes (field, species, mode, ky, type),
@@ -152,15 +153,12 @@ outputs:
                                           type: (gamma, frequency)
 
 description:
-    calculate both eigenvalues and fluxes on firstpass if vexb_shear = 0 or alpha_quench != 0, no secondpass
+    calculate both eigenvalues and fluxes on firstPass if vexb_shear = 0 or alpha_quench != 0, no secondPass
 """
-function onepass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, vexb_shear_s::T) where T<:Real
+function onePass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, vexb_shear_s::T) where T<:Real
 
     nmodes = inputs.NMODES
     new_eikonal_in = inputs.NEW_EIKONAL
-    find_width_in = inputs.FIND_WIDTH
-    nbasis_max_in = inputs.NBASIS_MAX
-    nmodes = inputs.NMODES
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     ky_spect = inputs.KY_SPECTRUM
@@ -174,27 +172,14 @@ function onepass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     for i = eachindex(ky_spect)
-        ky_s = ky_spect[i]
+        ky = ky_spect[i]
+        inputs.WIDTH = inputs.WIDTH_SPECTRUM[i]
 
         if(new_eikonal_in) # not sure what this is -DSUN
-            if(find_width_in) # find the width
-                # println("this is 1")
-                nmodes_out, gamma_nb_min_out,
-                gamma_out, freq_out,
-                particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max2(inputs, satParams, outputHermite, ky_s, vexb_shear_s)
-                
-                ### reset value
-                inputs.WIDTH = original_width
-
-            else # use width from input file
-                # println("this is 2")
-                error("not implemented yet")
-                nbasis = nbasis_max_in
-                tjlf_LS()
-                firstPass_width[i] = inputs.WIDTH
-                gamma_nb_min_out = gamma_out[1]
-            end
-
+            # println("this is 1")
+            nmodes_out, gamma_nb_min_out,
+            gamma_out, freq_out,
+            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max2(inputs, satParams, outputHermite, ky, vexb_shear_s)
         else
             error("NOT IMPLEMENTED YET -DSUN")
         end
@@ -214,10 +199,11 @@ function onepass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         end
     end
 
+    inputs.WIDTH = original_width
+
     return QL_flux_spectrum_out, eigenvalue_spectrum_out
 
 end
-
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
@@ -225,13 +211,81 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 """
-    function secondpass(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},firstPass_width::Vector{T},firstPass_eigenvalue::Array{T,3}) 
+    function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
-    firstPass_width::Vector{T}          - vector of widths found in the first pass
+
+outputs:
+    firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
+                                          type: (gamma, frequency)
+
+description:
+    calculate the eigenvalues to calculate the spectral shift (kx0_e) on secondPass
+"""
+function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+
+    nmodes = inputs.NMODES
+    ky_spect = inputs.KY_SPECTRUM
+    nky = length(ky_spect)
+
+    original_width = inputs.WIDTH
+
+    if(!inputs.NEW_EIKONAL)
+        error("not sure what this flag is -DSUN")
+    end
+
+    ### output values
+    eigenvalue_spectrum_out = zeros(Float64, nmodes, nky, 2)
+
+    # increment through the ky/width spectrum
+    for i = eachindex(ky_spect)
+        ky = ky_spect[i]
+        inputs.WIDTH = inputs.WIDTH_SPECTRUM[i]
+        if inputs.WIDTH<0.0 # invalid value found in max()
+            continue
+        end
+
+        # calculate the eigenvalues with no shear
+        nbasis = inputs.NBASIS_MAX
+        nmodes_out, gamma_out, freq_out,
+        _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0)
+
+        if(inputs.IBRANCH==-1) # check for inward ballooning modes
+            if(inputs.USE_INBOARD_DETRAPPED && ft_test > modB_test) ####### find ft_test and modB_test
+                error("not implemented XIII")
+            end
+        end
+
+        unstable = true
+        gamma_max = max(gamma_out[1],gamma_out[2]) # this covers ibranch=-1,0
+        if(gamma_max == 0.0) unstable = false end ############################ deleted gammma_nb_min_out ############################
+
+        if(unstable)
+            eigenvalue_spectrum_out[1:nmodes_out,i,1] .= gamma_out[1:nmodes_out]
+            eigenvalue_spectrum_out[1:nmodes_out,i,2] .= freq_out[1:nmodes_out]
+        end
+    end
+    inputs.WIDTH = original_width
+
+    return eigenvalue_spectrum_out
+
+end
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+"""
+    function secondPass(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},firstPass_eigenvalue::Array{T,3}) 
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
     firstPass_eigenvalue::Array{T,3}    - array of eigenvalues found in first pass
 
 outputs:
@@ -241,8 +295,7 @@ outputs:
 description:
     calculate the fluxes using the width and eigenvalues from the first pass as reference
 """
-function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
-    firstPass_width::Vector{T},
+function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
     firstPass_eigenvalue::Array{T,3}) where T<:Real
 
     ### input values
@@ -277,7 +330,7 @@ function secondpass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
         if(new_eikonal_in)
             gamma_reference_kx0 .= firstPass_eigenvalue[:,i,1]
             freq_reference_kx0 .= firstPass_eigenvalue[:,i,2]
-            inputs.WIDTH = firstPass_width[i]
+            inputs.WIDTH = abs(inputs.WIDTH_SPECTRUM[i])
             nbasis = nbasis_max_in
             # println("this is 3")
 

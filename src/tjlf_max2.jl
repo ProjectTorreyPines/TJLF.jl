@@ -318,7 +318,8 @@ function tjlf_max2(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
     end
 
     if(gamma_max==0.0)
-        inputs.WIDTH = original_width
+        # set the saved width to be negative if invalid, avoids finding false values
+        inputs.WIDTH = -original_width
         if(sat_rule_in==2 || sat_rule_in==3)
             inputs.USE_BPER = original_bper
             inputs.USE_BPAR = original_bpar

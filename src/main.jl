@@ -10,6 +10,7 @@ using .TJLF
 baseDirectory = "../outputs/test_TM/simple_test/"
 
 inputTJLF = readInput(baseDirectory)
+inputTJLF2 = readInput(baseDirectory)
 
 #*******************************************************************************************************
 #   start running stuff
@@ -19,14 +20,28 @@ outputHermite = gauss_hermite(inputTJLF)
 satParams = get_sat_params(inputTJLF)
 inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
 fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+# sum_ky_spectrum(inputTJLF, satParams, eigenvalue[1,:,:], fluxes)
 
-sum_ky_spectrum(inputTJLF, satParams, eigenvalue[1,:,:], fluxes)
+inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
+inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
+inputTJLF2.FIND_WIDTH = false
+
+fluxes2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
+
+for i in eachindex(fluxes)
+    if(!isapprox(fluxes[i],fluxes2[i],rtol=1e-6))
+        println(fluxes[i])
+        println(fluxes2[i])
+    end
+end
+
+
 
 #*******************************************************************************************************
 #   profiling
 #*******************************************************************************************************
 
-# @profview tjlf_TM(inputTJLF, satParams, outputHermite)
+@profview tjlf_TM(inputTJLF, satParams, outputHermite)
 # @profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite)
 # using Profile
 # @profile tjlf_TM(inputTJLF, satParams, outputHermite)
