@@ -30,18 +30,29 @@ fluxes2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
 
 for i in eachindex(fluxes)
     if(!isapprox(fluxes[i],fluxes2[i],rtol=1e-6))
-        println(fluxes[i])
-        println(fluxes2[i])
+        println(i)
     end
 end
 
+#*******************************************************************************************************
+#   plot energy flux with varied RLTS1
+#*******************************************************************************************************
 
+inputTJLF2.WIDTH_SPECTRUM .= inputTJLF2.WIDTH 
+plot()
+for rlts in 2:0.2:4
+    inputTJLF2.RLTS[1] = rlts
+    fluxes2, _ = tjlf_TM(inputTJLF2, satParams, outputHermite)
+    plot!(inputTJLF2.KY_SPECTRUM, fluxes2[1,2,1,:,2], label="RLTS_1 = $rlts", title="ion energy flux", legendfont=6)
+end
+plot!()
+plot(inputTJLF2.KY_SPECTRUM, inputTJLF2.WIDTH_SPECTRUM, title="widths", label = nothing)
 
 #*******************************************************************************************************
 #   profiling
 #*******************************************************************************************************
 
-# @profview tjlf_TM(inputTJLF, satParams, outputHermite)
+@profview tjlf_TM(inputTJLF2, satParams, outputHermite)
 # @profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite)
 # using Profile
 # @profile tjlf_TM(inputTJLF, satParams, outputHermite)
