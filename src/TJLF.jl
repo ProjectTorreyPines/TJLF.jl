@@ -2,6 +2,7 @@ module TJLF
 
 using LinearAlgebra
 import LinearAlgebra.LAPACK.ggev!
+import LinearAlgebra.LAPACK.gesv!
 # using KrylovKit
 # using Arpack
 # using SparseArrays
