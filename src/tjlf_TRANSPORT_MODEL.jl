@@ -21,6 +21,9 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
 
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    nroot = 15 #### hardcoded
 
     original_iflux = inputs.IFLUX
     original_width = inputs.WIDTH
@@ -28,26 +31,37 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
     # compute the flux spectrum
 
     if alpha_quench_in!=0.0 || vexb_shear_s==0.0 # do not calculate spectral shift
+
         # print("this is c")
         fluxes, firstPass_eigenvalue = onePass(inputs, satParams, outputHermite, vexb_shear_s)
 
     elseif !inputs.FIND_WIDTH # calculate spectral shift with predetermined width spectrum
+
+        nbasis = inputs.NBASIS_MAX
+        iur = (ns-ns0+1)*nroot*nbasis
+        amat = Matrix{ComplexF64}(undef, iur, iur)
+        bmat = Matrix{ComplexF64}(undef, iur, iur)
+
         # get the gammas to calculate the spectral shift on second pass
         inputs.IFLUX = false
-        firstPass_eigenvalue = widthPass(inputs, satParams, outputHermite)
+        firstPass_eigenvalue = widthPass(inputs, satParams, outputHermite, amat,bmat)
 
         inputs.IFLUX = original_iflux
-        fluxes = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue)
+        fluxes = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue, amat,bmat)
 
     else # calculate the spectral shift and the width spectrum
-        #  spectral shift model double pass
+        
         # println("this is a")
         inputs.IFLUX = false # do not compute QL on first pass
-        firstPass_eigenvalue = firstPass(inputs, satParams, outputHermite)
+        firstPass_eigenvalue = firstPass(inputs, satParams, outputHermite) #  spectral shift model double pass
 
+        nbasis = inputs.NBASIS_MAX
+        iur = (ns-ns0+1)*nroot*nbasis
+        amat = Matrix{ComplexF64}(undef, iur, iur)
+        bmat = Matrix{ComplexF64}(undef, iur, iur)
         # println("this is b")
         inputs.IFLUX = original_iflux # compute QL on second pass
-        fluxes = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue)
+        fluxes = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue, amat,bmat)
     end
 
     inputs.WIDTH = original_width
@@ -225,7 +239,7 @@ outputs:
 description:
     calculate the eigenvalues to calculate the spectral shift (kx0_e) on secondPass
 """
-function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, amat::Matrix{K},bmat::Matrix{K}) where T<:Real where K<:Complex
 
     nmodes = inputs.NMODES
     ky_spect = inputs.KY_SPECTRUM
@@ -251,7 +265,7 @@ function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         # calculate the eigenvalues with no shear
         nbasis = inputs.NBASIS_MAX
         nmodes_out, gamma_out, freq_out,
-        _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0)
+        _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0, amat,bmat)
 
         if(inputs.IBRANCH==-1) # check for inward ballooning modes
             if(inputs.USE_INBOARD_DETRAPPED && ft_test > modB_test) ####### find ft_test and modB_test
@@ -296,7 +310,8 @@ description:
     calculate the fluxes using the width and eigenvalues from the first pass as reference
 """
 function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
-    firstPass_eigenvalue::Array{T,3}) where T<:Real
+    firstPass_eigenvalue::Array{T,3},
+    amat::Matrix{K}, bmat::Matrix{K}) where T<:Real where K<:Complex
 
     ### input values
     sat_rule_in = inputs.SAT_RULE
@@ -340,6 +355,7 @@ function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
             stress_tor_QL_out,
             stress_par_QL_out,
             exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s,
+                                amat, bmat,
                                 kx0_e[i], gamma_reference_kx0, freq_reference_kx0)
 
             gamma_nb_min_out = gamma_out[1]
