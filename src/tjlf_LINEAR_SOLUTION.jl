@@ -29,9 +29,11 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             ky::T,
             nbasis::Int,
             vexb_shear_s::T,
+            amat::Matrix{K},
+            bmat::Matrix{K},
             kx0_e::T = 0.0,
             gamma_reference_kx0::Union{Vector{T},Missing} = missing,
-            freq_reference_kx0::Union{Vector{T},Missing} = missing) where T <: Real
+            freq_reference_kx0::Union{Vector{T},Missing} = missing) where T <: Real where K<:Complex
 
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
@@ -98,7 +100,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky)
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky, amat,bmat)
 
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)

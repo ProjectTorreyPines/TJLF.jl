@@ -1,7 +1,8 @@
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
-                        nbasis::Int, ky::T)::Tuple{Vector{ComplexF64},Array{ComplexF64}} where T<:Real
+                        nbasis::Int, ky::T,
+                        amat::Matrix{K},bmat::Matrix{K})::Tuple{Vector{ComplexF64},Array{ComplexF64}} where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -13,7 +14,6 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     nroot = 15 #### hardcoded
-    iur = (ns-ns0+1)*nroot*nbasis
 
     vpar::Vector{Float64} = inputs.VPAR
     mass::Vector{Float64} = inputs.MASS
@@ -455,8 +455,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     #*************************************************************
     # start of loop over species is,js for amat
     #*************************************************************
-    amat = Matrix{ComplexF64}(undef, iur, iur)
-    bmat = Matrix{ComplexF64}(undef, iur, iur)
+    # amat = Matrix{ComplexF64}(undef, iur, iur)
+    # bmat = Matrix{ComplexF64}(undef, iur, iur)
     if(nroot>6)
         v = Vector{Float64}(undef, 20)
         vb = Vector{Float64}(undef, 20)
