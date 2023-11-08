@@ -337,7 +337,7 @@ function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
     QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
     gamma_reference_kx0 = similar(firstPass_eigenvalue[:,1,1])
     freq_reference_kx0 = similar(firstPass_eigenvalue[:,1,2])
-    kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[1,:,:])
+    kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1])
 
     for i = eachindex(ky_spect)
         ky = ky_spect[i]

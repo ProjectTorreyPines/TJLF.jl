@@ -1,10 +1,10 @@
 """
-    function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_mix::AbstractArray{T}) where T<:Real
+    function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, most_unstable_gamma::AbstractArray{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    gamma_mix::Array{T}                 - array of gamma (net growth rate)
+    most_unstable_gamma::Vector{T}      - vector of most unstable gammas (mode = 1) along the ky spectrum
 
 outputs:
     vzf_mix - zonal flow mixing rate
@@ -15,7 +15,7 @@ description:
     finds the maximum of gamma/ky spectrum at low-k values by going through the ky_spect
     array, then after finding the max, interpolate the value to improve accuracy
 """
-function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_mix::Array{T}) where T<:Real
+function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, most_unstable_gamma::Vector{T}) where T<:Real
 
     sat_rule_in = inputs.SAT_RULE
     ky_spect = inputs.KY_SPECTRUM
@@ -27,7 +27,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
 
     rho_ion =  √(taus_2*mass_2) / abs(zs_2)
 
-    # find the local maximum of gamma_mix/ky_spect with the largest gamma_mix/ky_spect^2
+    # find the local maximum of most_unstable_gamma/ky_spect with the largest most_unstable_gamma/ky_spect^2
     kycut = 0.8/rho_ion
     kymin = 0.0
 
@@ -54,7 +54,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
         if((ky_spect[j+1] >= kymin) && (ky_spect[j] <= kycut))
             # save index in case no max
             j1=j
-            testmax1 = gamma_mix[j]/ky_spect[j]
+            testmax1 = most_unstable_gamma[j]/ky_spect[j]
             # find maxes
             if(testmax1 > testmax)
                 testmax = testmax1
@@ -73,7 +73,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     # no unstable modes in range set kymax index to end of range
     # this is cut of at j1 since a maximum may not exist in the low-k range
     kymax1 = ky_spect[jmax_mix]
-    gammamax1 = gamma_mix[jmax_mix]
+    gammamax1 = most_unstable_gamma[jmax_mix]
 
 
 
@@ -81,17 +81,17 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     # linearly interpolate to find a more accurate low-k maximum gamma/ky
     if(kymax1<kymin)
         kymax1 = kymin
-        gammamax1 = (gamma_mix[1]
-            + (gamma_mix[2]-gamma_mix[1])*(kymin-ky_spect[1])/(ky_spect[2]-ky_spect[1]))
+        gammamax1 = (most_unstable_gamma[1]
+            + (most_unstable_gamma[2]-most_unstable_gamma[1])*(kymin-ky_spect[1])/(ky_spect[2]-ky_spect[1]))
     end
     # determine kymax1 and gammamax1 bounded by the tree points f0,f1,f2
     # use a quadratic fit: f = a + b x + c x^2    to f = gamma/ky centered at jmax1
     # scale it to be quadratic where x goes from 0 to 1
     if(jmax_mix>1 && jmax_mix < j1)
         jmax1 = jmax_mix
-        f0 = gamma_mix[jmax1-1] / ky_spect[jmax1-1]
-        f1 = gamma_mix[jmax1] / ky_spect[jmax1]
-        f2 = gamma_mix[jmax1+1] / ky_spect[jmax1+1]
+        f0 = most_unstable_gamma[jmax1-1] / ky_spect[jmax1-1]
+        f1 = most_unstable_gamma[jmax1] / ky_spect[jmax1]
+        f2 = most_unstable_gamma[jmax1+1] / ky_spect[jmax1+1]
         deltaky = ky_spect[jmax1+1] - ky_spect[jmax1-1]
         x1 = (ky_spect[jmax1] - ky_spect[jmax1-1])/deltaky
         a = f0
@@ -214,13 +214,14 @@ end
 
 
 """
-    function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gp::Array{T},QL_data::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
+    function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_data::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    gp::Array{T}                        - array of gamma (net growth rate)
-    QL_data::Array{T}                   - array of quasilinear weights
+    gamma_matrix::Matrix{T}             - matrix of gamma (mode, ky)
+    QL_data::Array{T,5}                 - array of quasilinear weights (field, species, mode, ky, type)
+                                          type: (particle, energy, torodial stress, parallel stress, exchange)
     expsub::T (opt)                     - float for the exponent
     return_phi_params::T (opt)          - boolean flag to change how much is output
 
@@ -239,8 +240,8 @@ description:
 function intensity_sat(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
-    gp::Matrix{T},
-    QL_data::Array{T}, ### taken from the output file
+    gamma_matrix::Matrix{T},
+    QL_data::Array{T,5}, ### taken from the output file
     expsub::T=2.0,
     return_phi_params::Bool=false) where T<:Real
 
@@ -276,16 +277,12 @@ function intensity_sat(
     Bt0_out = satParams.Bt0
     b_geo0_out = satParams.B_geo[1]
     grad_r0_out = satParams.grad_r0
-    kx0_e = xgrid_functions_geo(inputs, satParams,  gp)
+    kx0_e = xgrid_functions_geo(inputs, satParams, gamma_matrix)
 
 
-    if length(size(gp)) > 1
-        gammas1 = gp[:, 1] # SAT1 and SAT2 use the growth rates of the most unstable modes
-    else
-        gammas1 = gp
-    end
+    most_unstable_gamma = gamma_matrix[1, :] # SAT1 and SAT2 use the growth rates of the most unstable modes
 
-    vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, gammas1)
+    vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, most_unstable_gamma)
 
     # model fit parameters
     # Miller geometry values igeo=1
@@ -381,12 +378,10 @@ function intensity_sat(
         xs = zeros(nmodes)
 
         for k in 1:nmodes
-            sum_W_i = zeros(length(QL_data[:, k, 1, 1, 2]))
-            for is in 2:size(QL_data)[3] # sum over ion species, requires electrons to be species 1
-                sum_W_i .= sum_W_i .+ QL_data[:, k, is, 1, 2]
-            end
+            # (field, species, mode, ky, type) type = 2 is energy flux
+            sum_W_i = sum(QL_data[1,2:end,k,:,2], dims=1) # sum over ion species, requires electrons to be species 1
+
             # check for singularities in weight ratio near kmax
-            ### isn't i == jmax_out? I don't think you need the loop
             i = 1
             while (ky_spect[i] < kmax)
 	            i += 1
@@ -396,7 +391,7 @@ function intensity_sat(
             if(sum_W_i[i]==0.0 || sum_W_i[i-1]==0.0)
                 x = 0.5
             else
-                abs_W_ratio = abs.(QL_data[:,k,1,1,2]./sum_W_i)
+                abs_W_ratio = abs.(QL_data[1,1,k,:,2]./sum_W_i)
                 x = linear_interpolation(ky_spect, abs_W_ratio, kmax)
             end
             Y = mode_transition_function(x, Y_ITG, Y_TEM, x_ITG, x_TEM)
@@ -425,7 +420,7 @@ function intensity_sat(
     end
 
     # if(!first_pass)  # second pass for spectral shift model
-    gamma_net = zeros(nky)
+    gamma_net = Vector{Float64}(undef,nky)
     for i in 1:nky
         kx = kx0_e[i]
         if(sat_rule_in==2 || sat_rule_in==3)
@@ -437,14 +432,14 @@ function intensity_sat(
             end
             kx = kx*ky0/kx_width
         end
-        gamma_net[i] = gammas1[i]/(1.0 + abs(ax*kx)^exp_ax)
+        gamma_net[i] = most_unstable_gamma[i]/(1.0 + abs(ax*kx)^exp_ax)
     end
 
     if(sat_rule_in==1)
         vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, gamma_net)
     else
         vzf_out_fp = vzf_out # used for recreation of first pass for SAT3
-        vzf_out = vzf_out*gamma_net[jmax_out]/max(gammas1[jmax_out], small)
+        vzf_out = vzf_out*gamma_net[jmax_out]/max(most_unstable_gamma[jmax_out], small)
     end
     # end   # second pass complete
 
@@ -455,8 +450,8 @@ function intensity_sat(
 
 
 
-    gamma_mix1 = zeros(nky)
-    gamma = zeros(nky)
+    gamma_mix1 = Vector{Float64}(undef,nky)
+    gamma = Vector{Float64}(undef,nky)
 
     if(sat_rule_in==1)
         gamma .= ifelse.(ky_spect.<kymax1,
@@ -507,8 +502,8 @@ function intensity_sat(
             gamma = zeros(size(ky_spect))
 
             gamma .= ifelse.(ky_spect.<kymax1,
-                            gammas1,
-                            ((gammamax1 * (vzf_out_fp/vzf_out)) .+ max.(gammas1 .- (cz2.*vzf_out_fp.*ky_spect),0.0)))
+                             most_unstable_gamma,
+                            ((gammamax1 * (vzf_out_fp/vzf_out)) .+ max.(most_unstable_gamma .- (cz2.*vzf_out_fp.*ky_spect),0.0)))
 
             gamma_fp .= gamma
         # end
@@ -557,7 +552,7 @@ function intensity_sat(
                 k += 1
             end
             for l in k-1:k
-                gamma0 = gammas1[l]
+                gamma0 = most_unstable_gamma[l]
 	            ky0 = ky_spect[l]
 	            kx = kx0_e[l]
 
@@ -607,7 +602,7 @@ function intensity_sat(
     sat_geo_factor_out = zeros(nky)
 
     for j in 1:nky
-        gamma0 = gammas1[j]
+        gamma0 = most_unstable_gamma[j]
         ky0 = ky_spect[j]
         kx = kx0_e[j]
         if(sat_rule_in==1)
@@ -632,12 +627,11 @@ function intensity_sat(
             for i in 1:nmodes
                 gammaeff = 0.0
                 if(gamma0>small)
-                    gammaeff = gamma_mix1[j]*(gp[j,i]/gamma0)^expsub
+                    gammaeff = gamma_mix1[j]*(gamma_matrix[i,j]/gamma0)^expsub
                 end
                 if(ky0>kyetg) gammaeff = gammaeff * √(ky0/kyetg) end
 
-                field_spectrum_out[j,i] = (measure*cnorm*
-                                ((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2)
+                field_spectrum_out[j,i] = measure*cnorm*((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2
                 if(units_in != "GYRO")
                     field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
                 end
@@ -657,7 +651,7 @@ function intensity_sat(
                     if (ky0 <= kP) # initial quadratic
 
 			            sig_ratio = (aoverb * (ky0^2) + ky0 + coverb) / (aoverb * (k0^2) + k0 + coverb)
-			            field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky * (gp[j,i]/gamma0)^(2 * expsub)
+			            field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky * (gamma_matrix[i,j]/gamma0)^(2 * expsub)
 
                     elseif (ky0 <= kT) # connecting quadratic
 
@@ -671,12 +665,12 @@ function intensity_sat(
                             eoversig0 = -2 * doversig0 * kP + ((2 * aoverb * kP + 1)/(aoverb * (k0^2) + k0 + coverb))
                             foversig0 = ((Ys[i] / YTs[i])^(1.0/abs(c_1))) - eoversig0 * kT - doversig0 * (kT^2)
                             sig_ratio = doversig0*(ky0^2) + eoversig0*ky0 + foversig0
-                            field_spectrum_out[j,i] = Ys[i] * (sig_ratio ^ c_1) * Fky * (gp[j,i]/gamma0)^(2*expsub)
+                            field_spectrum_out[j,i] = Ys[i] * (sig_ratio ^ c_1) * Fky * (gamma_matrix[i,j]/gamma0)^(2*expsub)
                         end
 
                     else # SAT2 for electron scale
 
-                        gammaeff = gamma_mix1[j]*(gp[j,i]/gamma0)^expsub
+                        gammaeff = gamma_mix1[j]*(gamma_matrix[i,j]/gamma0)^expsub
                         if(ky0 > kyetg) gammaeff = gammaeff*√(ky0/kyetg) end
 
                         field_spectrum_out[j,i] = (scal*measure*cnorm*
@@ -701,11 +695,11 @@ function intensity_sat(
             QLA_P[k] = 2 * mode_transition_function(xs[k], 1.1, 0.6, x_ITG, x_TEM)
             QLA_E[k] = 2 * mode_transition_function(xs[k], .75, 0.6, x_ITG, x_TEM)
         end
-	    QLA_O = 2 * 0.8
+	    QLA_O = fill(2.0 * 0.8, nmodes)
     else
-	   QLA_P = 1.0
-	   QLA_E = 1.0
-	   QLA_O = 1.0
+	   QLA_P = fill(1.0,nmodes)
+	   QLA_E = fill(1.0,nmodes)
+	   QLA_O = fill(1.0,nmodes)
     end
 
     phinorm = field_spectrum_out
@@ -732,36 +726,36 @@ function intensity_sat(
 end
 
 """
-    function flux_integrals(i::Int,ky::T,dky0::T,dky1::T,particle::Array{T},energy::Array{T},toroidal_stress::Array{T},parallel_stress::Array{T},exchange::Array{T},particle_flux_out,energy_flux_out,stress_tor_out,stress_par_out,exchange_out,q_low_out) where T <: Real
+    function flux_integrals(inputs::InputTJLF, QL::Array{T,5}, QL_flux_out::Array{T,3},q_low_out::Matrix{T},i::Int,ky::T,dky0::T,dky1::T) where T <: Real
 
 description:
     helper function that calculates the flux integrals given the index,
     and ky/QL values among other things
 """
 ######### i think dky0 is sometimes a different type for some reason #########
-function flux_integrals(inputs::InputTJLF, QL::Array{T,5}, QL_flux_out::Array{T,4},q_low_out::Matrix{T},
+function flux_integrals(inputs::InputTJLF, QL::Array{T,5}, QL_flux_out::Array{T,3},q_low_out::Matrix{T},
     i::Int,ky::T,dky0::T,dky1::T) where T <: Real
 
     # Compute the flux integrals
     # particle
-    QL_flux_out[:,:,:,1] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,1])
-                             .+ dky1 .* QL[:,:,:,i,1])
+    QL_flux_out[:,:,1] .+= (dky0 .* (i==1 ? 0 : sum(QL[:,:,:,i-1,1],dims=3))
+                             .+ dky1 .* sum(QL[:,:,:,i,1],dims=3))
     # energy
-    QL_flux_out[:,:,:,2] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,2])
-                             .+ dky1 .* QL[:,:,:,i,2])
+    QL_flux_out[:,:,2] .+= (dky0 .* (i==1 ? 0 : sum(QL[:,:,:,i-1,2],dims=3))
+                             .+ dky1 .* sum(QL[:,:,:,i,2],dims=3))
     # torodial stress
-    QL_flux_out[:,:,:,3] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,3])
-                             .+ dky1 .* QL[:,:,:,i,3])
+    QL_flux_out[:,:,3] .+= (dky0 .* (i==1 ? 0 : sum(QL[:,:,:,i-1,3],dims=3))
+                             .+ dky1 .* sum(QL[:,:,:,i,3],dims=3))
     # torodial stress
-    QL_flux_out[:,:,:,4] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,4])
-                             .+ dky1 .* QL[:,:,:,i,4])
+    QL_flux_out[:,:,4] .+= (dky0 .* (i==1 ? 0 : sum(QL[:,:,:,i-1,4],dims=3))
+                             .+ dky1 .* sum(QL[:,:,:,i,4],dims=3))
     # exchange
-    QL_flux_out[:,:,:,5] .+= (dky0 .* (i==1 ? 0 : QL[:,:,:,i-1,5])
-                             .+ dky1 .* QL[:,:,:,i,5])
+    QL_flux_out[:,:,5] .+= (dky0 .* (i==1 ? 0 : sum(QL[:,:,:,i-1,5],dims=3))
+                             .+ dky1 .* sum(QL[:,:,:,i,5],dims=3))
 
     if ky * inputs.TAUS[1] * inputs.MASS[2] <= 1
         # sum of first and second field of energy flux
-        q_low_out .= QL_flux_out[1,:,:,2] .+ QL_flux_out[2,:,:,2]
+        q_low_out .= QL_flux_out[1,:,2] .+ QL_flux_out[2,:,2]
     end
 
     return QL_flux_out, q_low_out
@@ -771,16 +765,17 @@ end
 
 
 """
-    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gp::Array{T},ave_p0::Vector{T},potential::Array{T},particle_QL::Array{T},energy_QL::Array{T},toroidal_stress_QL::Array{T},parallel_stress_QL::Array{T},exchange_QL::Array{T},etg_fact::T=1.25,c0::T=32.48,c1::T=0.534,exp1::T=1.547,cx_cy::T=0.56,alpha_x::T=1.15,)where T <: Real
+    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Matrix{T},QL::Array{T,5},etg_fact::T=1.25,c0::T=32.48,c1::T=0.534,exp1::T=1.547,cx_cy::T=0.56,alpha_x::T=1.15)where T <: Real
 
 parameters:
     inputs              - InputTJLF struct constructed using the input.TGLF file
-    gp                  - array of gamma (net growth rate)
-    QL_data             - split into separate types of QL weights
+    gamma_matrix        - matrix of gamma (mode, ky)
+    QL_data             - split into separate types of QL weights (field, species, mode, ky, type)
+                          type: (particle, energy, torodial stress, parallel stress, exchange)
     (optional)          - a lot of optional parameters that I don't use -DSUN
 
 outputs:
-    QL_flux_out         - flux integral of the QL weights (field, species, mode, type)
+    QL_flux_out         - flux integral of the QL weights (field, species, type)
 
     takes in the input.tglf file, ky values, gammas, quasilinear weights, calls
     intensity_sat() which returns the QL intensity values, then calls
@@ -789,7 +784,7 @@ outputs:
 function sum_ky_spectrum(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
-    gp::Matrix{T},
+    gamma_matrix::Matrix{T},
     QL::Array{T,5},
     etg_fact::T=1.25,
     c0::T=32.48,
@@ -808,24 +803,25 @@ function sum_ky_spectrum(
 
     # Multiply QL weights with desired intensity
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
-        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gp, QL)
+        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL)
     else
         throw(error("sat_rule_in must be [1.0, 1, 'SAT1', 2.0, 2, 'SAT2', 3.0, 3, 'SAT3], not $sat_rule_in"))
     end
 
+    flux_spectrum = similar(QL)
     # Ql size (nf,ns,nm,nky,ntype)
     # QLA_P and QLA_E are potentially vectors of size nm
     # intensity factor size (nky, nm)
-    QL[:,:,:,:,1] = QL[:,:,:,:,1] .* reshape((QLA_P .* intensity_factor'),(1,1,nm,nky)) # particle
-    QL[:,:,:,:,2] = QL[:,:,:,:,2] .* reshape((QLA_E .* intensity_factor'),(1,1,nm,nky)) # energy
-    QL[:,:,:,:,3] = QL[:,:,:,:,3] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # toroidal stress
-    QL[:,:,:,:,4] = QL[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
-    QL[:,:,:,:,5] = QL[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
+    flux_spectrum[:,:,:,:,1] = QL[:,:,:,:,1] .* reshape((QLA_P .* intensity_factor'),(1,1,nm,nky)) # particle
+    flux_spectrum[:,:,:,:,2] = QL[:,:,:,:,2] .* reshape((QLA_E .* intensity_factor'),(1,1,nm,nky)) # energy
+    flux_spectrum[:,:,:,:,3] = QL[:,:,:,:,3] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # toroidal stress
+    flux_spectrum[:,:,:,:,4] = QL[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
+    flux_spectrum[:,:,:,:,5] = QL[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
 
 
     # outputs
     q_low_out = zeros((ns, nm))
-    QL_flux_out = zeros(Float64, nf, ns, nm, 5)
+    QL_flux_out = zeros(Float64, nf, ns, 5)
     dky0 = 0.0
     ky0 = 0.0
     for i in eachindex(ky_spect)
@@ -839,7 +835,7 @@ function sum_ky_spectrum(
             dky0 = ky0 * (ky1 * dky - 1.0)
         end
 
-        QL_flux_out, q_low_out = flux_integrals(inputs, QL, QL_flux_out, q_low_out,
+        QL_flux_out, q_low_out = flux_integrals(inputs, flux_spectrum, QL_flux_out, q_low_out,
                                                 i,ky,dky0,dky1)
 
         ky0 = ky1
