@@ -7,7 +7,7 @@ using .TJLF
 # Read input.tglf
 #******************************************************************************************************
 # location for the input.tglf file
-baseDirectory = "../outputs/test_TM/simple_test/"
+baseDirectory = "../outputs/test_TM/nmodes2/"
 
 inputTJLF = readInput(baseDirectory)
 inputTJLF2 = readInput(baseDirectory)
@@ -20,7 +20,7 @@ outputHermite = gauss_hermite(inputTJLF)
 satParams = get_sat_params(inputTJLF)
 inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
 fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
-# sum_ky_spectrum(inputTJLF, satParams, eigenvalue[1,:,:], fluxes)
+QL_flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], fluxes)
 
 inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
 inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
@@ -38,14 +38,28 @@ end
 #   plot energy flux with varied RLTS1
 #*******************************************************************************************************
 
+using Plots
+
 inputTJLF2.WIDTH_SPECTRUM .= inputTJLF2.WIDTH 
-plot()
+inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
+
+rltsGrid = []
+electronEnergy = []
+ionEnergy = []
+
 for rlts in 2:0.2:4
     inputTJLF2.RLTS[1] = rlts
-    fluxes2, _ = tjlf_TM(inputTJLF2, satParams, outputHermite)
-    plot!(inputTJLF2.KY_SPECTRUM, fluxes2[1,2,1,:,2], label="RLTS_1 = $rlts", title="ion energy flux", legendfont=6)
+    fluxes2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
+    QL_flux_out = sum_ky_spectrum(inputTJLF2, satParams, eigenvalue2[:,:,1], fluxes2)
+
+    push!(rltsGrid,rlts)
+    push!(electronEnergy,sum(QL_flux_out[1,1,2]))
+    push!(ionEnergy,sum(QL_flux_out[1,2,2]))
 end
-plot!()
+plot(rltsGrid, electronEnergy, title="Q_e vs RLTS_1; varied width", xlabel="RLTS_1", ylabel="Q_e", label = nothing)
+plot(rltsGrid, ionEnergy, title="Q_i vs RLTS_1; varied width", xlabel="RLTS_1", ylabel="Q_i", label = nothing)
+
+
 plot(inputTJLF2.KY_SPECTRUM, inputTJLF2.WIDTH_SPECTRUM, title="widths", label = nothing)
 
 #*******************************************************************************************************
@@ -68,8 +82,8 @@ using BenchmarkTools
 using Plots
 
 # calls the fortran code as an executable
-# path = "./Fortran/tglf"
-# run(`$(path) $baseDirectory`)
+path = "./Fortran/tglf"
+run(`$(path) $baseDirectory`)
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
