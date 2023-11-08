@@ -2,7 +2,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
                         nbasis::Int, ky::T,
-                        amat::Matrix{K},bmat::Matrix{K})::Tuple{Vector{ComplexF64},Vector{ComplexF64}} where T<:Real where K<:Complex
+                        amat::Matrix{K},bmat::Matrix{K})::Vector{ComplexF64} where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2677,7 +2677,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     else
         (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
     end
-    return alpha,beta
+    return alpha./beta
 
     ### not supported
     # print("kyrlov: ")
