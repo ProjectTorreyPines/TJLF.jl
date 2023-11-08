@@ -1,10 +1,10 @@
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gammas::Matrix{T}, small::T=0.00000001) where T<:Real
+    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T}, small::T=0.00000001) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    gammas::Matrix{T}                   - growth rate eigenvalues
+    gamma_matrix::Matrix{T}             - growth rate eigenvalues (mode, ky)
 
 outputs:
     kx0_e                               - value of kx0_e given the gamma value
@@ -12,7 +12,7 @@ outputs:
 description:
     calculate kx0_e given the growthrate during second pass of TM
 """
-function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gammas::Matrix{T},
+function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T},
     small::T=0.00000001) where T<:Real
     sign_IT = inputs.SIGN_IT
     vexb_shear = inputs.VEXB_SHEAR
@@ -33,8 +33,8 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     # kx0 = kx0_loc/ky # note that kx0 is kx/ky
 
     # generalized quench rule kx0 shift
-    gamma_reference_kx0 = gammas[:, 1]
-    if(alpha_quench_in==0.0 && gamma_reference_kx0[1]!=0.0)
+    most_unstable_gamma = gamma_matrix[1, :]
+    if(alpha_quench_in==0.0 && most_unstable_gamma[1]!=0.0)
         vexb_shear_s = vexb_shear * sign_IT
         vexb_shear_kx0 = alpha_e_in*vexb_shear_s
 
@@ -44,22 +44,22 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         if(units_in=="GYRO")
             kx0_factor = abs(grad_r0^2/B_geo0)
             kx0_factor = 1.0 + 0.40*(kx0_factor-1.0)^2
-            wE .= (kx0_factor*vexb_shear_kx0) .* (ifelse.(kyi.<0.3,kyi./0.3,1.0))./gamma_reference_kx0
+            wE .= (kx0_factor*vexb_shear_kx0) .* (ifelse.(kyi.<0.3,kyi./0.3,1.0))./most_unstable_gamma
         else
             kx0_factor = 1.0
         end
 
-        kx0_e = -(0.36*vexb_shear_kx0./gamma_reference_kx0
+        kx0_e = -(0.36*vexb_shear_kx0./most_unstable_gamma
                 .+ (0.38.*wE.*tanh.((0.69.*wE).^6)))
 
         a0 = 1.3
         if(sat_rule_in==1)
             a0 = 1.45
-            kx0_e = -(0.53*vexb_shear_kx0./gamma_reference_kx0 .+
+            kx0_e = -(0.53*vexb_shear_kx0./most_unstable_gamma .+
                     (0.25.*wE.*tanh.((0.69.*wE).^6)))
         elseif(sat_rule_in==2 || sat_rule_in==3)
             a0=1.6
-            vzf_out, kymax_out, _ = get_zonal_mixing(inputs, satParams, gamma_reference_kx0)
+            vzf_out, kymax_out, _ = get_zonal_mixing(inputs, satParams, most_unstable_gamma)
             if(abs(kymax_out*vzf_out*vexb_shear_kx0) > small)
                 kx0_e = -(0.32*vexb_shear_kx0).*((ky_spect./kymax_out).^0.3)./(ky_spect.*vzf_out)
             else
