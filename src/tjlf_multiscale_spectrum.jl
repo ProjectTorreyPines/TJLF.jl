@@ -804,6 +804,8 @@ function sum_ky_spectrum(
     # Multiply QL weights with desired intensity
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
         intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL)
+    elseif sat_rule_in == 0 #################### TEMPORARY FIX -DSUN ####################
+        return NaN
     else
         throw(error("sat_rule_in must be [1.0, 1, 'SAT1', 2.0, 2, 'SAT2', 3.0, 3, 'SAT3], not $sat_rule_in"))
     end
