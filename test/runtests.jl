@@ -269,6 +269,7 @@ for dir_name in tests
         #******************************************************************************************************
 
         inputTJLF = readInput(baseDirectory)
+        inputTJLF2 = readInput(baseDirectory)
 
         #*******************************************************************************************************
         #   start running stuff
@@ -294,6 +295,21 @@ for dir_name in tests
         juliaEnergy = sum(QL_flux_out, dims = 1)[1,:,2]
         fortranEnergy = fluxesFortran[2,:]
         @test isapprox(juliaEnergy, fortranEnergy, rtol=1e-3)
+
+
+        #*******************************************************************************************************
+        #   test that providing widths yields same results
+        #*******************************************************************************************************
+
+        inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
+        inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
+        inputTJLF2.FIND_WIDTH = false
+
+        fluxes2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
+
+        for i in eachindex(fluxes)
+            @test isapprox(fluxes[i], fluxes2[i],atol=1e-10)
+        end
 
     end
 
