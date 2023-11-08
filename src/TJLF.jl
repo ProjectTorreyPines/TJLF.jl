@@ -4,7 +4,8 @@ using LinearAlgebra
 import LinearAlgebra.LAPACK.ggev!
 import LinearAlgebra.LAPACK.gesv!
 # using KrylovKit
-# using Arpack # if you use Arpack, use version 0.5.3
+using Arpack # if you use Arpack, use version 0.5.3
+using SparseArrays
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
