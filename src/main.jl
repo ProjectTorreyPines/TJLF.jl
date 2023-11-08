@@ -1,13 +1,17 @@
 # calls the fortran code as a shared library
 # ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
+# calls the fortran code as an executable
+# path = "./Fortran/tglf"
+# run(`$(path) $baseDirectory`)
 include("../src/TJLF.jl")
 using .TJLF
+using Plots
 
 #******************************************************************************************************
 # Read input.tglf
 #******************************************************************************************************
 # location for the input.tglf file
-baseDirectory = "../outputs/test_TM/nmodes2/"
+baseDirectory = "../outputs/test_TM/TEM case/"
 
 inputTJLF = readInput(baseDirectory)
 inputTJLF2 = readInput(baseDirectory)
@@ -35,32 +39,38 @@ for i in eachindex(fluxes)
 end
 
 #*******************************************************************************************************
-#   plot energy flux with varied RLTS1
+#   plot energy fluxes with varied input variable
 #*******************************************************************************************************
 
-using Plots
+# xGrid = []
+# electronEnergy = []
+# ionEnergy = []
+# electronEnergy2 = []
+# ionEnergy2 = []
 
-inputTJLF2.WIDTH_SPECTRUM .= inputTJLF2.WIDTH 
-inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
+plot()
+for val in 1:0.5:5
+    inputTJLF2.RLTS[2] = val
+    # inputTJLF.RLTS[2] = val
+    # push!(xGrid,val)
 
-rltsGrid = []
-electronEnergy = []
-ionEnergy = []
+    # _, eigenvalue, QL_flux_out = TJLF.run(inputTJLF)
+    # plot!(inputTJLF.KY_SPECTRUM, eigenvalue[2,:,1], title="2nd mode; found width", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
+    # push!(electronEnergy,QL_flux_out[1,1,2])
+    # push!(ionEnergy,QL_flux_out[1,2,2])
 
-for rlts in 2:0.2:4
-    inputTJLF2.RLTS[1] = rlts
-    fluxes2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
-    QL_flux_out = sum_ky_spectrum(inputTJLF2, satParams, eigenvalue2[:,:,1], fluxes2)
 
-    push!(rltsGrid,rlts)
-    push!(electronEnergy,sum(QL_flux_out[1,1,2]))
-    push!(ionEnergy,sum(QL_flux_out[1,2,2]))
+    _, eigenvalue2, QL_flux_out2 = TJLF.run(inputTJLF2)
+    plot!(inputTJLF2.KY_SPECTRUM, eigenvalue2[1,:,1], title="most unstable mode; fixed width", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
+    # push!(electronEnergy2,QL_flux_out2[1,1,2])
+    # push!(ionEnergy2,QL_flux_out2[1,2,2])
 end
-plot(rltsGrid, electronEnergy, title="Q_e vs RLTS_1; varied width", xlabel="RLTS_1", ylabel="Q_e", label = nothing)
-plot(rltsGrid, ionEnergy, title="Q_i vs RLTS_1; varied width", xlabel="RLTS_1", ylabel="Q_i", label = nothing)
+# plot(xGrid, electronEnergy, title="Q_e vs RLTS_2", xlabel="RLTS_2", ylabel="Q_e", label = "found widths")
+# plot!(xGrid, electronEnergy2, title="Q_e vs RLTS_2", xlabel="RLTS_2", ylabel="Q_e", label = "fixed widths")
+# plot(xGrid, ionEnergy, title="Q_i vs RLTS_2", xlabel="RLTS_2", ylabel="Q_i", label = "found widths")
+# plot!(xGrid, ionEnergy2, title="Q_i vs RLTS_2", xlabel="RLTS_2", ylabel="Q_i", label = "fixed widths")
+plot!()
 
-
-plot(inputTJLF2.KY_SPECTRUM, inputTJLF2.WIDTH_SPECTRUM, title="widths", label = nothing)
 
 #*******************************************************************************************************
 #   profiling
@@ -78,12 +88,6 @@ using BenchmarkTools
 #*******************************************************************************************************
 #   plot results
 #*******************************************************************************************************
-
-using Plots
-
-# calls the fortran code as an executable
-path = "./Fortran/tglf"
-run(`$(path) $baseDirectory`)
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
