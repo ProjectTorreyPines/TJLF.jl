@@ -139,7 +139,7 @@ for dir_name in tests
         inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
         @test isapprox(ky_spect, inputTJLF.KY_SPECTRUM, rtol=1e-6)
 
-        kx0epy = xgrid_functions_geo(inputTJLF, satParams, Matrix(gammas))
+        kx0epy = xgrid_functions_geo(inputTJLF, satParams, Matrix(gammas'))
         @test isapprox(kx0epy, kx0_e, rtol=1e-3)
         @test isapprox(inputComparison["SAT_geo0_out"], satParams.SAT_geo0, rtol=1e-6)
         @test isapprox(inputComparison["SAT_geo1_out"], satParams.SAT_geo1, rtol=1e-6)
@@ -152,9 +152,9 @@ for dir_name in tests
             @test isapprox(inputComparison["B_geo0_out"], satParams.B_geo[1], rtol=1e-6)
         end
 
-        QL_flux_out = sum_ky_spectrum(inputTJLF, satParams, gammas, QL_data)
+        QL_flux_out = sum_ky_spectrum(inputTJLF, satParams, Matrix(gammas'), QL_data)
         # julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
-        julia_sat1 = sum(sum(QL_flux_out, dims = 1)[1,:,:,:], dims = 2)[:,1,2]
+        julia_sat1 = sum(QL_flux_out, dims = 1)[1,:,2]
         expected_sat1 = fluxes[2,:]
         @test isapprox(julia_sat1, expected_sat1, rtol=1e-3)
     end
@@ -241,12 +241,7 @@ for dir_name in tests
         
         end
         QLw = reshape(ql, (ntype, nky, nmodes, nfield, nspecies))
-        QL_data = permutedims(QLw,(2,3,5,4,1))
-        particle_QL = QL_data[:, :, :, :, 1]
-        energy_QL = QL_data[:, :, :, :, 2]
-        toroidal_stress_QL = QL_data[:, :, :, :, 3]
-        parallel_stress_QL = QL_data[:, :, :, :, 4]
-        exchange_QL = QL_data[:, :, :, :, 5]
+        QL_data = permutedims(QLw,(4,5,3,2,1))
 
         # Get eigenvalue spectrum
         fileDirectory = baseDirectory * "out.tglf.eigenvalue_spectrum"
@@ -254,12 +249,20 @@ for dir_name in tests
         lines = split(join(lines[3:length(lines)]))
         lines = [parse(Float64, l) for l in lines]
 
-        gamma = []
-        freq = []
+        gamma = Vector{Vector{Float64}}()
+        freq = Vector{Vector{Float64}}()
         for k in 1:nmodes
             push!(gamma, lines[2k-1:2*nmodes:end])
             push!(freq, lines[2k:2*nmodes:end])
         end
+        gamma = vcat(gamma...)
+        freq = vcat(freq...)
+
+        # Get the integral flux
+        fileDirectory = baseDirectory * "out.tglf.gbflux"
+        lines = readlines(fileDirectory)
+        width::Integer = round(length(split(lines[1]))/4)
+        fluxesFortran = transpose(reshape(parse.(Float64,split(lines[1])), (width,4)))
 
         #******************************************************************************************************
         # Read input.tglf
@@ -276,23 +279,21 @@ for dir_name in tests
         inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
 
         fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
-        gammaJulia = eigenvalue[1,:,1]
-        freqJulia = eigenvalue[1,:,2]
+        gammaJulia = eigenvalue[:,:,1]
+        freqJulia = eigenvalue[:,:,2]
 
-        for i in eachindex(fluxes[1,1,1,:,1])
-                @test isapprox(particle_QL[i,1,1,1], fluxes[1,1,1,i,1], rtol=1e-6)
-                @test isapprox(energy_QL[i,1,1,1], fluxes[1,1,1,i,2], rtol=1e-6)
-                @test isapprox(exchange_QL[i,1,1,1], fluxes[1,1,1,i,5], rtol=1e-6)
-
-                ### stresses are VERY sensitive to eigenvalues
-                @test isapprox(toroidal_stress_QL[i,1,1,1], fluxes[1,1,1,i,3], atol=1e-10)
-                @test isapprox(parallel_stress_QL[i,1,1,1], fluxes[1,1,1,i,4], atol=1e-10)
-
+        for i in eachindex(fluxes[1,:,:,:,:])
+            @test isapprox(QL_data[i], (fluxes[1,:,:,:,:])[i], atol=1e-6)
         end
         for i in eachindex(gammaJulia)
-            @test isapprox(gamma[1][i],gammaJulia[i], atol=1e-6)
-            @test isapprox(freq[1][i],freqJulia[i], atol=1e-6)
+            @test isapprox(gamma[i],gammaJulia'[i], atol=1e-6)
+            @test isapprox(freq[i],freqJulia'[i], atol=1e-6)
         end
+
+        QL_flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], fluxes)
+        juliaEnergy = sum(QL_flux_out, dims = 1)[1,:,2]
+        fortranEnergy = fluxesFortran[2,:]
+        @test isapprox(juliaEnergy, fortranEnergy, rtol=1e-3)
 
     end
 
