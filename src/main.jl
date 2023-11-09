@@ -6,12 +6,14 @@
 include("../src/TJLF.jl")
 using .TJLF
 using Plots
+using Lowess
 
 #******************************************************************************************************
 # Read input.tglf
 #******************************************************************************************************
 # location for the input.tglf file
-baseDirectory = "../outputs/test_TM/TEM case/"
+# baseDirectory = "../outputs/test_TM/simple_test/"
+baseDirectory = "../outputs/test_TM/nmodes2/"
 
 inputTJLF = readInput(baseDirectory)
 inputTJLF2 = readInput(baseDirectory)
@@ -39,40 +41,6 @@ for i in eachindex(fluxes)
 end
 
 #*******************************************************************************************************
-#   plot energy fluxes with varied input variable
-#*******************************************************************************************************
-
-# xGrid = []
-# electronEnergy = []
-# ionEnergy = []
-# electronEnergy2 = []
-# ionEnergy2 = []
-
-plot()
-for val in 1:0.5:5
-    inputTJLF2.RLTS[2] = val
-    # inputTJLF.RLTS[2] = val
-    # push!(xGrid,val)
-
-    # _, eigenvalue, QL_flux_out = TJLF.run(inputTJLF)
-    # plot!(inputTJLF.KY_SPECTRUM, eigenvalue[2,:,1], title="2nd mode; found width", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
-    # push!(electronEnergy,QL_flux_out[1,1,2])
-    # push!(ionEnergy,QL_flux_out[1,2,2])
-
-
-    _, eigenvalue2, QL_flux_out2 = TJLF.run(inputTJLF2)
-    plot!(inputTJLF2.KY_SPECTRUM, eigenvalue2[1,:,1], title="most unstable mode; fixed width", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
-    # push!(electronEnergy2,QL_flux_out2[1,1,2])
-    # push!(ionEnergy2,QL_flux_out2[1,2,2])
-end
-# plot(xGrid, electronEnergy, title="Q_e vs RLTS_2", xlabel="RLTS_2", ylabel="Q_e", label = "found widths")
-# plot!(xGrid, electronEnergy2, title="Q_e vs RLTS_2", xlabel="RLTS_2", ylabel="Q_e", label = "fixed widths")
-# plot(xGrid, ionEnergy, title="Q_i vs RLTS_2", xlabel="RLTS_2", ylabel="Q_i", label = "found widths")
-# plot!(xGrid, ionEnergy2, title="Q_i vs RLTS_2", xlabel="RLTS_2", ylabel="Q_i", label = "fixed widths")
-plot!()
-
-
-#*******************************************************************************************************
 #   profiling
 #*******************************************************************************************************
 
@@ -86,7 +54,88 @@ using BenchmarkTools
 
 
 #*******************************************************************************************************
-#   plot results
+#   plot fluxes with varied RLTS2
+#*******************************************************************************************************
+
+rlts = []
+xGrid = []
+particleFlux = []
+energyFlux = []
+xGrid2 = []
+particleFlux2 = []
+energyFlux2 = []
+
+for val in 0.1:0.1:3.0
+    inputTJLF.RLTS[2] = val
+    inputTJLF2.RLTS[2] = val
+    push!(rlts,val)
+
+    flux, _, _ = TJLF.run(inputTJLF)
+    push!(xGrid,inputTJLF.KY_SPECTRUM)
+    push!(particleFlux,flux[1,1,1,:,1])
+    push!(energyFlux,flux[1,1,1,:,2])
+
+    flux2, _, _ = TJLF.run(inputTJLF2)
+    push!(xGrid2,inputTJLF2.KY_SPECTRUM)
+    push!(particleFlux2,flux2[1,1,1,:,1])
+    push!(energyFlux2,flux2[1,1,1,:,2])
+
+end
+for i in 1:4
+    plot()
+    for r in rlts
+        if i==1
+            plot!(xGrid[i],particleFlux[i],title="particle flux; ITG; find width", xlabel="ky", ylabel="flux", label = "$RLTS(r)")
+        elseif i==2
+            plot!(xGrid[i],energyFlux[i],title="energy flux; ITG; find width", xlabel="ky", ylabel="flux", label = "$(r)")
+        elseif i==3
+            plot!(xGrid[i],particleFlux2[i],title="particle flux; ITG; fixed width", xlabel="ky", ylabel="flux", label = "$(r)")
+        elseif i==4
+            plot!(xGrid[i],energyFlux2[i],title="particle flux; ITG; fixed width", xlabel="ky", ylabel="flux", label = "$(r)")
+        end
+    end
+    plot!(legendfont=6)
+end
+
+#*******************************************************************************************************
+#   plot smoothed fluxes
+#*******************************************************************************************************
+
+plot(inputTJLF.KY_SPECTRUM, fluxes[1,2,1,:,1], title="particle flux", xlabel="ky", ylabel="flux", label = "original data")
+plot!(inputTJLF.KY_SPECTRUM, lowess(inputTJLF.KY_SPECTRUM, fluxes[1,2,1,:,1]), title="particle flux", xlabel="ky", ylabel="flux", label = "smooth data")
+
+#*******************************************************************************************************
+#   plot energy fluxes with varied input variable
+#*******************************************************************************************************
+
+xGrid = []
+electronEnergy = []
+ionEnergy = []
+electronEnergy2 = []
+ionEnergy2 = []
+for val in 0.1:0.1:6.0
+    inputTJLF.RLTS[2] = val
+    inputTJLF2.RLTS[2] = val
+    push!(xGrid,val)
+
+    _, eigenvalue, QL_flux_out = TJLF.run(inputTJLF)
+    # plot!(inputTJLF.KY_SPECTRUM, eigenvalue[2,:,1], title="second mode; find width; ITG", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
+    push!(electronEnergy,QL_flux_out[1,1,2])
+    push!(ionEnergy,QL_flux_out[1,2,2])
+
+    _, eigenvalue2, QL_flux_out2 = TJLF.run(inputTJLF2)
+    # plot!(inputTJLF2.KY_SPECTRUM, eigenvalue2[2,:,1], title="second mode; fixed width", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
+    push!(electronEnergy2,QL_flux_out2[1,1,2])
+    push!(ionEnergy2,QL_flux_out2[1,2,2])
+
+end
+plot(xGrid, electronEnergy, title="Q_e vs RLTS_2", xlabel="RLTS_2", ylabel="Q_e", label = "find widths")
+plot!(xGrid, electronEnergy2, title="Q_e vs RLTS_2; TEM", xlabel="RLTS_2", ylabel="Q_e", label = "fixed widths")
+plot(xGrid, ionEnergy, title="Q_i vs RLTS_2", xlabel="RLTS_2", ylabel="Q_i", label = "find widths")
+plot!(xGrid, ionEnergy2, title="Q_i vs RLTS_2; TEM", xlabel="RLTS_2", ylabel="Q_i", label = "fixed widths")
+
+#*******************************************************************************************************
+#   compare flux/eigenvalues to Fortran
 #*******************************************************************************************************
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
