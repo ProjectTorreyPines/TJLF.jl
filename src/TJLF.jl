@@ -3,7 +3,7 @@ module TJLF
 using LinearAlgebra
 import LinearAlgebra.LAPACK.ggev!
 import LinearAlgebra.LAPACK.gesv!
-# using KrylovKit
+# using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem
 using Arpack # if you use Arpack, use version 0.5.3
 using SparseArrays
 
