@@ -7,7 +7,7 @@ parameters:
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
 
 outputs:
-    fluxes                              - 5d array of QL fluxes (field, species, mode, ky, type),
+    QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
     firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
                                           type: (gamma, frequency)
@@ -33,7 +33,7 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
     if alpha_quench_in!=0.0 || vexb_shear_s==0.0 # do not calculate spectral shift
 
         # print("this is c")
-        fluxes, firstPass_eigenvalue = onePass(inputs, satParams, outputHermite, vexb_shear_s)
+        QL_weights, firstPass_eigenvalue = onePass(inputs, satParams, outputHermite, vexb_shear_s)
 
     elseif !inputs.FIND_WIDTH # calculate spectral shift with predetermined width spectrum
 
@@ -47,7 +47,7 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
         firstPass_eigenvalue = widthPass(inputs, satParams, outputHermite, amat,bmat)
 
         inputs.IFLUX = original_iflux
-        fluxes = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue, amat,bmat)
+        QL_weights = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue, amat,bmat)
 
     else # calculate the spectral shift and the width spectrum
         
@@ -61,12 +61,12 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
         bmat = Matrix{ComplexF64}(undef, iur, iur)
         # println("this is b")
         inputs.IFLUX = original_iflux # compute QL on second pass
-        fluxes = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue, amat,bmat)
+        QL_weights = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue, amat,bmat)
     end
 
     inputs.WIDTH = original_width
 
-    return fluxes, firstPass_eigenvalue
+    return QL_weights, firstPass_eigenvalue
 
     # sum_ky_spectrum(inputs, eigenvalue_spectrum_out[1,:,:],
     #             ave_p0,potential,
@@ -94,7 +94,7 @@ parameters:
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
 
 outputs:
-    fluxes                              - 5d array of QL fluxes (field, species, mode, ky, type),
+    QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
     firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
                                           type: (gamma, frequency)
@@ -161,9 +161,9 @@ parameters:
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
 
 outputs:
-    QL_flux_spectrum_out                - 5d array of QL fluxes (field, species, mode, ky, type),
+    QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
-    eigenvalue_spectrum_out              - 3d array of eigenvalues (mode, ky, type)
+    eigenvalue_spectrum_out             - 3d array of eigenvalues (mode, ky, type)
                                           type: (gamma, frequency)
 
 description:
@@ -182,7 +182,7 @@ function onePass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     ### output values
     eigenvalue_spectrum_out = zeros(Float64, nmodes, nky, 2)
-    QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
+    QL_weights::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
 
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     for i = eachindex(ky_spect)
@@ -205,17 +205,17 @@ function onePass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         if(unstable)
             eigenvalue_spectrum_out[1:nmodes_out,i,1] .= gamma_out[1:nmodes_out]
             eigenvalue_spectrum_out[1:nmodes_out,i,2] .= freq_out[1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
         end
     end
 
     inputs.WIDTH = original_width
 
-    return QL_flux_spectrum_out, eigenvalue_spectrum_out
+    return QL_weights, eigenvalue_spectrum_out
 
 end
 #----------------------------------------------------------------------------------------------------------------------------
@@ -303,11 +303,11 @@ parameters:
     firstPass_eigenvalue::Array{T,3}    - array of eigenvalues found in first pass
 
 outputs:
-    QL_flux_spectrum_out                - 5d array of QL fluxes (field, species, mode, ky, type),
+    QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
 
 description:
-    calculate the fluxes using the width and eigenvalues from the first pass as reference
+    calculate the QL weights using the width and eigenvalues from the first pass as reference
 """
 function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
     firstPass_eigenvalue::Array{T,3},
@@ -334,7 +334,7 @@ function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
     mask_save::Vector{Int} = zeros(Int, nky)
 
     # initialize output arrays
-    QL_flux_spectrum_out::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
+    QL_weights::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
     gamma_reference_kx0 = similar(firstPass_eigenvalue[:,1,1])
     freq_reference_kx0 = similar(firstPass_eigenvalue[:,1,2])
     kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1])
@@ -441,11 +441,11 @@ function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
             #     end #imax
             # end  # is
             # save flux_spectrum_out
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_flux_spectrum_out[:,ns0:ns,1:nmodes_out,i,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
+            QL_weights[:,ns0:ns,1:nmodes_out,i,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
             # for is = ns0:ns
             #     for j = 1:3
             #         for imax = 1:nmodes_out
@@ -480,6 +480,6 @@ function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
     # freq_out[1] = fmax
     # inputs.NEW_EIKONAL = true  # reset default for next call to tjlf_TM
 
-    return QL_flux_spectrum_out
+    return QL_weights
 
 end
