@@ -96,12 +96,12 @@ for val in 0.1:0.1:3.0
     inputTJLF2.RLTS[2] = val
     push!(rlts,val)
 
-    QL_weight, _, _, _ = TJLF.run(inputTJLF)
+    QL_weight, _, _ = TJLF.run(inputTJLF)
     push!(xGrid,inputTJLF.KY_SPECTRUM)
     # push!(particleFlux,flux[1,1,1,:,1])
     push!(energyFlux,QL_weight[1,2,1,:,2])
 
-    QL_weight2, _, _, _ = TJLF.run(inputTJLF2)
+    QL_weight2, _, _ = TJLF.run(inputTJLF2)
     push!(xGrid2,inputTJLF2.KY_SPECTRUM)
     # push!(particleFlux2,flux2[1,1,1,:,1])
     push!(energyFlux2,QL_weight2[1,2,1,:,2])
