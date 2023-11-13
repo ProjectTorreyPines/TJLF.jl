@@ -10,7 +10,6 @@ using SparseArrays
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
 include("tjlf_hermite.jl")
-include("intensity_sat_rules.jl")
 include("tjlf_multiscale_spectrum.jl")
 include("tjlf_geometry.jl")
 include("tjlf_kygrid.jl")
