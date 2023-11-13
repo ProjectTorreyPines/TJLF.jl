@@ -8,7 +8,7 @@ using ..TJLF
 directory = "../outputs/tglf_regression/"
 tests = readdir(directory)
 
-# 03 is s-alpha geometry
+# 03 is s-alpha geometry, not implemented
 excludeFolders = ["tglf03"]
 testFolders = [joinpath(directory,item) for item in readdir(directory) if isdir(joinpath(directory,item)) && item ∉ excludeFolders]
 
@@ -28,7 +28,7 @@ for baseDirectory in testFolders
         end
         
         inputTJLF = readInput(baseDirectory)
-        fluxesJulia, _, _ = TJLF.run(inputTJLF)
+        fluxesJulia, _, _, _ = TJLF.run(inputTJLF)
         
         @test isapprox(sum(fluxesJulia),sum(fluxesFortran), rtol=1e-6)
     end
