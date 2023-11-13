@@ -199,6 +199,16 @@ function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
 
 end
 
+
+
+
+
+
+
+
+
+
+
 """
     function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
@@ -212,7 +222,7 @@ parameters:
     return_phi_params::T (opt)          - boolean flag to change how much is output
 
 outputs: (FIX TO HAVE SAME RETURN TYPE)
-    phinorm           - intensity of the saturation rule
+    phinorm           - intensity of the saturation rule (nky,nmodes)
     QLA_P             - QLA particle value
     QLA_E             - QLA energy value
     QLA_O             - QLA value
@@ -360,8 +370,8 @@ function intensity_sat(
         Y_TEM = 12.7 * (gmax^2) / (kmax^4)
         scal = 0.82 # Q(SAT3 GA D) / (2 * QLA(ITG,Q) * Q(SAT2 GA D))
 
-        Ys = zeros(nmodes)
-        xs = zeros(nmodes)
+        Ys = Vector{Float64}(undef, nmodes)
+        xs = Vector{Float64}(undef, nmodes)
 
         for k in 1:nmodes
             # (field, species, mode, ky, type) type = 2 is energy flux
@@ -484,8 +494,8 @@ function intensity_sat(
     # recreate first pass for ExB rule in SAT3
     if(sat_rule_in==3)
         # if(!first_pass)
-            gamma_fp = zeros(size(ky_spect))
-            gamma = zeros(size(ky_spect))
+            gamma_fp = similar(ky_spect)
+            gamma = similar(ky_spect)
 
             gamma .= ifelse.(ky_spect.<kymax1,
                              most_unstable_gamma,
@@ -529,7 +539,7 @@ function intensity_sat(
 
     # generate SAT2 potential for SAT3 to connect to for electron scale
 
-    YTs = zeros(nmodes)
+    YTs = Vector{Float64}(undef, nmodes)
     if(sat_rule_in==3)
         if(ky_spect[nky] >= kT)
             dummy_interp = zeros(size(ky_spect))
@@ -582,10 +592,10 @@ function intensity_sat(
 
     # intensity model
 
-    field_spectrum_out = zeros((nky,nmodes))
-    gammaeff_out = zeros((nky,nmodes))
-    kx_width_out = zeros(nky)
-    sat_geo_factor_out = zeros(nky)
+    field_spectrum_out = Matrix{Float64}(undef, nky,nmodes)
+    gammaeff_out = Matrix{Float64}(undef, nky,nmodes)
+    kx_width_out = Vector{Float64}(undef, nky)
+    sat_geo_factor_out = Vector{Float64}(undef, nky)
 
     for j in 1:nky
         gamma0 = most_unstable_gamma[j]
