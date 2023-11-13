@@ -214,13 +214,13 @@ end
 
 
 """
-    function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_data::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
+    function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     gamma_matrix::Matrix{T}             - matrix of gamma (mode, ky)
-    QL_data::Array{T,5}                 - array of quasilinear weights (field, species, mode, ky, type)
+    QL_weights::Array{T,5}              - array of quasilinear weights (field, species, mode, ky, type)
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
     expsub::T (opt)                     - float for the exponent
     return_phi_params::T (opt)          - boolean flag to change how much is output
@@ -241,7 +241,7 @@ function intensity_sat(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
-    QL_data::Array{T,5}, ### taken from the output file
+    QL_weights::Array{T,5}, ### taken from the output file
     expsub::T=2.0,
     return_phi_params::Bool=false) where T<:Real
 
@@ -379,7 +379,7 @@ function intensity_sat(
 
         for k in 1:nmodes
             # (field, species, mode, ky, type) type = 2 is energy flux
-            sum_W_i = sum(QL_data[1,2:end,k,:,2], dims=1) # sum over ion species, requires electrons to be species 1
+            sum_W_i = sum(QL_weights[1,2:end,k,:,2], dims=1) # sum over ion species, requires electrons to be species 1
 
             # check for singularities in weight ratio near kmax
             i = 1
@@ -391,7 +391,7 @@ function intensity_sat(
             if(sum_W_i[i]==0.0 || sum_W_i[i-1]==0.0)
                 x = 0.5
             else
-                abs_W_ratio = abs.(QL_data[1,1,k,:,2]./sum_W_i)
+                abs_W_ratio = abs.(QL_weights[1,1,k,:,2]./sum_W_i)
                 x = linear_interpolation(ky_spect, abs_W_ratio, kmax)
             end
             Y = mode_transition_function(x, Y_ITG, Y_TEM, x_ITG, x_TEM)
@@ -632,7 +632,7 @@ function intensity_sat(
                 if(ky0>kyetg) gammaeff = gammaeff * √(ky0/kyetg) end
 
                 field_spectrum_out[j,i] = measure*cnorm*((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2
-                if(units_in != "GYRO")
+                                if(units_in != "GYRO")
                     field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
                 end
                 gammaeff_out[j, i] = gammaeff
@@ -770,7 +770,7 @@ end
 parameters:
     inputs              - InputTJLF struct constructed using the input.TGLF file
     gamma_matrix        - matrix of gamma (mode, ky)
-    QL_data             - split into separate types of QL weights (field, species, mode, ky, type)
+    QL_weights          - split into separate types of QL weights (field, species, mode, ky, type)
                           type: (particle, energy, torodial stress, parallel stress, exchange)
     (optional)          - a lot of optional parameters that I don't use -DSUN
 
@@ -785,7 +785,7 @@ function sum_ky_spectrum(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
-    QL::Array{T,5},
+    QL_weights::Array{T,5},
     etg_fact::T=1.25,
     c0::T=32.48,
     c1::T=0.534,
@@ -803,23 +803,22 @@ function sum_ky_spectrum(
 
     # Multiply QL weights with desired intensity
     if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
-        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL)
+        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL_weights)
     elseif sat_rule_in == 0 #################### TEMPORARY FIX -DSUN ####################
         return NaN
     else
         throw(error("sat_rule_in must be [1.0, 1, 'SAT1', 2.0, 2, 'SAT2', 3.0, 3, 'SAT3], not $sat_rule_in"))
     end
 
-    flux_spectrum = similar(QL)
+    flux_spectrum = similar(QL_weights)
     # Ql size (nf,ns,nm,nky,ntype)
     # QLA_P and QLA_E are potentially vectors of size nm
     # intensity factor size (nky, nm)
-    flux_spectrum[:,:,:,:,1] = QL[:,:,:,:,1] .* reshape((QLA_P .* intensity_factor'),(1,1,nm,nky)) # particle
-    flux_spectrum[:,:,:,:,2] = QL[:,:,:,:,2] .* reshape((QLA_E .* intensity_factor'),(1,1,nm,nky)) # energy
-    flux_spectrum[:,:,:,:,3] = QL[:,:,:,:,3] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # toroidal stress
-    flux_spectrum[:,:,:,:,4] = QL[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
-    flux_spectrum[:,:,:,:,5] = QL[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
-
+    flux_spectrum[:,:,:,:,1] = QL_weights[:,:,:,:,1] .* reshape((QLA_P .* intensity_factor'),(1,1,nm,nky)) # particle
+    flux_spectrum[:,:,:,:,2] = QL_weights[:,:,:,:,2] .* reshape((QLA_E .* intensity_factor'),(1,1,nm,nky)) # energy
+    flux_spectrum[:,:,:,:,3] = QL_weights[:,:,:,:,3] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # toroidal stress
+    flux_spectrum[:,:,:,:,4] = QL_weights[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
+    flux_spectrum[:,:,:,:,5] = QL_weights[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
 
     # outputs
     q_low_out = zeros((ns, nm))
@@ -843,6 +842,6 @@ function sum_ky_spectrum(
         ky0 = ky1
     end
 
-    return QL_flux_out
+    return QL_flux_out, flux_spectrum
 
 end
