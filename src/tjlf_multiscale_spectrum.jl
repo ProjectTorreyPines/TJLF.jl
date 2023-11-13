@@ -199,20 +199,6 @@ function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
 
 end
 
-
-######### DSUN thoughts of splitting intensity_sat into 3 functions to help with readability?
-######### abandoned for now, but can be seen in the intensity.jl file
-# function intensity_sat(inputs::InputTJLF{T}, ky_spect::Vector{T}, gp::Array{T}, QL_data::Array{T}, expsub::T=2.0, return_phi_params::Bool=false) where T<: Real
-#     if inputs.SAT_RULE == 1
-#         return intensity_sat1(inputs, ky_spect, gp, QL_data)
-#     elseif inputs.SAT_RULE == 2
-#         return intensity_sat2(inputs, ky_spect, gp, QL_data)
-#     elseif inputs.SAT_RULE == 3
-#         return intensity_sat3(inputs, ky_spect, gp, QL_data)
-#     end
-# end
-
-
 """
     function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
