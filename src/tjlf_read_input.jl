@@ -12,7 +12,7 @@ description:
     based off the values in the file. has some check to make sure the file is written properly
 
 """
-function readInput(baseDirectory::String)
+function readInput(baseDirectory::String)::InputTJLF
     # gets the input.tglf file
     fileDirectory = joinpath(baseDirectory, "input.tglf")
     lines = readlines(fileDirectory)
@@ -21,6 +21,7 @@ function readInput(baseDirectory::String)
     ns = -1
     nky = -1
     kygrid_model = -1
+    nwidth = -1
     for line in lines[1:length(lines)]
         line = split(line, "\n")
         line = split(line[1],"=")
@@ -30,6 +31,8 @@ function readInput(baseDirectory::String)
             nky = parse(Int, strip(line[2]))
         elseif line[1] == "KYGRID_MODEL"
             kygrid_model = parse(Int, strip(line[2]))
+        elseif line[1] == "NWIDTH"
+            nwidth = parse(Int, strip(line[2]))
         end
     end
     # make sure ns is defined
@@ -39,9 +42,11 @@ function readInput(baseDirectory::String)
     @assert kygrid_model>=0 && kygrid_model <=5 "KYGRID_MODEL must be Int between 0 and 5"
 
     nky = get_ky_spectrum_size(nky,kygrid_model)
+    ############# nky should equal NWIDTH ##################
+    @assert nky == nwidth "ky spectrum size should equal width spectrum size"
 
     # create InputTJLF struct
-    inputTJLF = InputTJLF{Float64}(ns,nky)
+    inputTJLF = InputTJLF{Float64}(ns,nwidth)
 
     # go through each line of the input.tglf file
     for line in lines[1:length(lines)]
@@ -114,17 +119,22 @@ function readInput(baseDirectory::String)
         inputTJLF.WDIA_TRAPPED = 1.0
     end
 
+    inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
+    inputTJLF.KY_SPECTRUM .= NaN
+
     # double check struct is properly populated
     field_names = fieldnames(InputTJLF)
     for field_name in field_names
         field_value = getfield(inputTJLF, field_name)
         if typeof(field_value)<:Real
-            @assert !isnan(field_value) "did not properly populate inputTJLF for $field_name = $field_value"
+            @assert !isnan(field_value) && !ismissing(field_value) "Did not properly populate inputTJLF for $field_name"
+        end
+        if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM
+            for val in field_value
+                @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
+            end
         end
     end
-
-    inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
-    inputTJLF.KY_SPECTRUM .= NaN
 
     return inputTJLF
 

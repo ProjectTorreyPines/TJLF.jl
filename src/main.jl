@@ -11,7 +11,7 @@ using Plots
 # using ImageFiltering
 # using KernelDensity
 # using Distributions
-using SmoothingSplines
+# using SmoothingSplines
 
 #******************************************************************************************************
 # Read input.tglf
@@ -31,7 +31,7 @@ outputHermite = gauss_hermite(inputTJLF)
 satParams = get_sat_params(inputTJLF)
 inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
 QL_weight, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
-QL_flux_out, flux_out,_ = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weight)
+QL_flux_out, flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weight)
 
 inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
 inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM

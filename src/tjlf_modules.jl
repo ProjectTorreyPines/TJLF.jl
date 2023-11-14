@@ -1,15 +1,217 @@
-# Base.@kwdef mutable struct Species{T<:Real}
-#     ZS::Union{T,Missing} = missing
-#     MASS::Union{T,Missing} = missing
-#     RLNS::Union{T,Missing} = missing
-#     RLTS::Union{T,Missing} = missing
-#     TAUS::Union{T,Missing} = missing
-#     AS::Union{T,Missing} = missing
-#     VPAR::Union{T,Missing} = missing
-#     VPAR_SHEAR::Union{T,Missing} = missing
-#     VNS_SHEAR::Union{T,Missing} = missing
-#     VTS_SHEAR::Union{T,Missing} = missing
-# end
+Base.@kwdef mutable struct InputTGLF
+    SIGN_BT::Union{Int,Missing} = missing
+    SIGN_IT::Union{Int,Missing} = missing
+    NS::Union{Int,Missing} = missing
+    ZMAJ_LOC::Union{Float64,Missing} = missing
+    DRMINDX_LOC::Union{Float64,Missing} = missing
+    DZMAJDX_LOC::Union{Float64,Missing} = missing
+    S_DELTA_LOC::Union{Float64,Missing} = missing
+    ZETA_LOC::Union{Float64,Missing} = missing
+    S_ZETA_LOC::Union{Float64,Missing} = missing
+
+    MASS_1::Union{Float64,Missing} = missing
+    ZS_1::Union{Float64,Missing} = missing
+    AS_1::Union{Float64,Missing} = missing
+    TAUS_1::Union{Float64,Missing} = missing
+
+    MASS_2::Union{Float64,Missing} = missing
+    ZS_2::Union{Float64,Missing} = missing
+    VPAR_2::Union{Float64,Missing} = missing
+    VPAR_SHEAR_2::Union{Float64,Missing} = missing
+
+    MASS_3::Union{Float64,Missing} = missing
+    ZS_3::Union{Float64,Missing} = missing
+    RLTS_3::Union{Float64,Missing} = missing
+    TAUS_3::Union{Float64,Missing} = missing
+    VPAR_3::Union{Float64,Missing} = missing
+    VPAR_SHEAR_3::Union{Float64,Missing} = missing
+
+    # TGLF-NN uses 3 species
+    # This is why parameters for species 1:3 are sorted differently than 4:10
+    MASS_4::Union{Float64,Missing} = missing
+    AS_4::Union{Float64,Missing} = missing
+    ZS_4::Union{Float64,Missing} = missing
+    RLNS_4::Union{Float64,Missing} = missing
+    RLTS_4::Union{Float64,Missing} = missing
+    TAUS_4::Union{Float64,Missing} = missing
+    VPAR_4::Union{Float64,Missing} = missing
+    VPAR_SHEAR_4::Union{Float64,Missing} = missing
+
+    MASS_5::Union{Float64,Missing} = missing
+    AS_5::Union{Float64,Missing} = missing
+    ZS_5::Union{Float64,Missing} = missing
+    RLNS_5::Union{Float64,Missing} = missing
+    RLTS_5::Union{Float64,Missing} = missing
+    TAUS_5::Union{Float64,Missing} = missing
+    VPAR_5::Union{Float64,Missing} = missing
+    VPAR_SHEAR_5::Union{Float64,Missing} = missing
+
+    MASS_6::Union{Float64,Missing} = missing
+    AS_6::Union{Float64,Missing} = missing
+    ZS_6::Union{Float64,Missing} = missing
+    RLNS_6::Union{Float64,Missing} = missing
+    RLTS_6::Union{Float64,Missing} = missing
+    TAUS_6::Union{Float64,Missing} = missing
+    VPAR_6::Union{Float64,Missing} = missing
+    VPAR_SHEAR_6::Union{Float64,Missing} = missing
+
+    MASS_7::Union{Float64,Missing} = missing
+    AS_7::Union{Float64,Missing} = missing
+    ZS_7::Union{Float64,Missing} = missing
+    RLNS_7::Union{Float64,Missing} = missing
+    RLTS_7::Union{Float64,Missing} = missing
+    TAUS_7::Union{Float64,Missing} = missing
+    VPAR_7::Union{Float64,Missing} = missing
+    VPAR_SHEAR_7::Union{Float64,Missing} = missing
+
+    MASS_8::Union{Float64,Missing} = missing
+    AS_8::Union{Float64,Missing} = missing
+    ZS_8::Union{Float64,Missing} = missing
+    RLNS_8::Union{Float64,Missing} = missing
+    RLTS_8::Union{Float64,Missing} = missing
+    TAUS_8::Union{Float64,Missing} = missing
+    VPAR_8::Union{Float64,Missing} = missing
+    VPAR_SHEAR_8::Union{Float64,Missing} = missing
+
+    MASS_9::Union{Float64,Missing} = missing
+    AS_9::Union{Float64,Missing} = missing
+    ZS_9::Union{Float64,Missing} = missing
+    RLNS_9::Union{Float64,Missing} = missing
+    RLTS_9::Union{Float64,Missing} = missing
+    TAUS_9::Union{Float64,Missing} = missing
+    VPAR_9::Union{Float64,Missing} = missing
+    VPAR_SHEAR_9::Union{Float64,Missing} = missing
+
+    MASS_10::Union{Float64,Missing} = missing
+    AS_10::Union{Float64,Missing} = missing
+    ZS_10::Union{Float64,Missing} = missing
+    RLNS_10::Union{Float64,Missing} = missing
+    RLTS_10::Union{Float64,Missing} = missing
+    TAUS_10::Union{Float64,Missing} = missing
+    VPAR_10::Union{Float64,Missing} = missing
+    VPAR_SHEAR_10::Union{Float64,Missing} = missing
+
+    AS_2::Union{Float64,Missing} = missing
+    AS_3::Union{Float64,Missing} = missing
+    BETAE::Union{Float64,Missing} = missing
+    DEBYE::Union{Float64,Missing} = missing
+    DELTA_LOC::Union{Float64,Missing} = missing
+    DRMAJDX_LOC::Union{Float64,Missing} = missing
+    KAPPA_LOC::Union{Float64,Missing} = missing
+    P_PRIME_LOC::Union{Float64,Missing} = missing
+    Q_LOC::Union{Float64,Missing} = missing
+    Q_PRIME_LOC::Union{Float64,Missing} = missing
+    RLNS_1::Union{Float64,Missing} = missing
+    RLNS_2::Union{Float64,Missing} = missing
+    RLNS_3::Union{Float64,Missing} = missing
+    RLTS_1::Union{Float64,Missing} = missing
+    RLTS_2::Union{Float64,Missing} = missing
+    RMAJ_LOC::Union{Float64,Missing} = missing
+    RMIN_LOC::Union{Float64,Missing} = missing
+    S_KAPPA_LOC::Union{Float64,Missing} = missing
+    TAUS_2::Union{Float64,Missing} = missing
+    VEXB_SHEAR::Union{Float64,Missing} = missing
+    VPAR_1::Union{Float64,Missing} = missing
+    VPAR_SHEAR_1::Union{Float64,Missing} = missing
+    XNUE::Union{Float64,Missing} = missing
+    ZEFF::Union{Float64,Missing} = missing
+
+    # switches
+    UNITS::Union{String,Missing} = missing
+    ALPHA_ZF::Union{Float64,Missing} = missing
+    USE_MHD_RULE::Union{Bool,Missing} = missing
+    NKY::Union{Int,Missing} = missing
+    SAT_RULE::Union{Int,Missing} = missing
+    KYGRID_MODEL::Union{Int,Missing} = missing
+    NMODES::Union{Int,Missing} = missing
+    NBASIS_MIN::Union{Int,Missing} = missing
+    NBASIS_MAX::Union{Int,Missing} = missing
+    XNU_MODEL::Union{Int,Missing} = missing
+    USE_AVE_ION_GRID::Union{Bool,Missing} = missing
+    ALPHA_QUENCH::Union{Int,Missing} = missing
+    ALPHA_MACH::Union{Float64,Missing} = missing
+    WDIA_TRAPPED::Union{Float64,Missing} = missing
+    USE_BPAR::Union{Bool,Missing} = missing
+    USE_BPER::Union{Bool,Missing} = missing
+
+    _Qgb::Union{Float64,Missing} = missing
+
+    # missing
+    USE_TRANSPORT_MODEL::Bool = true
+    USE_BISECTION::Bool = true
+    USE_INBOARD_DETRAPPED::Bool = false
+    NEW_EIKONAL::Bool = true
+    FIND_WIDTH::Bool = true
+    IFLUX::Bool = true
+    ADIABATIC_ELEC::Bool = false
+
+    GEOMETRY_FLAG::Int = 1
+    NWIDTH::Int = 21
+    NXGRID::Int = 16
+    VPAR_MODEL::Int = 0
+    FT_MODEL_SA::Int = 1
+    VPAR_SHEAR_MODEL::Int = 1
+    IBRANCH::Int = -1
+    WRITE_WAVEFUNCTION_FLAG::Int = 0
+
+    VNS_SHEAR_1::Float64 = 0.0
+    VNS_SHEAR_2::Float64 = 0.0
+    VNS_SHEAR_3::Float64 = 0.0
+    VNS_SHEAR_4::Float64 = 0.0
+    VNS_SHEAR_5::Float64 = 0.0
+    VNS_SHEAR_6::Float64 = 0.0
+    VNS_SHEAR_7::Float64 = 0.0
+    VNS_SHEAR_8::Float64 = 0.0
+    VNS_SHEAR_9::Float64 = 0.0
+    VNS_SHEAR_10::Float64 = 0.0
+    VTS_SHEAR_1::Float64 = 0.0
+    VTS_SHEAR_2::Float64 = 0.0
+    VTS_SHEAR_3::Float64 = 0.0
+    VTS_SHEAR_4::Float64 = 0.0
+    VTS_SHEAR_5::Float64 = 0.0
+    VTS_SHEAR_6::Float64 = 0.0
+    VTS_SHEAR_7::Float64 = 0.0
+    VTS_SHEAR_8::Float64 = 0.0
+    VTS_SHEAR_9::Float64 = 0.0
+    VTS_SHEAR_10::Float64 = 0.0
+
+    KY::Float64 = 0.3
+    VEXB::Float64 = 0.0
+    ALPHA_E::Float64 = 1.0
+    ALPHA_P::Float64 = 1.0
+    XNU_FACTOR::Float64 = 1.0
+    DEBYE_FACTOR::Float64 = 1.0
+    RLNP_CUTOFF::Float64 = 18.0
+    WIDTH::Float64 = 1.65
+    WIDTH_MIN::Float64 = 0.3
+    BETA_LOC::Float64 = 1.0
+    KX0_LOC::Float64 = 1.0
+    RMIN_SA::Float64 = 0.5
+    RMAJ_SA::Float64 = 3.0
+    Q_SA::Float64 = 2.0
+    SHAT_SA::Float64 = 1.0
+    ALPHA_SA::Float64 = 0.0
+    PARK::Float64 = 1.0
+    GHAT::Float64 = 1.0
+    GCHAT::Float64 = 1.0
+    WD_ZERO::Float64 = 0.1
+    LINSKER_FACTOR::Float64 = 0.0
+    GRADB_FACTOR::Float64 = 0.0
+    FILTER::Float64 = 2.0
+    THETA_TRAPPED::Float64 = 0.7
+    NN_MAX_ERROR::Float64 = -1.0
+
+end
+
+
+
+
+
+
+
+
+
+
 
 
 mutable struct InputTJLF{T<:Real}
@@ -22,13 +224,13 @@ mutable struct InputTJLF{T<:Real}
     USE_MHD_RULE::Union{Bool,Missing}
     USE_BISECTION::Union{Bool,Missing}
     USE_INBOARD_DETRAPPED::Union{Bool,Missing}
-    USE_AVE_ION_GRID::Union{Bool,Missing}
+    USE_AVE_ION_GRID::Union{Bool,Missing} # not used?
     NEW_EIKONAL::Union{Bool,Missing}
     FIND_WIDTH::Union{Bool,Missing}
     IFLUX::Union{Bool,Missing}
     ADIABATIC_ELEC::Union{Bool,Missing}
 
-    GEOMETRY_FLAG::Union{Int,Missing}
+    GEOMETRY_FLAG::Union{Int,Missing} # used to specify geometry type
     SAT_RULE::Union{Int,Missing}
     NS::Union{Int,Missing}
     NMODES::Union{Int,Missing}
@@ -40,13 +242,12 @@ mutable struct InputTJLF{T<:Real}
     KYGRID_MODEL::Union{Int,Missing}
     XNU_MODEL::Union{Int,Missing}
     VPAR_MODEL::Union{Int,Missing}
-    B_MODEL_SA::Union{Int,Missing}
-    FT_MODEL_SA::Union{Int,Missing}
-    VPAR_SHEAR_MODEL::Union{Int,Missing}
+    B_MODEL_SA::Union{Int,Missing} # used for SA geometry
+    FT_MODEL_SA::Union{Int,Missing} # used for SA geometry
+    VPAR_SHEAR_MODEL::Union{Int,Missing} # commented out in TGLF
     IBRANCH::Union{Int,Missing}
-    WRITE_WAVEFUNCTION_FLAG::Union{Int,Missing}
+    WRITE_WAVEFUNCTION_FLAG::Union{Int,Missing} 
 
-    # SPECIES::Vector{Species{T}} = Vector{Species{T}}()
     ZS::Vector{T}
     MASS::Vector{T}
     RLNS::Vector{T}
@@ -125,18 +326,57 @@ mutable struct InputTJLF{T<:Real}
 
 
     function InputTJLF{T}(ns::Int,nky::Int) where T<:Real
-
         new("",
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),Vector{T}(undef,ns),
-        Vector{T}(undef,nky),Vector{T}(undef,nky),
+        fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
+        fill(NaN,(nky)),fill(NaN,(nky)),
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,)
+    end
+
+    # create InputTJLF struct given a InputTGLF struct
+    function InputTJLF{T}(inputTGLF::InputTGLF) where T<:Real
+
+        inputTJLF = InputTJLF{T}(inputTGLF.NS,inputTGLF.NWIDTH)
+
+        for fieldname in fieldnames(inputTGLF)
+            if occursin(r"\d",String(fieldname)) || fieldname==:_Qgb # species parameter
+                continue
+            end
+            setfield!(inputTJLF,fieldname,getfield(inputTGLF,fieldname))
+        end
+        for i in 1:inputTGLF.NS
+            inputTJLF.ZS[i] = getfield(inputTGLF,Symbol("ZS_",i))
+            inputTJLF.AS[i] = getfield(inputTGLF,Symbol("AS_",i))
+            inputTJLF.MASS[i] = getfield(inputTGLF,Symbol("MASS_",i))
+            inputTJLF.RLNS[i] = getfield(inputTGLF,Symbol("RLNS_",i))
+            inputTJLF.RLTS[i] = getfield(inputTGLF,Symbol("RLTS_",i))
+            inputTJLF.TAUS[i] = getfield(inputTGLF,Symbol("TAUS_",i))
+            inputTJLF.VPAR[i] = getfield(inputTGLF,Symbol("VPAR_",i))
+            inputTJLF.VPAR_SHEAR[i] = getfield(inputTGLF,Symbol("VPAR_SHEAR_",i))
+            inputTJLF.VNS_SHEAR[i] = getfield(inputTGLF,Symbol("VNS_SHEAR_",i))
+            inputTJLF.VTS_SHEAR[i] = getfield(inputTGLF,Symbol("VTS_SHEAR_",i))
+        end
+        inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
+
+        for fieldname in fieldnames(inputTJLF)
+            fieldvalue = getfield(inputTJLF,fieldname)
+            if typeof(fieldvalue)<:Real
+                @assert !isnan(fieldvalue) && !ismissing(fieldvalue) "Did not properly populate inputTJLF for $fieldname"
+            end
+            if typeof(fieldvalue)<:Vector && fieldname!=:KY_SPECTRUM
+                for val in fieldvalue
+                    @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
+                end
+            end
+        end
+
+        return inputTJLF
     end
 end
 
