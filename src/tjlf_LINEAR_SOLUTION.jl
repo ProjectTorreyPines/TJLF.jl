@@ -1,3 +1,4 @@
+using Revise
 """
     function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T,kx0_e::T = 0.0,gamma_reference_kx0::Union{Vector{T},Missing} = missing,freq_reference_kx0::Union{Vector{T},Missing} = missing)
 
@@ -30,10 +31,11 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             nbasis::Int,
             vexb_shear_s::T,
             amat::Matrix{K},
-            bmat::Matrix{K},
+            bmat::Matrix{K};
             kx0_e::T = 0.0,
             gamma_reference_kx0::Union{Vector{T},Missing} = missing,
-            freq_reference_kx0::Union{Vector{T},Missing} = missing) where T <: Real where K<:Complex
+            freq_reference_kx0::Union{Vector{T},Missing} = missing,
+            ky_index::Int=-1) where T <: Real where K<:Complex
 
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
@@ -100,7 +102,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky, amat,bmat)
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky, amat,bmat;ky_index)
     # eigenvalues = alpha./beta
 
     rr = real.(eigenvalues)
@@ -122,24 +124,23 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         rr .*= ifelse.((rr.>0.0)  .&  (abs.(ri).>max_freq), -1 , 1)
     end
 
-    maxmodes = 16 #### from tglf_modules
-    jmax = zeros(Int, maxmodes)
+    jmax = zeros(Int, nmodes_in)
     if ismissing(gamma_reference_kx0)
-        gamma_out = zeros(Float64, maxmodes)
-        freq_out = zeros(Float64, maxmodes)
+        gamma_out = zeros(Float64, nmodes_in)
+        freq_out = zeros(Float64, nmodes_in)
     else
         gamma_out = similar(gamma_reference_kx0)
         freq_out = similar(freq_reference_kx0)
     end
 
     if(inputs.IBRANCH==0)
-        di = zeros(Int, iur)
-        de = zeros(Int, iur)
+        di = zeros(Int, size(rr))
+        de = zeros(Int, size(rr))
         nmodes_out = nmodes_in
         # sort the unstable modes into electron and ion frequencies
         mi = 0
         me = 0
-        for j1 = 1:iur
+        for j1 = eachindex(rr)
             if(rr[j1]>epsilon1)
                 if(ri[j1]>0.0)
                     # note that ri = -freq, rr = gamma
@@ -185,7 +186,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         jmax .= ifelse.(rr[jmax].>epsilon1, jmax, 0)
         reverse!(jmax)
         nmodes_out = 0
-        for j1 = 1:nmodes_in
+        for j1 = 1:min(nmodes_in,size(rr,1))
             if(jmax[j1]!=0)
                 nmodes_out = nmodes_out + 1
                 gamma_out[j1] = rr[jmax[j1]]
@@ -251,8 +252,13 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 # zmat = beta[jmax[imax]].*amat .- (small.+alpha[jmax[imax]]).*bmat
                 # gesv!(zmat,v)
                 # calculate eigenvector with Arpack.jl, very slightly slower
-                _, v = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]])
-
+                if inputs.FIND_WIDTH || ky_index==-1 || inputs.GAMMA_SPECTRUM[ky_index] == 0.0 || isnan(v[1,1])
+                    _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]])
+                    eigenvector = vec[:,1]
+                else
+                    eigenvector = v[:,jmax[imax]]
+                end
+                
                 Ns_Ts_phase,
                 Ne_Te_phase,
                 N_weight,
@@ -272,7 +278,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 energy_weight,
                 stress_par_weight,
                 stress_tor_weight,
-                exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalues[jmax[imax]], v[:,1])
+                exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalues[jmax[imax]], eigenvector)
                 #### probably outputs
                 wd_bar_out[imax] = wd_bar
                 b0_bar_out[imax] = b0_bar
@@ -335,11 +341,11 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
     end
 
-    particle_QL_out = fill(NaN, (3, ns, maxmodes))
-    energy_QL_out = fill(NaN, (3, ns, maxmodes))
-    stress_par_QL_out = fill(NaN, (3, ns, maxmodes))
-    stress_tor_QL_out = fill(NaN, (3, ns, maxmodes))
-    exchange_QL_out = fill(NaN, (3, ns, maxmodes))
+    particle_QL_out = fill(NaN, (3, ns, nmodes_in))
+    energy_QL_out = fill(NaN, (3, ns, nmodes_in))
+    stress_par_QL_out = fill(NaN, (3, ns, nmodes_in))
+    stress_tor_QL_out = fill(NaN, (3, ns, nmodes_in))
+    exchange_QL_out = fill(NaN, (3, ns, nmodes_in))
 
     return nmodes_out, gamma_out, freq_out,
     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
