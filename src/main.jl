@@ -3,6 +3,7 @@
 # calls the fortran code as an executable
 # path = "./Fortran/tglf"
 # run(`$(path) $baseDirectory`)
+using Revise
 include("../src/TJLF.jl")
 using .TJLF
 using Plots
@@ -35,13 +36,14 @@ QL_flux_out, flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1],
 
 inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
 inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
+inputTJLF2.GAMMA_SPECTRUM .= eigenvalue[inputTJLF.NMODES,:,1]
 inputTJLF2.FIND_WIDTH = false
 
 QL_weight2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
 
-for i in eachindex(fluxes)
+for i in eachindex(QL_weight)
     if(!isapprox(QL_weight[i],QL_weight2[i],rtol=1e-6))
-        println(i)
+        println("$i: $(QL_weight[i]) and $(QL_weight2[i])")
     end
 end
 
@@ -56,7 +58,6 @@ end
 # @codewarning
 using BenchmarkTools
 @btime tjlf_TM(inputTJLF2, satParams, outputHermite)
-
 
 #*******************************************************************************************************
 #   plot smoothed QL flux
@@ -89,53 +90,33 @@ xGrid2 = []
 particleFlux2 = []
 energyFlux2 = []
 
-energyFlux3 = []
-
-for val in 0.1:0.1:3.0
+for val in 3.0:0.1:6.0
     inputTJLF.RLTS[2] = val
     inputTJLF2.RLTS[2] = val
     push!(rlts,val)
 
-    QL_weight, _, _ = TJLF.run(inputTJLF)
+    QL_weight, _, _, _ = TJLF.run(inputTJLF)
     push!(xGrid,inputTJLF.KY_SPECTRUM)
     # push!(particleFlux,flux[1,1,1,:,1])
     push!(energyFlux,QL_weight[1,2,1,:,2])
 
-    QL_weight2, _, _ = TJLF.run(inputTJLF2)
+    QL_weight2, eigenvalue2, _, _ = TJLF.run(inputTJLF2)
+    inputTJLF2.GAMMA_SPECTRUM .= eigenvalue2[:,:,1]
     push!(xGrid2,inputTJLF2.KY_SPECTRUM)
     # push!(particleFlux2,flux2[1,1,1,:,1])
     push!(energyFlux2,QL_weight2[1,2,1,:,2])
 
-    QL_weight2[1,2,1,:,2] .= predict(fit(SmoothingSpline, inputTJLF2.KY_SPECTRUM, QL_weight2[1,2,1,:,2], 0.01))
-    # itp = interpolate((inputTJLF2.KY_SPECTRUM,), QL_weight2[1,2,1,:,2], Gridded(Linear()))
-    # x_new = [(inputTJLF2.KY_SPECTRUM[i] + inputTJLF2.KY_SPECTRUM[i+1]) / 2.0 for i in 1:20]
-    # pushfirst!(x_new, inputTJLF2.KY_SPECTRUM[1])
-    # push!(x_new, inputTJLF2.KY_SPECTRUM[end])
-    # y_new = itp(x_new)
-    # itp = interpolate((x_new,), y_new, Gridded(Linear()))
-    # QL_weight2[1,2,1,:,2] .= itp(inputTJLF2.KY_SPECTRUM)
-
-    push!(energyFlux3,QL_weight2[1,2,1,:,2])
-
 end
 
-plot()
-for r in eachindex(rlts)
-    plot!(xGrid2[r],energyFlux3[r],title="ion energy flux; ITG; smoothed width; λ=0.01", xlabel="ky", ylabel="flux", label = "RLTS_2 = $(rlts[r])")
-
-end
-display(plot!(legendfontsize=3))
-
-for i in 1:3
+for i in 1:2
     plot()
     for r in eachindex(rlts)
         if i==0
             # plot!(xGrid[r],particleFlux[r],title="electron particle flux; ITG; find width", xlabel="ky", ylabel="flux", label = "RLTS_2 = $(rlts[r])")
         elseif i==1
-            # plot!(xGrid[r],energyFlux[r],title="ion energy flux; ITG; find width", xlabel="ky", ylabel="flux", label = "RLTS_2 = $(rlts[r])")
+            plot!(xGrid[r],energyFlux[r],title="ion energy flux; ITG; find width", xlabel="ky", ylabel="flux", label = "RLTS_2 = $(rlts[r])")
         elseif i==2
-            plot!(xGrid2[r],energyFlux3[r],title="ion energy flux; ITG; smoothed width; λ=0.05", xlabel="ky", ylabel="flux", label = "RLTS_2 = $(rlts[r])")
-            # plot!(xGrid2[r],particleFlux2[r],title="electron particle flux; ITG; fixed width", xlabel="ky", ylabel="flux", label = "RLTS_2 = $(rlts[r])")
+            plot!(xGrid2[r],energyFlux2[r],title="ion particle flux; ITG; fixed width", xlabel="ky", ylabel="flux", label = "RLTS_2 = $(rlts[r])")
         elseif i==3
             # plot!(xGrid2[r],energyFlux2[r],title="ion energy flux; ITG; fixed width", xlabel="ky", ylabel="flux", label = "RLTS_2 = $(rlts[r])")
         end
@@ -181,19 +162,16 @@ electronEnergyZF = []
 electronEnergy2 = []
 electronEnergy2ZF = []
 # ionEnergy2 = []
-# electronEnergy3 = []
-# plot()
-# λ = 0.00005
 for val in 0.1:0.1:6.1
     inputTJLF.RLTS[2] = val
     inputTJLF2.RLTS[2] = val
     push!(xGrid,val)
 
     inputTJLF.ALPHA_ZF = 1.0
-    weights_out, eigenvalue, QL_flux_out, flux_out, intensity = TJLF.run(inputTJLF)
+    weights_out, eigenvalue, QL_flux_out, flux_out = TJLF.run(inputTJLF)
     push!(electronEnergy,QL_flux_out[1,1,1])
     inputTJLF.ALPHA_ZF = -1.0
-    weights_out, eigenvalue, QL_flux_out, flux_out, intensity = TJLF.run(inputTJLF)
+    weights_out, eigenvalue, QL_flux_out, flux_out = TJLF.run(inputTJLF)
     push!(electronEnergyZF,QL_flux_out[1,1,1])
     # plot!(inputTJLF.KY_SPECTRUM, eigenvalue[1,:,1]./inputTJLF.KY_SPECTRUM, title="second mode; find width; ITG", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
     # plot!(inputTJLF.KY_SPECTRUM, weights_out[1,1,1,:,2], title="energy weight before integral", xlabel="ky", ylabel="flux", label = "RLTS_2 = $val")
@@ -201,32 +179,11 @@ for val in 0.1:0.1:6.1
     # push!(ionEnergy,QL_flux_out[1,2,2])
 
     inputTJLF2.ALPHA_ZF = 1.0
-    weights_out2, eigenvalue2, QL_flux_out2, _, _ = TJLF.run(inputTJLF2)
+    weights_out2, eigenvalue2, QL_flux_out2, _ = TJLF.run(inputTJLF2)
     push!(electronEnergy2,QL_flux_out2[1,1,1])
     inputTJLF2.ALPHA_ZF = -1.0
-    weights_out2, eigenvalue2, QL_flux_out2, _, _ = TJLF.run(inputTJLF2)
+    weights_out2, eigenvalue2, QL_flux_out2, _, = TJLF.run(inputTJLF2)
     push!(electronEnergy2ZF,QL_flux_out2[1,1,1])
-
-    # spl = fit(SmoothingSpline, inputTJLF2.KY_SPECTRUM[1:12], eigenvalue2[1,1:12,1], 0.00001)
-    # eigenvalue2[1,1:12,1] .= predict(spl)
-    # plot!(inputTJLF2.KY_SPECTRUM, eigenvalue2[1,:,1], title="gamma; fixed width", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
-    
-    # push!(ionEnergy2,QL_flux_out2[1,2,2])
-
-    # for mode in 1:2
-    #     itp = interpolate((inputTJLF2.KY_SPECTRUM,), fluxes2[1,2,mode,:,2], Gridded(Linear()))
-    #     x_new = [(inputTJLF2.KY_SPECTRUM[i] + inputTJLF2.KY_SPECTRUM[i+1]) / 2.0 for i in 1:20]
-    #     pushfirst!(x_new, inputTJLF2.KY_SPECTRUM[1])
-    #     push!(x_new, inputTJLF2.KY_SPECTRUM[end])
-    #     y_new = itp(x_new)
-    #     itp = interpolate((x_new,), y_new, Gridded(Linear()))
-    #     fluxes2[1,2,mode,:,2] .= itp(inputTJLF2.KY_SPECTRUM)
-    #     fluxes2[1,1,mode,:,2] .= predict(fit(SmoothingSpline, inputTJLF2.KY_SPECTRUM, fluxes2[1,1,mode,:,2], 0.001))
-    # end
-
-    # QL_flux_out3 = sum_ky_spectrum(inputTJLF, satParams, eigenvalue2[:,:,1], fluxes2)
-    # push!(electronEnergy3,QL_flux_out3[1,1,2])
-
 end
 # xlims!(0.1, 0.4)
 # ylims!(0,.5)
@@ -236,9 +193,6 @@ plot!(xGrid, electronEnergy2, title="particle flux vs RLTS_2; ITG", xlabel="RLTS
 plot!(xGrid, electronEnergyZF, title="particle flux vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="particle flux", label = "find widths; α_zf = -1")
 plot!(xGrid, electronEnergy2ZF, title="particle flux vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="particle flux", label = "fixed widths; α_zf = -1")
 vline!([3], linestyle=:dash, color=:black, label = "width value")
-# plot!(xGrid, electronEnergy3, title="Q_e vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="Q_e", label = "smoothed fixed widths λ=0.001")
-# plot(xGrid, ionEnergy, title="Q_i vs RLTS_2; alpha_zf = -1; find widths", xlabel="RLTS_2", ylabel="Q_i")#, label = "find widths")
-# plot!(xGrid, ionEnergy2, title="Q_i vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="Q_i", label = "fixed widths")
 
 #*******************************************************************************************************
 #   compare flux/eigenvalues to Fortran
