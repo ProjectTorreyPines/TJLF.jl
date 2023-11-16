@@ -1,8 +1,10 @@
+using Revise
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
                         nbasis::Int, ky::T,
-                        amat::Matrix{K},bmat::Matrix{K})::Vector{ComplexF64} where T<:Real where K<:Complex
+                        amat::Matrix{K},bmat::Matrix{K};
+                        ky_index::Int=-1)::Tuple{Vector{K},Matrix{K}} where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2670,6 +2672,18 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     #*************************************************************
 
     ### only calculate the eigenvalues
+    if !inputs.FIND_WIDTH && ky_index != -1
+        sigma = inputs.GAMMA_SPECTRUM[ky_index]
+        if sigma != 0.0 
+            try
+                λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LR,sigma=sigma,maxiter=50)
+                return λ, v
+            catch
+                # println("can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index])")
+            end
+        end
+    end
+
     if inputs.IFLUX
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
@@ -2677,7 +2691,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     else
         (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
     end
-    return alpha./beta
+    return alpha./beta, fill(NaN*im,(1,1))
 
     ### not supported
     # print("kyrlov: ")
@@ -2704,9 +2718,18 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # return solution.values, solution.vectors
     
     ### slower
+    # if inputs.IFLUX
+    #     amat_copy = copy(amat)
+    #     bmat_copy = copy(bmat)
+    #     (alpha, beta, _, _) = ggev!('N','N',amat_copy,bmat_copy)
+    # else
+    #     (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
+    # end
     # amat = sparse(amat)
     # bmat = sparse(bmat)
-    # λ, ϕ = eigs(amat,bmat,nev=iur-2)
-    # return λ, ϕ
+    # amat = amat + diagm(ones(size(A, 1)).*im)
+    # bmat = bmat + diagm(ones(size(A, 1)).*im)
+    # λ, _ = eigs(sparse(amat),sparse(bmat),nev=2, which=:LR, tol = 0.1)
+    # return λ
 
 end
