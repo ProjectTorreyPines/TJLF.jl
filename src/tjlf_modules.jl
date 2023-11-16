@@ -261,6 +261,7 @@ mutable struct InputTJLF{T<:Real}
 
     WIDTH_SPECTRUM::Vector{T}
     KY_SPECTRUM::Vector{T}
+    GAMMA_SPECTRUM::Vector{T}
 
     SIGN_BT::T
     SIGN_IT::T
@@ -330,7 +331,7 @@ mutable struct InputTJLF{T<:Real}
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
-        fill(NaN,(nky)),fill(NaN,(nky)),
+        fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN,(nky)),
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
@@ -369,7 +370,7 @@ mutable struct InputTJLF{T<:Real}
             if typeof(fieldvalue)<:Real
                 @assert !isnan(fieldvalue) && !ismissing(fieldvalue) "Did not properly populate inputTJLF for $fieldname"
             end
-            if typeof(fieldvalue)<:Vector && fieldname!=:KY_SPECTRUM
+            if typeof(fieldvalue)<:Vector && fieldname!=:KY_SPECTRUM && fieldname!=:GAMMA_SPECTRUM
                 for val in fieldvalue
                     @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
                 end
