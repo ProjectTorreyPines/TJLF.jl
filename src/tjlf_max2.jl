@@ -320,7 +320,7 @@ function tjlf_max2(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
            end
         end
 
-        gamma_max = max(gamma_out[1],gamma_out[2])  # works for both ibranch_in cases
+        gamma_max = findmax(gamma_out)[1]  # works for both ibranch_in cases
 
     end
 
