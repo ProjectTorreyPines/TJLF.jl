@@ -33,8 +33,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             amat::Matrix{K},
             bmat::Matrix{K};
             kx0_e::T = 0.0,
-            gamma_reference_kx0::Union{Vector{T},Missing} = missing,
-            freq_reference_kx0::Union{Vector{T},Missing} = missing,
+            gamma_reference_kx0::Vector{T} = T[],
+            freq_reference_kx0::Vector{T} = T[],
             ky_index::Int=-1) where T <: Real where K<:Complex
 
     epsilon1 = 1.0e-12
@@ -125,7 +125,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     jmax = zeros(Int, nmodes_in)
-    if ismissing(gamma_reference_kx0)
+    if size(gamma_reference_kx0,1) == 0
         gamma_out = zeros(Float64, nmodes_in)
         freq_out = zeros(Float64, nmodes_in)
     else
