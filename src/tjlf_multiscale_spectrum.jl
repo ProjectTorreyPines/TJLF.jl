@@ -628,7 +628,8 @@ function intensity_sat(
                 if(ky0>kyetg) gammaeff = gammaeff * √(ky0/kyetg) end
 
                 field_spectrum_out[j,i] = measure*cnorm*((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2
-                                if(units_in != "GYRO")
+                                
+                if(units_in != "GYRO")
                     field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
                 end
                 gammaeff_out[j, i] = gammaeff
