@@ -152,7 +152,7 @@ for dir_name in tests
             @test isapprox(inputComparison["B_geo0_out"], satParams.B_geo[1], rtol=1e-6)
         end
 
-        QL_flux_out = sum_ky_spectrum(inputTJLF, satParams, Matrix(gammas'), QL_data)
+        QL_flux_out, flux_out = sum_ky_spectrum(inputTJLF, satParams, Matrix(gammas'), QL_data)
         # julia_sat1 = sum(sum(sat_1["energy_flux_integral"], dims=3)[:,:,1], dims=1)[1,:]
         julia_sat1 = sum(QL_flux_out, dims = 1)[1,:,2]
         expected_sat1 = fluxes[2,:]
@@ -291,25 +291,26 @@ for dir_name in tests
             @test isapprox(freq[i],freqJulia'[i], atol=1e-6)
         end
 
-        QL_flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], fluxes)
+        QL_flux_out, flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], fluxes)
         juliaEnergy = sum(QL_flux_out, dims = 1)[1,:,2]
         fortranEnergy = fluxesFortran[2,:]
         @test isapprox(juliaEnergy, fortranEnergy, rtol=1e-3)
 
 
+        #*******************************************************************************************************0
+        #   test that providing widths yields same results (NO LONGER VALID AFTER NEW QUICK/ITERATIVE EIGENSOLVER METHOD)
         #*******************************************************************************************************
-        #   test that providing widths yields same results
-        #*******************************************************************************************************
 
-        inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
-        inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
-        inputTJLF2.FIND_WIDTH = false
+        # inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
+        # inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
+        # inputTJLF2.GAMMA_SPECTRUM .= eigenvalue[inputTJLF.NMODES,:,1]
+        # inputTJLF2.FIND_WIDTH = false
 
-        fluxes2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
+        # fluxes2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
 
-        for i in eachindex(fluxes)
-            @test isapprox(fluxes[i], fluxes2[i],atol=1e-10)
-        end
+        # for i in eachindex(fluxes)
+        #     @test isapprox(fluxes[i], fluxes2[i],atol=1e-8)
+        # end
 
     end
 
