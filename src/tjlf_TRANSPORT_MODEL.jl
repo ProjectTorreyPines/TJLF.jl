@@ -132,7 +132,7 @@ function firstPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         end
 
         unstable = true
-        gamma_max = max(gamma_out[1],gamma_out[2]) # this covers ibranch=-1,0
+        gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
         if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
 
         if(unstable)
@@ -199,7 +199,7 @@ function onePass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         end
 
         unstable = true
-        gamma_max = max(gamma_out[1],gamma_out[2]) # this covers ibranch=-1,0
+        gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
         if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
 
         if(unstable)
@@ -265,7 +265,7 @@ function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         # calculate the eigenvalues with no shear
         nbasis = inputs.NBASIS_MAX
         nmodes_out, gamma_out, freq_out,
-        _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0, amat,bmat)
+        _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0, amat,bmat;ky_index = i)
 
         if(inputs.IBRANCH==-1) # check for inward ballooning modes
             if(inputs.USE_INBOARD_DETRAPPED && ft_test > modB_test) ####### find ft_test and modB_test
@@ -274,7 +274,7 @@ function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, out
         end
 
         unstable = true
-        gamma_max = max(gamma_out[1],gamma_out[2]) # this covers ibranch=-1,0
+        gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
         if(gamma_max == 0.0) unstable = false end ############################ deleted gammma_nb_min_out ############################
 
         if(unstable)
@@ -355,8 +355,8 @@ function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
             stress_tor_QL_out,
             stress_par_QL_out,
             exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s,
-                                amat, bmat,
-                                kx0_e[i], gamma_reference_kx0, freq_reference_kx0)
+                                amat, bmat;
+                                kx0_e=kx0_e[i], gamma_reference_kx0, freq_reference_kx0, ky_index = i)
 
             gamma_nb_min_out = gamma_out[1]
 
