@@ -1,13 +1,35 @@
-include("tjlf_modules.jl")
-include("tjlf_geometry.jl")
-include("tjlf_LINEAR_SOLUTION.jl")
+"""
+    function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky::T, vexb_shear_s::T) where T<:Real
 
-function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
-                 ky::T, vexb_shear_s::T) where T<:Real
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    ky::T                               - value of ky
+    vexb_shear_s::T                     - e x b shear value (=VEXB_SHEAR*SIGN_IT)
 
+outputs:
+    nmodes_out                          - number of most unstable modes calculated
+    gamma_nb_min_out                    - most unstable gamma value
+    gamma_out                           - array of growth rate eigenvalue calculated
+    freq_out                            - array of frequency eigenvalue calculated
+    particle_QL_out                     - particle QL flux
+    energy_QL_out                       - energy QL flux
+    stress_tor_QL_out                   - torodial stress QL flux
+    stress_par_QL_out                   - parallel stress QL flux
+    exchange_QL_out                     - exchange QL flux
+
+description:
+    finds the width using the WIDTH from the InputTJLF as an initial guess,
+    returns the number of unstable modes, the eigenvalues, and QL fluxes after 
+    getting the proper width value
+"""
+function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky::T, vexb_shear_s::T, ky_index::Int) where T<:Real
+
+    ### saturation parameters
     R_unit = satParams.R_unit
     q_unit = satParams.q_unit
-
+    ### input parameters
     alpha_p_in = inputs.ALPHA_P
     sign_It_in = inputs.SIGN_IT
     use_bisection_in = inputs.USE_BISECTION
@@ -18,22 +40,20 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     width_min = inputs.WIDTH_MIN
-    width_max = abs(inputs.WIDTH)
+    width_max = abs(inputs.WIDTH_SPECTRUM[ky_index])
 
-
-    #### organize this better
-    original_iflux = inputs.IFLUX
+    ### original values
     original_ibranch = inputs.IBRANCH
     original_bper = inputs.USE_BPER
     original_bpar = inputs.USE_BPAR
-    original_width = inputs.WIDTH
-
-    inputs.IBRANCH = -1
-    inputs.IFLUX = false
-    if(sat_rule_in==2 || sat_rule_in==3)
-        inputs.USE_BPER = false
-        inputs.USE_BPAR = false
-    end
+    original_width = inputs.WIDTH_SPECTRUM[ky_index]
+    ### change input values
+    # inputs.IBRANCH = -1
+    
+    # if(sat_rule_in==2 || sat_rule_in==3)
+    #     inputs.USE_BPER = false
+    #     inputs.USE_BPAR = false
+    # end
     nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
 
     if(alpha_p_in > 0.0)
@@ -67,23 +87,22 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     tp = tmin
 
     gamma_n = zeros(Float64, nt)
-    freq_n = zeros(Float64, nt)
     width_n = zeros(Float64, nt)
     for i = 1:nt
         tp = tmin + (i-1)*dt
-        inputs.WIDTH = 10.0^tp
+        inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
         new_width = true
         # println("this is I")
-        nmodes_out, gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+        nmodes_out, gamma_out, freq_out,
+        _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
-        width_n[i] = inputs.WIDTH
+        width_n[i] = inputs.WIDTH_SPECTRUM[ky_index]
         gamma_n[i] = gamma_out[1]
-        freq_n[i] = freq_out[1]
     end
 
-    ### this might be off by one if there are repeats, og code finds last max value
+    ### find the most unstable and save that width
     (gamma_max, imax) = findmax(gamma_n)
-    inputs.WIDTH = width_n[imax]
+    inputs.WIDTH_SPECTRUM[ky_index] = width_n[imax]
 
     # use bounded bisection search to refine width
     if(use_bisection_in && gamma_max > 0.0)
@@ -95,10 +114,11 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             g2 = gamma_n[2]
             t2 = log10(width_n[2])
             tp = (t2+t1)/2.0
-            inputs.WIDTH = 10.0^tp
+            inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
             new_width = true
             # println("this is II")
-            _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+            nmodes_out, gamma_out, freq_out,
+            _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
             gm = gamma_out[1]
             tm = tp
 
@@ -109,11 +129,11 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             g2 = gamma_n[nt]
             t2 = tmax
             tp = (t2+t1)/2.0
-            inputs.WIDTH = 10.0^tp
+            inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
             new_width = true
             # println("this is III")
             nmodes_out, gamma_out, freq_out,
-            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+            _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
             gm = gamma_out[1]
             tm = tp
@@ -129,20 +149,20 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
 
         # start bisection search
         dt=(t2-t1)/2.0
-
         while(dt > dtmin)
             dt=dt/2.0
 
             gmax = max(gm,g1,g2)
-            ###### rewrite this, it is so ugly
+
             if(g1==gmax)
                 if(t1>tmin)
                 # shift past t1 and compute new g1,t1
                     tp = t1 - dt
-                    inputs.WIDTH = 10.0^tp
+                    inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
                     new_width = true
                     # println("this is IV")
-                    _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+                    nmodes_out, gamma_out, freq_out,
+                    _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
                     tm = t1
                     gm = g1
@@ -151,20 +171,23 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
 
                     # compute new g2,t2
                     tp = tm + dt
-                    inputs.WIDTH = 10.0^tp
+                    inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
                     new_width = true
                     # println("this is V")
-                    _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+                    nmodes_out, gamma_out, freq_out,
+                    _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
                     g2 = gamma_out[1]
                     t2 = tp
 
                 else   # t1 at tmin; shrink towards t1
                     tp = t1 + dt
-                    inputs.WIDTH = 10.0^tp
+                    inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
                     new_width = true
                     # println("this is VI")
-                    tjlf_LS() ############### have to create this ###############
+                    nmodes_out, gamma_out, freq_out,
+                    _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
+
                     g2 = gm
                     t2 = tm
                     gm = gamma_out[1]
@@ -175,10 +198,11 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             elseif(g2==gmax)
                 if(t2<tmax) # shift past t2 and compute new g2,t2
                     tp = t2 + dt
-                    inputs.WIDTH = 10.0^tp
+                    inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
                     new_width = true
                     # println("this is VII")
-                    _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+                    nmodes_out, gamma_out, freq_out,
+                    _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
                     gm = g2
                     tm = t2
@@ -187,19 +211,21 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
 
                     # compute new g1,t1
                     tp = tm - dt
-                    inputs.WIDTH = 10.0^tp
+                    inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
                     new_width = true
                     # println("this is VIII")
-                    _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+                    nmodes_out, gamma_out, freq_out,
+                    _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
                     g1 = gamma_out[1]
                     t1 = tp
                 else  # t2 at tmax shrink towards t2
                     tp = t2 - dt
-                    inputs.WIDTH = 10.0^tp
+                    inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
                     new_width = true
                     # println("this is IX")
-                    _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+                    nmodes_out, gamma_out, freq_out,
+                    _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
                     g1 = gm
                     t1 = tm
@@ -211,19 +237,21 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             else  # gm==gmax
                 # compute new g1,t1 and g2,t2 closer to gm,tm
                 tp = tm - dt
-                inputs.WIDTH = 10.0^tp
+                inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
                 new_width = true
                 # println("this is X")
-                _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+                nmodes_out, gamma_out, freq_out,
+                _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
                 g1 = gamma_out[1]
                 t1 = tp
 
                 tp = tm + dt
-                inputs.WIDTH = 10.0^tp
+                inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
                 new_width = true
                 # println("this is XI")
-                _, gamma_out, _, _, _, _, _, _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+                nmodes_out, gamma_out, freq_out,
+                _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
                 g2 = gamma_out[1]
                 t2 = tp
@@ -242,43 +270,41 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             tp = t2
         end
         gamma_max = gmax
-        inputs.WIDTH = 10.0^tp
+        inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
     end # done with bisection search
 
     gamma_nb_min_out = gamma_max
 
     ### reset values
-    inputs.IBRANCH = original_ibranch
-    inputs.IFLUX = original_iflux
+    # inputs.IBRANCH = original_ibranch
     if(gamma_max!=0.0) # refine eigenvalue with more basis functions
-        ### reset values
+        # use new nbasis value
         nbasis = inputs.NBASIS_MAX
-        if(sat_rule_in==2 || sat_rule_in==3)
-            inputs.USE_BPER = original_bper
-            inputs.USE_BPAR = original_bpar
-        end
+        # if(sat_rule_in==2 || sat_rule_in==3)
+        #     inputs.USE_BPER = original_bper
+        #     inputs.USE_BPAR = original_bpar
+        # end
         # println("this is XII")
-        new_width = true
         nmodes_out, gamma_out, freq_out,
-        particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s)
+        particle_QL_out, 
+        energy_QL_out, 
+        stress_tor_QL_out, 
+        stress_par_QL_out, 
+        exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
         if(inputs.IBRANCH==-1) # check for inward ballooning modes
             if(inputs.USE_INBOARD_DETRAPPED && ft_test > modB_test) ####### find ft_test and modB_test
-                fts(:) =  ft_min
-                new_geometry = false
-                new_width = false
-                new_matrix = true
-                # println("this is XIII")
-                tjlf_LS() ############### have to create this ###############
+                error("not implemented XIII")
            end
         end
 
-        gamma_max = max(gamma_out[1],gamma_out[2])  # works for both ibranch_in cases
+        gamma_max = findmax(gamma_out)[1]  # works for both ibranch_in cases
 
     end
 
     if(gamma_max==0.0)
-        inputs.WIDTH = original_width
+        # set the saved width to be negative if invalid, avoids finding false values
+        inputs.WIDTH_SPECTRUM[ky_index] = original_width
         if(sat_rule_in==2 || sat_rule_in==3)
             inputs.USE_BPER = original_bper
             inputs.USE_BPAR = original_bpar
@@ -286,36 +312,17 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         maxmodes = 16 #### from tglf_modules
         gamma_out = zeros(Float64,maxmodes)
         freq_out = zeros(Float64,maxmodes)
+        particle_QL_out = fill(NaN, (3, ns, maxmodes))
+        energy_QL_out = fill(NaN, (3, ns, maxmodes))
+        stress_par_QL_out = fill(NaN, (3, ns, maxmodes))
+        stress_tor_QL_out = fill(NaN, (3, ns, maxmodes))
+        exchange_QL_out = fill(NaN, (3, ns, maxmodes))
     end
+
 
     return nmodes_out, gamma_nb_min_out, gamma_out, freq_out,
     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
-
-    # return gamma_nb_min_out,
-    #         gamma_out,
-    #         freq_out,
-    #         v_QL_out,
-    #         a_par_QL_out,
-    #         b_par_QL_out,
-    #         phi_bar_out,
-    #         a_par_bar_out,
-    #         b_par_bar_out,
-    #         v_bar_out,
-    #         ne_te_phase_out,
-    #         field_weight_out,
-    #         particle_QL_out,
-    #         energy_QL_out,
-    #         stress_par_QL_out,
-    #         stress_tor_QL_out,
-    #         exchange_QL_out,
-    #         N_QL_out,
-    #         T_QL_out,
-    #         U_QL_out,
-    #         Q_QL_out,
-    #         N_bar_out,
-    #         T_bar_out,
-    #         U_bar_out,
-    #         Q_bar_out,
-    #         Ns_Ts_phase_out
+    
+    
 
 end
