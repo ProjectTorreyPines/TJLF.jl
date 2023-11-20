@@ -2674,7 +2674,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
     if Threads.nthreads() > 1
         if inputs.IFLUX
-            (alpha, beta, _, vr) = ggev!('N','V',amat_copy,bmat_copy)
+            (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
             return alpha./beta, vr
         else
             (alpha, beta, _, _) = ggev!('N','N',amat,bmat)

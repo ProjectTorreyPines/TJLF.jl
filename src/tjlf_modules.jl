@@ -395,7 +395,7 @@ end
 
 function OutputHermite(x, wx, h, nky::Int)
     _dvec = Matrix{typeof(wx[1])}(undef,size(wx,1),nky)
-    return OutputHermite(x, wx, h, _dvec, _h)
+    return OutputHermite(x, wx, h, _dvec)
 end
 
 ##########################################################
