@@ -108,5 +108,5 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
         end
     end
 
-    return OutputHermite(x,wx,h)
+    return OutputHermite(x,wx,h,size(inputs.KY_SPECTRUM,1))
 end
