@@ -20,7 +20,7 @@ include("tjlf_FLR_modules.jl")
 include("tjlf_finiteLarmorRadius.jl")
 include("tjlf_matrix.jl")
 include("tjlf_LINEAR_SOLUTION.jl")
-include("tjlf_max2.jl")
+include("tjlf_max.jl")
 include("tjlf_TRANSPORT_MODEL.jl")
 include("run_tjlf.jl")
 
