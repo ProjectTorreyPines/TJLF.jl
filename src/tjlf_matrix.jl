@@ -23,7 +23,7 @@ description:
 """
 function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},
                     ky::T,
-                    nbasis::Int) where T<:Real
+                    nbasis::Int, ky_index::Int) where T<:Real
 
     ns::Int = inputs.NS
 
@@ -36,8 +36,8 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     aveWG = AveWG{Float64}(ns, nbasis)
     aveKG = AveKG(ns, nbasis)
 
-    FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky, nbasis)
-    get_ave!(inputs, outputGeo, outputHermite, ave, nbasis, ky)
+    FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky, nbasis, ky_index)
+    get_ave!(inputs, outputGeo, outputHermite, ave, nbasis, ky, ky_index)
 
     if(inputs.VPAR_MODEL==0 && inputs.USE_BPER)
         ave.bpinv = inv(ave.bp)
@@ -108,7 +108,7 @@ end
 #*************************************************************
 #  compute the FLR integrals at the hermite nodes
 function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},
-    aveH::AveH{T}, aveG::AveG{T}, ky::T, nbasis::Int) where T<:Real
+    aveH::AveH{T}, aveG::AveG{T}, ky::T, nbasis::Int, ky_index::Int) where T<:Real
 
     zero_cut = 1.e-12
     nx = 2*inputs.NXGRID - 1
@@ -186,8 +186,8 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             end
         end
     end
-
-    dvec = outputHermite._dvec
+    
+    @views dvec = outputHermite._dvec[:,ky_index]
     for is = ns0:ns
         @views dvec .= hxn[is,:] .* wx
         outer!(aveH.hn, h, dvec, is)
@@ -279,13 +279,13 @@ end
 #  compute  k-independent hermite basis averages
 #***********************************************************
 function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermite::OutputHermite{T},ave::Ave{T},
-    nbasis::Int, ky::T) where T<:Real
+    nbasis::Int, ky::T, ky_index::Int) where T<:Real
 
     zero_cut = 1.e-12
     fts = outputGeo.fts
     ft2 = fts[1]^2
 
-    width_in = inputs.WIDTH
+    width_in = inputs.WIDTH_SPECTRUM[ky_index]
 
     vpar_model_in = inputs.VPAR_MODEL
     alpha_mach_in = inputs.ALPHA_MACH
@@ -320,13 +320,11 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
     pol = sum(zs.^2 .* as./taus)
     U0 = sum((alpha_mach_in*sign_it_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
 
-
     p0x = Vector{Float64}(undef, nx)
     for i = 1:nx
         debye = debye_factor_in*b0x[i]*(ky*debye_s)^2
         p0x[i] = debye + pol
     end
-
 
     #  compute the guass-hermite intregrals
     for i = 1:nbasis
@@ -447,7 +445,6 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     ave.modwdh = a * abs.(w) * transpose(a)
     ave.wdh = a * w * transpose(a) 
 
-
     ### now for wdg
     eigen = eigen!(Symmetric(ave.wdg))
     w = eigen.values
@@ -457,7 +454,6 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     w = Diagonal(w)
     ave.modwdg = a * abs.(w) * transpose(a)
     ave.wdg = a * w * transpose(a)
-
 end
 
 

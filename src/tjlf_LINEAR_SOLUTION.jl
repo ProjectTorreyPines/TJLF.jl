@@ -10,8 +10,8 @@ parameters:
     nbasis::Int                         - number of basis for matrix dimension
     vexb_shear_s::T                     - e x b shear value (=VEXB_SHEAR*SIGN_IT)
     kx0_e::T = 0.0                      - kx0_e value calculated on second pass with eigen values from first pass
-    gamma_reference_kx0 = missing       - gamma vector if second pass
-    freq_reference_kx0 = missing        - freq vector if second pass
+    gamma_reference_kx0                 - gamma vector if second pass
+    freq_reference_kx0                  - freq vector if second pass
 
 outputs:
     nmodes_out                          - number of most unstable modes calculated
@@ -30,12 +30,10 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             ky::T,
             nbasis::Int,
             vexb_shear_s::T,
-            amat::Matrix{K},
-            bmat::Matrix{K};
+            ky_index::Int;
             kx0_e::T = 0.0,
             gamma_reference_kx0::Vector{T} = T[],
-            freq_reference_kx0::Vector{T} = T[],
-            ky_index::Int=-1) where T <: Real where K<:Complex
+            freq_reference_kx0::Vector{T} = T[]) where T <: Real
 
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
@@ -68,41 +66,41 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 # trace_path[4]=1
                 # miller_geo(inputs)
                 # mercier_luc(inputs)
-
             # FOURIER geometry
             elseif(igeo==2)
                 error("sorry fourier geometry not implemented yet :(")
                 # trace_path[5]=1
                 fourier_geo(inputs)
-
             # ELITE geometry
             elseif(igeo==3)
                 error("sorry fourier geometry not implemented yet :(")
                 #trace_path[8]=1
                 ELITE_geo(inputs)
             end
-
             # compute the eikonal functions for general geometry (igeo>0)
             # if(igeo > 0) mercier_luc(inputs) end
-
         end
         new_geometry = false
 
 
         #  load the x-grid eikonal functions v_QL_out,b0x
         if(new_width)
-            outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky, kx0_e)
+            outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky, ky_index; kx0_e)
         end
     end  #new_eikonal_in
 
     new_matrix = true ######################## hardcode for now ########################
     if(new_matrix)
         ave, aveH, aveWH, aveKH,
-        aveG, aveWG, aveKG = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis)
+        aveG, aveWG, aveKG = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis, ky_index)
     end
 
+    # @show aveH.hnp0[1,1,1]
+
+    amat = Matrix{ComplexF64}(undef, iur, iur)
+    bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky, amat,bmat;ky_index)
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky, amat,bmat,ky_index)
     # eigenvalues = alpha./beta
 
     rr = real.(eigenvalues)
@@ -153,7 +151,6 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             end
         end
 
-
         # find the most unstable mode for each branch
         if(me>0)
             zgamax = 0.0
@@ -177,7 +174,6 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             gamma_out[2] = rr[jmax[2]]
             freq_out[2] = -ri[jmax[2]]
         end
-
 
     elseif(inputs.IBRANCH==-1)
         # find the top nmodes most unstable modes
@@ -252,7 +248,9 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 # zmat = beta[jmax[imax]].*amat .- (small.+alpha[jmax[imax]]).*bmat
                 # gesv!(zmat,v)
                 # calculate eigenvector with Arpack.jl, very slightly slower
-                if inputs.FIND_WIDTH || ky_index==-1 || inputs.GAMMA_SPECTRUM[ky_index] == 0.0 || isnan(v[1,1])
+                if Threads.nthreads()>1
+                    eigenvector = v[:,jmax[imax]]
+                elseif inputs.FIND_WIDTH || isnan(v[1,1]) || inputs.GAMMA_SPECTRUM[ky_index] == 0.0
                     _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]])
                     eigenvector = vec[:,1]
                 else
@@ -287,7 +285,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 a_par_QL_out[imax] = a_par_weight
                 b_par_QL_out[imax] = b_par_weight
                 kx_bar_out[imax] = kx_bar
-                kpar_bar_out[imax] = kpar_bar/(R_unit*q_unit*inputs.WIDTH)
+                kpar_bar_out[imax] = kpar_bar/(R_unit*q_unit*inputs.WIDTH_SPECTRUM[ky_index])
 
                 field_weight_out[:,:,imax]  .= field_weight_QL_out
 

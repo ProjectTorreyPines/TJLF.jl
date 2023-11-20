@@ -3,8 +3,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
                         nbasis::Int, ky::T,
-                        amat::Matrix{K},bmat::Matrix{K};
-                        ky_index::Int=-1)::Tuple{Vector{K},Matrix{K}} where T<:Real where K<:Complex
+                        amat::Matrix{K},bmat::Matrix{K},
+                        ky_index::Int)::Tuple{Vector{K},Matrix{K}} where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -28,7 +28,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     vs2 = √(taus[2] / mass[2])
     vs1 = √(taus[1] / mass[1])
 
-    width_in = inputs.WIDTH
+    width_in = inputs.WIDTH_SPECTRUM[ky_index]
     use_bpar_in = inputs.USE_BPAR
     use_bper_in = inputs.USE_BPER
     vpar_model_in = inputs.VPAR_MODEL
@@ -218,17 +218,17 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     vb10_i = uv_constants.vb[20]
 
     # GLF parallel closure coefficients
-    bpar_HP = 3 + (32 - 9π)/(3π - 8)
-    bper_DH = 1
-    dper_DH = √(π/2)
-    dpar_HP = 2*√(2π)/(3π - 8)
+    bpar_HP = 3.0 + (32.0 - 9.0π)/(3.0π - 8.0)
+    bper_DH = 1.0
+    dper_DH = √(π/2.0)
+    dpar_HP = 2.0*√(2.0π)/(3.0π - 8.0)
 
     b1 = bpar_HP
     d1 = dpar_HP
     b3 = bper_DH
     d3 = dper_DH
-    b33 = (b1 - b3)/3
-    d33 = (d1 - d3)/3
+    b33 = (b1 - b3)/3.0
+    d33 = (d1 - d3)/3.0
 
     # include R(theta)/R0 factor like gyro convetions. Note that sign_Bt_in is in ave_c_tor_par
     vpar_shear = Vector{Float64}(undef, ns)
@@ -309,7 +309,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         xnu_bndry = (1.0 - ft2)*xnu_a*xnu_b
 
         xnu_n_b     = xnu_factor_in*xnu_bndry*xnu_p1_1
-        xnu_p3_b    =  xnu_n_b
+        xnu_p3_b    = xnu_n_b
         xnu_p1_b    = xnu_n_b
         xnu_u_b     = xnu_factor_in*xnu_bndry*xnu_q1_q1_1
         xnu_q3_b    = xnu_u_b
@@ -324,7 +324,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
     cnuei = 0.0
     if(xnu_model>=2) cnuei = xnue_s end
-    kparvthe = abs(k_par0)*vs1/√(2)
+    kparvthe = abs(k_par0)*vs1/√(2.0)
     kparvthe = max(kparvthe,1.0E-10)
 
     #*************************************************************
@@ -2671,16 +2671,29 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # find the eigenvalues and eigenvectors
     #*************************************************************
 
-    ### only calculate the eigenvalues
-    if !inputs.FIND_WIDTH && ky_index != -1
+
+    if Threads.nthreads() > 1
+        if inputs.IFLUX
+            (alpha, beta, _, vr) = ggev!('N','V',amat_copy,bmat_copy)
+            return alpha./beta, vr
+        else
+            (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
+            return alpha./beta, fill(NaN*im,(1,1))
+        end
+    end
+
+    # calculate eigenvalues/eigenvectors
+    if !inputs.FIND_WIDTH && !isnan(inputs.GAMMA_SPECTRUM[1])
         sigma = inputs.GAMMA_SPECTRUM[ky_index]
         if sigma != 0.0 
             try
                 λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LR,sigma=sigma,maxiter=50)
                 return λ, v
             catch
-                # println("can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index])")
+                @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
             end
+        else
+            @warn "no growth rate intial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
         end
     end
 

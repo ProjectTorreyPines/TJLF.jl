@@ -22,62 +22,122 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
     ns = inputs.NS
-    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
-    nroot = 15 #### hardcoded
-
+    nmodes = inputs.NMODES
+    ky_spect = inputs.KY_SPECTRUM
+    nky = length(ky_spect)
+    
     original_iflux = inputs.IFLUX
-    original_width = inputs.WIDTH
 
-    # compute the flux spectrum
+    ### output values
+    firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2)
+    QL_weights::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
 
+    # compute the flux spectrum and eigenvalues
     if alpha_quench_in!=0.0 || vexb_shear_s==0.0 # do not calculate spectral shift
 
-        # print("this is c")
-        QL_weights, firstPass_eigenvalue = onePass(inputs, satParams, outputHermite, vexb_shear_s)
+        Threads.@threads for ky_index = eachindex(ky_spect)
+            # print("this is c")
+            onePass!(inputs, satParams, outputHermite, vexb_shear_s, firstPass_eigenvalue, QL_weights, ky_index)
+        end
 
     elseif !inputs.FIND_WIDTH # calculate spectral shift with predetermined width spectrum
 
-        nbasis = inputs.NBASIS_MAX
-        iur = (ns-ns0+1)*nroot*nbasis
-        amat = Matrix{ComplexF64}(undef, iur, iur)
-        bmat = Matrix{ComplexF64}(undef, iur, iur)
-
         # get the gammas to calculate the spectral shift on second pass
-        inputs.IFLUX = false
-        firstPass_eigenvalue = widthPass(inputs, satParams, outputHermite, amat,bmat)
-
-        inputs.IFLUX = original_iflux
-        QL_weights = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue, amat,bmat)
+        inputs.IFLUX = false # do not compute QL on first pass
+        Threads.@threads for ky_index = eachindex(ky_spect)
+            inputs.IFLUX = false
+            widthPass!(inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
+        end
+        kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1]) # spectral shift
+        
+        inputs.IFLUX = true # do not compute QL on first pass
+        Threads.@threads for ky_index = eachindex(ky_spect)
+            inputs.IFLUX = original_iflux
+            secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index)
+        end
 
     else # calculate the spectral shift and the width spectrum
-        
-        # println("this is a")
+        # initial guess if finding width
+        inputs.WIDTH_SPECTRUM .= inputs.WIDTH
         inputs.IFLUX = false # do not compute QL on first pass
-        firstPass_eigenvalue = firstPass(inputs, satParams, outputHermite) #  spectral shift model double pass
+        Threads.@threads for ky_index = eachindex(ky_spect)
+            # println("this is a")
+            firstPass!(inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index) #  spectral shift model double pass
+        end
+        kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1]) # spectral shift
 
-        nbasis = inputs.NBASIS_MAX
-        iur = (ns-ns0+1)*nroot*nbasis
-        amat = Matrix{ComplexF64}(undef, iur, iur)
-        bmat = Matrix{ComplexF64}(undef, iur, iur)
-        # println("this is b")
-        inputs.IFLUX = original_iflux # compute QL on second pass
-        QL_weights = secondPass(inputs, satParams, outputHermite, firstPass_eigenvalue, amat,bmat)
+        inputs.IFLUX = true # do not compute QL on first pass
+        Threads.@threads for ky_index = eachindex(ky_spect)
+            # println("this is b")
+            inputs.IFLUX = original_iflux # compute QL on second pass
+            secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index)
+        end
+
     end
-
-    inputs.WIDTH = original_width
+    inputs.IFLUX = original_iflux
 
     return QL_weights, firstPass_eigenvalue
 
-    # sum_ky_spectrum(inputs, eigenvalue_spectrum_out[1,:,:],
-    #             ave_p0,potential,
-    #             particle_QL,
-    #             energy_QL,
-    #             toroidal_stress_QL,
-    #             parallel_stress_QL,
-    #             exchange_QL)
-
 end
 
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------------------------
+
+"""
+    function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
+    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+
+outputs:
+    QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
+                                          type: (particle, energy, torodial stress, parallel stress, exchange)
+    eigenvalue_spectrum_out             - 3d array of eigenvalues (mode, ky, type)
+                                          type: (gamma, frequency)
+
+description:
+    calculate both eigenvalues and fluxes on firstPass if vexb_shear = 0 or alpha_quench != 0, no secondPass
+"""
+function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
+    vexb_shear_s::T,
+    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
+
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    # increment through the ky_spectrum and find the width/eigenvalues of each ky
+    ky = inputs.KY_SPECTRUM[ky_index]
+
+    if(inputs.NEW_EIKONAL) # not sure what this is -DSUN
+        # println("this is 1")
+        nmodes_out, gamma_nb_min_out,
+        gamma_out, freq_out,
+        particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max2(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index)
+    else
+        error("NOT IMPLEMENTED YET -DSUN")
+    end
+
+    unstable = true
+    gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
+    if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
+
+    if(unstable)
+        eigenvalue_spectrum_out[1:nmodes_out,ky_index,1] .= gamma_out[1:nmodes_out]
+        eigenvalue_spectrum_out[1:nmodes_out,ky_index,2] .= freq_out[1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
+    end
+
+end
 
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
@@ -102,122 +162,31 @@ outputs:
 description:
     calculate the widths and eigenvalues with vexb_shear = 0.0
 """
-function firstPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+function firstPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
 
-    nmodes = inputs.NMODES
-    new_eikonal_in = inputs.NEW_EIKONAL
-    ky_spect = inputs.KY_SPECTRUM
-    nky = length(ky_spect)
+    # increment through the ky_spectrum and find the width/eigenvalues of each k
+    ky = inputs.KY_SPECTRUM[ky_index]
 
-    original_width = inputs.WIDTH
-
-    ### output values
-    eigenvalue_spectrum_out = zeros(Float64, nmodes, nky, 2)
-
-    # increment through the ky_spectrum and find the width/eigenvalues of each ky
-    for i = eachindex(ky_spect)
-        ky = ky_spect[i]
-
-        if(new_eikonal_in) # not sure what this is -DSUN
-            # println("this is 1")
-            nmodes_out, gamma_nb_min_out,
-            gamma_out, freq_out,
-            _,_,_,_,_ = tjlf_max2(inputs, satParams, outputHermite, ky, 0.0)
-
-            inputs.WIDTH_SPECTRUM[i] = inputs.WIDTH
-            ### reset value
-            inputs.WIDTH = original_width
-        else
-            error("NOT IMPLEMENTED YET -DSUN")
-        end
-
-        unstable = true
-        gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
-        if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
-
-        if(unstable)
-            eigenvalue_spectrum_out[1:nmodes_out,i,1] .= gamma_out[1:nmodes_out]
-            eigenvalue_spectrum_out[1:nmodes_out,i,2] .= freq_out[1:nmodes_out]
-        end
+    if(inputs.NEW_EIKONAL) # not sure what this is -DSUN
+        # println("this is 1")
+        nmodes_out, gamma_nb_min_out,
+        gamma_out, freq_out,
+        _,_,_,_,_ = tjlf_max2(inputs, satParams, outputHermite, ky, 0.0, ky_index)
+    else
+        error("NOT IMPLEMENTED YET -DSUN")
     end
 
-    return eigenvalue_spectrum_out
+    unstable = true
+    gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
+    if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
+
+    if(unstable)
+        firstPass_eigenvalue[1:nmodes_out,ky_index,1] .= gamma_out[1:nmodes_out]
+        firstPass_eigenvalue[1:nmodes_out,ky_index,2] .= freq_out[1:nmodes_out]
+    end
 
 end
 
-#----------------------------------------------------------------------------------------------------------------------------
-#----------------------------------------------------------------------------------------------------------------------------
-#----------------------------------------------------------------------------------------------------------------------------
-#----------------------------------------------------------------------------------------------------------------------------
-#----------------------------------------------------------------------------------------------------------------------------
-#----------------------------------------------------------------------------------------------------------------------------
-
-"""
-    function onePass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
-
-parameters:
-    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
-    satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
-
-outputs:
-    QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
-                                          type: (particle, energy, torodial stress, parallel stress, exchange)
-    eigenvalue_spectrum_out             - 3d array of eigenvalues (mode, ky, type)
-                                          type: (gamma, frequency)
-
-description:
-    calculate both eigenvalues and fluxes on firstPass if vexb_shear = 0 or alpha_quench != 0, no secondPass
-"""
-function onePass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, vexb_shear_s::T) where T<:Real
-
-    nmodes = inputs.NMODES
-    new_eikonal_in = inputs.NEW_EIKONAL
-    ns = inputs.NS
-    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
-    ky_spect = inputs.KY_SPECTRUM
-    nky = length(ky_spect)
-
-    original_width = inputs.WIDTH
-
-    ### output values
-    eigenvalue_spectrum_out = zeros(Float64, nmodes, nky, 2)
-    QL_weights::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
-
-    # increment through the ky_spectrum and find the width/eigenvalues of each ky
-    for i = eachindex(ky_spect)
-        ky = ky_spect[i]
-        inputs.WIDTH = inputs.WIDTH_SPECTRUM[i]
-
-        if(new_eikonal_in) # not sure what this is -DSUN
-            # println("this is 1")
-            nmodes_out, gamma_nb_min_out,
-            gamma_out, freq_out,
-            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max2(inputs, satParams, outputHermite, ky, vexb_shear_s)
-        else
-            error("NOT IMPLEMENTED YET -DSUN")
-        end
-
-        unstable = true
-        gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
-        if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
-
-        if(unstable)
-            eigenvalue_spectrum_out[1:nmodes_out,i,1] .= gamma_out[1:nmodes_out]
-            eigenvalue_spectrum_out[1:nmodes_out,i,2] .= freq_out[1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
-        end
-    end
-
-    inputs.WIDTH = original_width
-
-    return QL_weights, eigenvalue_spectrum_out
-
-end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
@@ -239,52 +208,37 @@ outputs:
 description:
     calculate the eigenvalues to calculate the spectral shift (kx0_e) on secondPass
 """
-function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, amat::Matrix{K},bmat::Matrix{K}) where T<:Real where K<:Complex
-
-    nmodes = inputs.NMODES
-    ky_spect = inputs.KY_SPECTRUM
-    nky = length(ky_spect)
-
-    original_width = inputs.WIDTH
+function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
 
     if(!inputs.NEW_EIKONAL)
         error("not sure what this flag is -DSUN")
     end
 
-    ### output values
-    eigenvalue_spectrum_out = zeros(Float64, nmodes, nky, 2)
-
     # increment through the ky/width spectrum
-    for i = eachindex(ky_spect)
-        ky = ky_spect[i]
-        inputs.WIDTH = inputs.WIDTH_SPECTRUM[i]
-        if inputs.WIDTH<0.0 # invalid value found in max()
-            continue
-        end
+    ky = inputs.KY_SPECTRUM[ky_index]
+    if inputs.WIDTH_SPECTRUM[ky_index]<0.0 # the abs() was an idea to set the width to be <0 if no growth rate was found
+        return
+    end
 
-        # calculate the eigenvalues with no shear
-        nbasis = inputs.NBASIS_MAX
-        nmodes_out, gamma_out, freq_out,
-        _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0, amat,bmat;ky_index = i)
+    # calculate the eigenvalues with no shear
+    nbasis = inputs.NBASIS_MAX
+    nmodes_out, gamma_out, freq_out,
+    _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
 
-        if(inputs.IBRANCH==-1) # check for inward ballooning modes
-            if(inputs.USE_INBOARD_DETRAPPED && ft_test > modB_test) ####### find ft_test and modB_test
-                error("not implemented XIII")
-            end
-        end
-
-        unstable = true
-        gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
-        if(gamma_max == 0.0) unstable = false end ############################ deleted gammma_nb_min_out ############################
-
-        if(unstable)
-            eigenvalue_spectrum_out[1:nmodes_out,i,1] .= gamma_out[1:nmodes_out]
-            eigenvalue_spectrum_out[1:nmodes_out,i,2] .= freq_out[1:nmodes_out]
+    if(inputs.IBRANCH==-1) # check for inward ballooning modes
+        if(inputs.USE_INBOARD_DETRAPPED && ft_test > modB_test) ####### find ft_test and modB_test
+            error("not implemented XIII")
         end
     end
-    inputs.WIDTH = original_width
 
-    return eigenvalue_spectrum_out
+    unstable = true
+    gamma_max = findmax(gamma_out)[1] # this covers ibranch=-1,0
+    if(gamma_max == 0.0) unstable = false end ############################ deleted gammma_nb_min_out ############################
+
+    if(unstable)
+        firstPass_eigenvalue[1:nmodes_out,ky_index,1] .= gamma_out[1:nmodes_out]
+        firstPass_eigenvalue[1:nmodes_out,ky_index,2] .= freq_out[1:nmodes_out]
+    end
 
 end
 #----------------------------------------------------------------------------------------------------------------------------
@@ -309,169 +263,101 @@ outputs:
 description:
     calculate the QL weights using the width and eigenvalues from the first pass as reference
 """
-function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
-    firstPass_eigenvalue::Array{T,3},
-    amat::Matrix{K}, bmat::Matrix{K}) where T<:Real where K<:Complex
+function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
+    kx0_e::T,
+    firstPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
 
-    ### input values
-    sat_rule_in = inputs.SAT_RULE
-    nmodes = inputs.NMODES
+    # input values
     ns = inputs.NS
-    new_eikonal_in = inputs.NEW_EIKONAL
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     nbasis_max_in = inputs.NBASIS_MAX
     nbasis_min_in = inputs.NBASIS_MIN
-    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     nx = 2*inputs.NXGRID - 1
-    ky_spect = inputs.KY_SPECTRUM
-    nky = length(ky_spect)
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
-    ### saturation values
+
+    # saturation values
     R_unit = satParams.R_unit
     q_unit = satParams.q_unit
-    ### change input value
-    inputs.IFLUX = true
 
-    mask_save::Vector{Int} = zeros(Int, nky)
+    # mask_save::Vector{Int} = zeros(Int, nky)
 
-    # initialize output arrays
-    QL_weights::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
+    # initialize reference eigenvalue arrays
     gamma_reference_kx0 = similar(firstPass_eigenvalue[:,1,1])
     freq_reference_kx0 = similar(firstPass_eigenvalue[:,1,2])
-    kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1])
 
-    for i = eachindex(ky_spect)
-        ky = ky_spect[i]
+    ky = inputs.KY_SPECTRUM[ky_index]
 
-        if(new_eikonal_in)
-            gamma_reference_kx0 .= firstPass_eigenvalue[:,i,1]
-            freq_reference_kx0 .= firstPass_eigenvalue[:,i,2]
-            inputs.WIDTH = abs(inputs.WIDTH_SPECTRUM[i])
-            nbasis = nbasis_max_in
-            # println("this is 3")
+    if(inputs.NEW_EIKONAL)
+        gamma_reference_kx0 .= firstPass_eigenvalue[:,ky_index,1]
+        freq_reference_kx0 .= firstPass_eigenvalue[:,ky_index,2]
+        nbasis = nbasis_max_in
+        # println("this is 3")
 
-            nmodes_out, gamma_out, freq_out,
-            particle_QL_out,
-            energy_QL_out,
-            stress_tor_QL_out,
-            stress_par_QL_out,
-            exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s,
-                                amat, bmat;
-                                kx0_e=kx0_e[i], gamma_reference_kx0, freq_reference_kx0, ky_index = i)
+        nmodes_out, gamma_out, freq_out,
+        particle_QL_out,
+        energy_QL_out,
+        stress_tor_QL_out,
+        stress_par_QL_out,
+        exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
+                            kx0_e, gamma_reference_kx0, freq_reference_kx0)
 
-            gamma_nb_min_out = gamma_out[1]
+        gamma_nb_min_out = gamma_out[1]
 
-            mask_save[i] = 1
-            if(gamma_out[1] == 0.0) mask_save[i] = 0 end
-        else
-        ############### need these values from the function calls earlier probably
-            error("NOT IMPLEMENTED YET -DSUN")
-            gamma_nb_min_out = gamma_nb_min_save[i]
-            inputs.WIDTH = width_save[i]
-            ft = ft_save[i]
-            R_unit = R_unit_save[i]
-            q_unit = q_unit_save[i]
-            for j = 1:nx
-                wdx[j] = wdx_save[i,j]
-                b0x[j] = b0x_save[i,j]
-                b2x[j] = b2x_save[i,j]
-                cx_par_par[j] = cx_par_par_save[i,j]
-                cx_tor_par[j] = cx_tor_par_save[i,j]
-                cx_tor_per[j] = cx_tor_per_save[i,j]
-                kxx[j] = kxx_save[i,j]
-            end
-
-            if(mask_save[i] == 1)
-                # println("this is 4")
-                tjlf_LS() ############### have to create this ###############
-            else
-                gamma_out[1] = 0.0
-            end
+        # mask_save[i] = 1
+        # if(gamma_out[1] == 0.0) mask_save[i] = 0 end
+    else
+    ############### need these values from the function calls earlier probably
+        error("NOT IMPLEMENTED YET -DSUN")
+        gamma_nb_min_out = gamma_nb_min_save[ky_index]
+        inputs.WIDTH = width_save[ky_index]
+        ft = ft_save[ky_index]
+        R_unit = R_unit_save[ky_index]
+        q_unit = q_unit_save[ky_index]
+        for j = 1:nx
+            wdx[j] = wdx_save[ky_index,j]
+            b0x[j] = b0x_save[ky_index,j]
+            b2x[j] = b2x_save[ky_index,j]
+            cx_par_par[j] = cx_par_par_save[ky_index,j]
+            cx_tor_par[j] = cx_tor_par_save[ky_index,j]
+            cx_tor_per[j] = cx_tor_per_save[ky_index,j]
+            kxx[j] = kxx_save[ky_index,j]
         end
 
-        unstable = true
-        if inputs.IBRANCH==0
-            gamma_max = max(gamma_out[1],gamma_out[2])
-        else
-            gamma_max = max(gamma_out[1],0.0)
-        end
-        if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
+        # if(mask_save[i] == 1)
+        #     # println("this is 4")
+        #     tjlf_LS() ############### have to create this ###############
+        # else
+        #     gamma_out[1] = 0.0
+        # end
+    end
+
+    unstable = true
+    if inputs.IBRANCH==0
+        gamma_max = max(gamma_out[1],gamma_out[2])
+    else
+        gamma_max = max(gamma_out[1],0.0)
+    end
+    if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
 
 
-        if(unstable)
-            # println("DSUN")
-            gamma_cutoff = 0.1*ky/R_unit
-            rexp = 1.0
-            reduce = 1.0
-            if(nbasis_max_in != nbasis_min_in)
-                if(gamma_nb_min_out < gamma_out[1] && gamma_nb_min_out < gamma_cutoff)
-                    reduce = (gamma_nb_min_out/gamma_cutoff)^rexp
-                end
+    if(unstable)
+        # println("DSUN")
+        gamma_cutoff = 0.1*ky/R_unit
+        rexp = 1.0
+        reduce = 1.0
+        if(nbasis_max_in != nbasis_min_in)
+            if(gamma_nb_min_out < gamma_out[1] && gamma_nb_min_out < gamma_cutoff)
+                reduce = (gamma_nb_min_out/gamma_cutoff)^rexp
             end
-            if(sat_rule_in >= 1) reduce = 1.0 end
-            # # save the spectral shift of the radial wavenumber due to VEXB_SHEAR
-            # spectral_shift_out[i] = kx0_e
-            # ave_p0_spectrum_out[i] = ave_p0_out
-            # # save field_spectrum_out and eigenvalue_spectrum_out
-
-            # for imax = 1:nmodes_out
-            #     QL_field_spectrum_out[1,i,imax] = v_QL_out[imax]
-            #     QL_field_spectrum_out[2,i,imax] = 1.0
-            #     QL_field_spectrum_out[3,i,imax] = a_par_QL_out[imax]
-            #     QL_field_spectrum_out[4,i,imax] = b_par_QL_out[imax]
-            #     field_spectrum_out[1,i,imax] = reduce*v_bar_out[imax]
-            #     field_spectrum_out[2,i,imax] = reduce*phi_bar_out[imax]
-            #     field_spectrum_out[3,i,imax] = reduce*a_par_bar_out[imax]
-            #     field_spectrum_out[4,i,imax] = reduce*b_par_bar_out[imax]
-            #     if(ky <= 1.0 && gamma_out[imax] > gmax)
-            #         gmax=gamma_out[imax]
-            #         fmax=freq_out[imax]
-            #     end
-            # end
-            # save intensity_spectrum_out
-            # for is = ns0:ns
-            #     for imax = 1:nmodes_out
-            #         QL_intensity_spectrum_out[1,is,i,imax] = N_QL_out[imax,is]
-            #         QL_intensity_spectrum_out[2,is,i,imax] = T_QL_out[imax,is]
-            #         QL_intensity_spectrum_out[3,is,i,imax] = U_QL_out[imax,is]
-            #         QL_intensity_spectrum_out[4,is,i,imax] = Q_QL_out[imax,is]
-            #         intensity_spectrum_out[1,is,i,imax] = N_bar_out[imax,is]
-            #         intensity_spectrum_out[2,is,i,imax] = T_bar_out[imax,is]
-            #         intensity_spectrum_out[3,is,i,imax] = U_bar_out[imax,is]
-            #         intensity_spectrum_out[4,is,i,imax] = Q_bar_out[imax,is]
-            #     end #imax
-            # end  # is
-            # save flux_spectrum_out
-            QL_weights[:,ns0:ns,1:nmodes_out,i,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
-            QL_weights[:,ns0:ns,1:nmodes_out,i,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
-            # for is = ns0:ns
-            #     for j = 1:3
-            #         for imax = 1:nmodes_out
-                        # phi_bar = reduce*phi_bar_out[imax]
-                        # pflux1 = particle_QL_out[imax,is,j]
-                        # eflux1 = energy_QL_out[imax,is,j]
-                        # stress_tor1 = stress_tor_QL_out[imax,is,j]
-                        # stress_par1 = stress_par_QL_out[imax,is,j]
-                        # exch1 = exchange_QL_out[imax,is,j]
-                        # QL_flux_spectrum_out[j,is,imax,i,1] = pflux1
-                        # QL_flux_spectrum_out[j,is,imax,i,2] = eflux1
-                        # QL_flux_spectrum_out[j,is,imax,i,3] = stress_tor1
-                        # QL_flux_spectrum_out[j,is,imax,i,4] = stress_par1
-                        # QL_flux_spectrum_out[j,is,imax,i,5] = exch1
-                        # flux_spectrum_out[1,is,j,i,imax] = phi_bar*pflux1
-                        # flux_spectrum_out[2,is,j,i,imax] = phi_bar*eflux1
-                        # flux_spectrum_out[3,is,j,i,imax] = phi_bar*stress_tor1
-                        # flux_spectrum_out[4,is,j,i,imax] = phi_bar*stress_par1
-                        # flux_spectrum_out[5,is,j,i,imax] = phi_bar*exch1
-            #         end #imax
-            #     end # j
-            # end  # is
-
         end
-
-    end  # i
+        
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
+        
+    end
 
     # recompute spectrum using non-local in ky multiscale model
     # if(sat_rule_in >= 1) get_multiscale_spectrum(inputs) end
@@ -479,7 +365,5 @@ function secondPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T},out
     # gamma_out[1] = gmax
     # freq_out[1] = fmax
     # inputs.NEW_EIKONAL = true  # reset default for next call to tjlf_TM
-
-    return QL_weights
 
 end
