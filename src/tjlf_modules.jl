@@ -387,16 +387,15 @@ end
 ##########################################################
 
 struct OutputHermite{T<:Real}
-
     x::Vector{T}
     wx::Vector{T}
     h::Matrix{T}
-    _dvec::Vector{T}
+    _dvec::Matrix{T}
 end
 
-function OutputHermite(x, wx, h)
-    _dvec = similar(wx)
-    return OutputHermite(x, wx, h, _dvec)
+function OutputHermite(x, wx, h, nky::Int)
+    _dvec = Matrix{typeof(wx[1])}(undef,size(wx,1),nky)
+    return OutputHermite(x, wx, h, _dvec, _h)
 end
 
 ##########################################################
