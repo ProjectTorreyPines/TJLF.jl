@@ -1,11 +1,12 @@
 module TJLF
 
+using Base.Threads
 using LinearAlgebra
 import LinearAlgebra.LAPACK.ggev!
 import LinearAlgebra.LAPACK.gesv!
-# using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem
-using Arpack # if you use Arpack, use version 0.5.3
+using Arpack # use version 0.5.3
 using SparseArrays
+# using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
