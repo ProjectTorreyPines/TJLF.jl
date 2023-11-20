@@ -1,10 +1,10 @@
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T}, small::T=0.00000001) where T<:Real
+    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Vector{T}, small::T=0.00000001) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    gamma_matrix::Matrix{T}             - growth rate eigenvalues (mode, ky)
+    gamma_modes::Vector{T}              - growth rate eigenvalues for each mode
 
 outputs:
     kx0_e                               - value of kx0_e given the gamma value
@@ -100,10 +100,10 @@ description:
     create the OutputGeometry struct for the specific WIDTHS value
 """
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T},
-    ky::T, kx0_e::T=0.0,
+    ky::T, ky_index::Int; kx0_e::T=0.0,
     mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
 
-    width_in = inputs.WIDTH
+    width_in = inputs.WIDTH_SPECTRUM[ky_index]
     sat_rule_in = inputs.SAT_RULE
 
     ### different for different geometries!!!
@@ -355,7 +355,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         end
     end
 
-    return OutputGeometry{Float64}(0, fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
+    return OutputGeometry{Float64}(kx0_e, fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
 
 end
 
@@ -841,6 +841,7 @@ function miller_geo(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128)
     # R, Z, R*Bp on flux surface s-grid
     B_unit_out = zeros(Float64, ms + 1)
     # grad_r_out = zeros(Float64, ms + 1)
+    B_unit = NaN
     for m in 1:ms+1
         theta = t_s[m]
         arg_r = theta + x_delta*sin(theta)
@@ -864,10 +865,10 @@ function miller_geo(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128)
 
         grad_r = abs(l_t/det)
         if m==1
-            global B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
-            if(drmindx_loc==1.0) global B_unit=1.0 end # Waltz-Miller convention
+            B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
+            if(drmindx_loc==1.0) B_unit=1.0 end # Waltz-Miller convention
         end
-        B_unit_out[m] = B_unit
+        
         # grad_r_out[m] = grad_r
 
         # changes q_s to q_loc
@@ -876,6 +877,7 @@ function miller_geo(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128)
         q_prime_s = q_prime_s / B_unit
 
     end
+    B_unit_out .= B_unit
 
     return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, ds, t_s
 end
