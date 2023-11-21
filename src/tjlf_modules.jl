@@ -1024,7 +1024,7 @@ mutable struct AveGrad{T<:Real}
     gradgr11p0::Array{T,3}
     gradgr13p0::Array{T,3}
 
-    function AveGrad(ns::Int, nbasis::Int)
+    function AveGrad{T}(ns::Int, nbasis::Int) where T<:Real
         gradhp1 = zeros(T, ns, nbasis, nbasis)
         gradhr11 = zeros(T, ns, nbasis, nbasis)
         gradhr13 = zeros(T, ns, nbasis, nbasis)
@@ -1044,6 +1044,7 @@ mutable struct AveGrad{T<:Real}
         gradgp1p0 = zeros(T, ns, nbasis, nbasis)
         gradgr11p0 = zeros(T, ns, nbasis, nbasis)
         gradgr13p0 = zeros(T, ns, nbasis, nbasis)
+
         new(
             gradhp1,gradhr11,gradhr13,gradhp1p1,gradhr11p1,gradhr13p1,gradhp1p0,gradhr11p0,gradhr13p0,
             gradgp1,gradgr11,gradgr13,gradgp1p1,gradgr11p1,gradgr13p1,gradgp1p0,gradgr11p0,gradgr13p0
@@ -1070,7 +1071,7 @@ mutable struct AveGradB{T<:Real}
     gradBgu3::Array{T,3}
     gradBgu33::Array{T,3}
 
-    function AveGradB(ns::Int, nbasis::Int)
+    function AveGradB{T}(ns::Int, nbasis::Int) where T<:Real
         gradBhp1 = zeros(T, ns, nbasis, nbasis)
         gradBhp3 = zeros(T, ns, nbasis, nbasis)
         gradBhr11 = zeros(T, ns, nbasis, nbasis)

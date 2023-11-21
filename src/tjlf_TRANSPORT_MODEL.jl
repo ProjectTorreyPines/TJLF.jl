@@ -223,11 +223,25 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
     # calculate the eigenvalues with no shear
     nbasis = inputs.NBASIS_MAX
     nmodes_out, gamma_out, freq_out,
-    _,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
+    _,_,_,_,_,ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
 
     if(inputs.IBRANCH==-1) # check for inward ballooning modes
-        if(inputs.USE_INBOARD_DETRAPPED && ft_test > modB_test) ####### find ft_test and modB_test
-            error("not implemented XIII")
+        if(inputs.USE_INBOARD_DETRAPPED) ####### find ft_test and modB_test
+            if(inputs.USE_INBOARD_DETRAPPED)
+                b_geo = satParams.B_geo
+                Bmax,_ = findmax(b_geo)
+                Bmin,_ = findmin(b_geo)
+                modB_test = 0.5*(Bmax + Bmin)/Bmin
+                if(ft_test > modB_test)
+                    ft_min = 0.01
+                    outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky, ky_index; kx0_e)
+                    outputGeo.fts .= ft_min
+                    @warn "NOT TESTED max.jl ln 302"
+                    # println("this is XIII")
+                    nmodes_out, gamma_out, freq_out,
+                    _,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                end
+            end
         end
     end
 
@@ -294,41 +308,13 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
         # println("this is 3")
 
         nmodes_out, gamma_out, freq_out,
-        particle_QL_out,
-        energy_QL_out,
-        stress_tor_QL_out,
-        stress_par_QL_out,
-        exchange_QL_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
+        particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
+        _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
                             kx0_e, gamma_reference_kx0, freq_reference_kx0)
 
         gamma_nb_min_out = gamma_out[1]
-
-        # mask_save[i] = 1
-        # if(gamma_out[1] == 0.0) mask_save[i] = 0 end
     else
-    ############### need these values from the function calls earlier probably
         error("NOT IMPLEMENTED YET -DSUN")
-        gamma_nb_min_out = gamma_nb_min_save[ky_index]
-        inputs.WIDTH = width_save[ky_index]
-        ft = ft_save[ky_index]
-        R_unit = R_unit_save[ky_index]
-        q_unit = q_unit_save[ky_index]
-        for j = 1:nx
-            wdx[j] = wdx_save[ky_index,j]
-            b0x[j] = b0x_save[ky_index,j]
-            b2x[j] = b2x_save[ky_index,j]
-            cx_par_par[j] = cx_par_par_save[ky_index,j]
-            cx_tor_par[j] = cx_tor_par_save[ky_index,j]
-            cx_tor_per[j] = cx_tor_per_save[ky_index,j]
-            kxx[j] = kxx_save[ky_index,j]
-        end
-
-        # if(mask_save[i] == 1)
-        #     # println("this is 4")
-        #     tjlf_LS() ############### have to create this ###############
-        # else
-        #     gamma_out[1] = 0.0
-        # end
     end
 
     unstable = true

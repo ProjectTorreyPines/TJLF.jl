@@ -33,7 +33,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             ky_index::Int;
             kx0_e::T = 0.0,
             gamma_reference_kx0::Vector{T} = T[],
-            freq_reference_kx0::Vector{T} = T[]) where T <: Real
+            freq_reference_kx0::Vector{T} = T[],
+            outputGeo::Union{OutputGeometry{T},Missing} = missing) where T <: Real
 
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
@@ -84,7 +85,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
 
         #  load the x-grid eikonal functions v_QL_out,b0x
-        if(new_width)
+        if(ismissing(outputGeo))
             outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky, ky_index; kx0_e)
         end
     end  #new_eikonal_in
@@ -337,7 +338,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         ft_test = ft_test/modB_min
 
         return nmodes_out, gamma_out, freq_out,
-        particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
+        particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
+        ft_test
     end
 
     particle_QL_out = fill(NaN, (3, ns, nmodes_in))
@@ -347,7 +349,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     exchange_QL_out = fill(NaN, (3, ns, nmodes_in))
 
     return nmodes_out, gamma_out, freq_out,
-    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
+    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
+    NaN
     # return  gamma_out,
     #         freq_out,
     #         v_QL_out,
