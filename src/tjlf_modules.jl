@@ -312,8 +312,6 @@ mutable struct InputTJLF{T<:Real}
             inputTJLF.TAUS[i] = getfield(inputTGLF,Symbol("TAUS_",i))
             inputTJLF.VPAR[i] = getfield(inputTGLF,Symbol("VPAR_",i))
             inputTJLF.VPAR_SHEAR[i] = getfield(inputTGLF,Symbol("VPAR_SHEAR_",i))
-            inputTJLF.VNS_SHEAR[i] = getfield(inputTGLF,Symbol("VNS_SHEAR_",i))
-            inputTJLF.VTS_SHEAR[i] = getfield(inputTGLF,Symbol("VTS_SHEAR_",i))
         end
         inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
 
