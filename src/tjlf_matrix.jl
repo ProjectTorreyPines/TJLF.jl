@@ -36,6 +36,9 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     aveWG = AveWG{Float64}(ns, nbasis)
     aveKG = AveKG(ns, nbasis)
 
+    aveGrad = AveGrad{Float64}(ns, nbasis)
+    aveGradB = AveGradB{Float64}(ns, nbasis)
+
     FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky, nbasis, ky_index)
     get_ave!(inputs, outputGeo, outputHermite, ave, nbasis, ky, ky_index)
 
@@ -61,7 +64,10 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
 
     h_ratios!(inputs, aveH)
 
-    if(inputs.LINSKER_FACTOR!=0.0) error("Haven't implemented :)") end #grad_ave_h() end
+    if(inputs.LINSKER_FACTOR!=0.0) 
+        @warn "NOT TESTED matrix.jl ln 68"
+        grad_ave_h(inputs,ave,aveH,aveGrad) 
+    end
 
     ave_hp0!(inputs, ave, aveH)
     if(inputs.BETAE>0.0)
@@ -72,13 +78,19 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     wd_h!(inputs, ave, aveH, aveWH)
     kpar_h!(inputs, ave, aveH, aveKH)
 
-    if(inputs.GRADB_FACTOR!=0.0) error("Haven't implemented :)") end #gradB_h() end
+    if(inputs.GRADB_FACTOR!=0.0) 
+        @warn "NOT TESTED matrix.jl ln 82"
+        gradB_h(inputs,ave,aveH,aveGradB) 
+    end
 
 
     nroot = 15 ###### hardcoded
     if(nroot>6)
         g_ratios!(inputs, aveG)
-        if(inputs.LINSKER_FACTOR!=0) error("Have't implemented :)") end #grad_ave_g
+        if(inputs.LINSKER_FACTOR!=0) 
+            @warn "NOT TESTED matrix.jl ln 91"
+            grad_ave_g(inputs,ave,aveG,aveGrad)
+        end
         ave_gp0!(inputs, ave, aveG)
         if(inputs.BETAE>0.0)
             ave_gb0!(inputs, ave, aveG)
@@ -86,10 +98,13 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
         end
         wd_g!(inputs, ave, aveG, aveWG)
         kpar_g!(inputs, ave, aveG, aveKG)
-        if(inputs.GRADB_FACTOR!=0.0) error("Haven't implemented :)") end #gradB_g
+        if(inputs.GRADB_FACTOR!=0.0)
+            @warn "NOT TESTED matrix.jl ln 102"
+            gradB_g(inputs,ave,aveG,aveGradB)
+        end
     end
 
-    return ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG
+    return ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG, aveGrad, aveGradB
 end
 
 function outer!(Y, x, dvec, is)
@@ -388,18 +403,18 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
         if(nbasis==1)
             ave.kpar_eff[is,1,1] = -im/√(2)
             if(vpar_model_in==1)
-                error("NOT IMPLEMENTED YET -DSUN")
+                @warn "I haven't tested this (matrix.jl ln 394)"
                 vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.VPAR[is]
-                ave.kpar_eff[is,1,1] = ave.kpar_eff[is,1,1] + im*abs(alpha_mach_in*vpar_s)*ky*R_unit*q_unit*width_in*mass(is)/zs(is)
+                ave.kpar_eff[is,1,1] = ave.kpar_eff[is,1,1] + im*abs(alpha_mach_in*vpar_s)*ky*R_unit*q_unit*inputs.WIDTH_SPECTRUM[ky_index]*inputs.MASS[is]/inputs.ZS[is]
             end
         else
             for i = 1:nbasis
                 for j = 1:nbasis
                     ave.kpar_eff[is,i,j] = ave.kpar[i,j]
                     if(vpar_model_in==1 && i==j)
-                        error("too lazy rn -DSUN")
+                        @warn "I haven't tested this (matrix.jl ln 403)"
                         vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.VPAR[is]
-                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*ky*R_unit*q_unit*width_in*mass(is)/zs(is)
+                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*vpar_s*ky*R_unit*q_unit*inputs.WIDTH_SPECTRUM[ky_index]*inputs.MASS[is]/inputs.ZS[is]
                     end
                 end
             end
@@ -927,5 +942,136 @@ function kpar_g!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveKG::AveKG) wh
                 mult1!(aveKG.kpargr13bp, aveG.gr13bp, ave.kpar, Ctmp, Atmp, is)
             end
         end
+    end
+end
+
+
+
+
+
+function mult4!(C, A, B, C1tmp, C2tmp, Atmp, is)
+    Atmp .= @view A[is,:,:]
+    mul!(C1tmp, Atmp, B)
+    mul!(C2tmp, B, Atmp)
+    C[is,:,:] .= C1tmp .- C2tmp
+end
+
+function mult5!(C, A, B, C1tmp, C2tmp, Btmp, is)
+    Btmp .= @view B[is,:,:]
+    mul!(C1tmp, A, Btmp)
+    mul!(C2tmp, Btmp, A)
+    C[is,:,:] .= C1tmp .- C2tmp
+end
+
+#***************************************************************
+#   compute the parallel gradient of ave_m matrix
+#***************************************************************
+function grad_ave_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveGrad::AveGrad{T}) where T<:Real
+
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveGrad.gradhp1)
+    C1tmp = zeros(eltype(aveGrad.gradhp1), nbasis, nbasis)
+    C2tmp = zeros(eltype(aveGrad.gradhp1), nbasis, nbasis)
+    Atmp = zeros(eltype(aveH.hu1), nbasis, nbasis)
+    Btmp = zeros(eltype(aveH.hp1), nbasis, nbasis)
+
+    hp1inv = inv(aveH.hp1)
+
+    for is = ns0:ns
+        mult5!(aveGrad.gradhp1, ave.kpar, aveH.hp1, C1tmp, C2tmp, Btmp, is)
+        mult3!(aveGrad.gradhr11, aveH.hu1, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
+        mult3!(aveGrad.gradhr13, aveH.hu3, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
+
+        mult3!(aveGrad.gradhp1p1, aveGrad.gradhp1, hp1inv, C1tmp, Atmp, Btmp, is)
+        mult3!(aveGrad.gradhr11p1, aveGrad.gradhr11, hp1inv, C1tmp, Atmp, Btmp, is)
+        mult3!(aveGrad.gradhr13p1, aveGrad.gradhr13, hp1inv, C1tmp, Atmp, Btmp, is)
+
+        mult1!(aveGrad.gradhp1p0, aveGrad.gradhp1, ave.p0inv, C1tmp, Atmp, is)
+        mult1!(aveGrad.gradhr11p0, aveGrad.gradhr11, ave.p0inv, C1tmp, Atmp, is)
+        mult1!(aveGrad.gradhr13p0, aveGrad.gradhr13, ave.p0inv, C1tmp, Atmp, is)
+    end 
+end
+
+
+#***************************************************************
+#   compute the parallel gradient of ave_g matricies
+#***************************************************************
+function  grad_ave_g(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveGrad::AveGrad{T}) where T<:Real
+
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveGrad.gradgp1)
+    C1tmp = zeros(eltype(aveGrad.gradgp1), nbasis, nbasis)
+    C2tmp = zeros(eltype(aveGrad.gradgp1), nbasis, nbasis)
+    Atmp = zeros(eltype(aveG.gu1), nbasis, nbasis)
+    Btmp = zeros(eltype(aveG.gp1), nbasis, nbasis)
+
+    gp1inv = inv(aveG.gp1)
+
+    for is = ns0:ns
+        mult5!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, C2tmp, Btmp, is)
+        mult3!(aveGrad.gradgr11, aveG.gu1, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
+        mult3!(aveGrad.gradgr13, aveG.gu3, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
+
+        mult3!(aveGrad.gradgp1p1, aveGrad.gradgp1, gp1inv, C1tmp, Atmp, Btmp, is)
+        mult3!(aveGrad.gradgr11p1, aveGrad.gradgr11, gp1inv, C1tmp, Atmp, Btmp, is)
+        mult3!(aveGrad.gradgr13p1, aveGrad.gradgr13, gp1inv, C1tmp, Atmp, Btmp, is)
+
+        mult1!(aveGrad.gradgp1p0, aveGrad.gradgp1, ave.p0inv, C1tmp, Atmp, is)
+        mult1!(aveGrad.gradgr11p0, aveGrad.gradgr11, ave.p0inv, C1tmp, Atmp, is)
+        mult1!(aveGrad.gradgr13p0, aveGrad.gradgr13, ave.p0inv, C1tmp, Atmp, is)
+    end 
+end
+
+
+#***************************************************************
+#   compute the products gradB*h
+#***************************************************************
+function gradB_h(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveGradB::AveGradB{T}) where T<:Real
+
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveGradB.gradBhp1)
+    Ctmp = zeros(eltype(aveGradB.gradBhp1), nbasis, nbasis)
+    Btmp = zeros(eltype(aveH.hp1p0), nbasis, nbasis)
+
+    for is = ns0:ns
+        mult2!(aveGradB.gradBhp1, ave.gradB, aveH.hp1p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBhp3, ave.gradB, aveH.hp3p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBhr11, ave.gradB, aveH.hr11p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBhr13, ave.gradB, aveH.hr13p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBhr33, ave.gradB, aveH.hr33p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBhu1, ave.gradB, aveH.hu1, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBhu3, ave.gradB, aveH.hu3, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBhu33, ave.gradB, aveH.hu33, Ctmp, Btmp, is)
+    end
+end
+
+
+#***************************************************************
+#   compute the products gradB*ave_g
+#***************************************************************
+function gradB_g(inputs::InputTJLF{T},ave::Ave{T},aveG::AveH{T},aveGradB::AveGradB{T}) where T<:Real
+
+    ns = inputs.NS
+    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+
+    _, nbasis, _ = size(aveGradB.gradBgp1)
+    Ctmp = zeros(eltype(aveGradB.gradBgp1), nbasis, nbasis)
+    Btmp = zeros(eltype(aveG.gp1p0), nbasis, nbasis)
+
+    for is = ns0:ns
+        mult2!(aveGradB.gradBgp1, ave.gradB, aveG.gp1p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBgp3, ave.gradB, aveG.gp3p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBgr11, ave.gradB, aveG.gr11p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBgr13, ave.gradB, aveG.gr13p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBgr33, ave.gradB, aveG.gr33p0, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBgu1, ave.gradB, aveG.gu1, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBgu3, ave.gradB, aveG.gu3, Ctmp, Btmp, is)
+        mult2!(aveGradB.gradBgu33, ave.gradB, aveG.gu33, Ctmp, Btmp, is)
     end
 end

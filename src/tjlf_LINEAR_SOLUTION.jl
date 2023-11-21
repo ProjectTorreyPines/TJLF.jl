@@ -92,7 +92,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     new_matrix = true ######################## hardcode for now ########################
     if(new_matrix)
         ave, aveH, aveWH, aveKH,
-        aveG, aveWG, aveKG = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis, ky_index)
+        aveG, aveWG, aveKG,
+        aveGrad, aveGradB = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis, ky_index)
     end
 
     # @show aveH.hnp0[1,1,1]
@@ -100,7 +101,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,nbasis,ky, amat,bmat,ky_index)
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index)
     # eigenvalues = alpha./beta
 
     rr = real.(eigenvalues)

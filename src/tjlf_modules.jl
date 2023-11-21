@@ -999,3 +999,99 @@ mutable struct AveKG
             )
     end
 end
+
+
+
+
+mutable struct AveGrad{T<:Real}
+    gradhp1::Array{T,3}
+    gradhr11::Array{T,3}
+    gradhr13::Array{T,3}
+    gradhp1p1::Array{T,3}
+    gradhr11p1::Array{T,3}
+    gradhr13p1::Array{T,3}
+    gradhp1p0::Array{T,3}
+    gradhr11p0::Array{T,3}
+    gradhr13p0::Array{T,3}
+
+    gradgp1::Array{T,3}
+    gradgr11::Array{T,3}
+    gradgr13::Array{T,3}
+    gradgp1p1::Array{T,3}
+    gradgr11p1::Array{T,3}
+    gradgr13p1::Array{T,3}
+    gradgp1p0::Array{T,3}
+    gradgr11p0::Array{T,3}
+    gradgr13p0::Array{T,3}
+
+    function AveGrad(ns::Int, nbasis::Int)
+        gradhp1 = zeros(T, ns, nbasis, nbasis)
+        gradhr11 = zeros(T, ns, nbasis, nbasis)
+        gradhr13 = zeros(T, ns, nbasis, nbasis)
+        gradhp1p1 = zeros(T, ns, nbasis, nbasis)
+        gradhr11p1 = zeros(T, ns, nbasis, nbasis)
+        gradhr13p1 = zeros(T, ns, nbasis, nbasis)
+        gradhp1p0 = zeros(T, ns, nbasis, nbasis)
+        gradhr11p0 = zeros(T, ns, nbasis, nbasis)
+        gradhr13p0 = zeros(T, ns, nbasis, nbasis)
+    
+        gradgp1 = zeros(T, ns, nbasis, nbasis)
+        gradgr11 = zeros(T, ns, nbasis, nbasis)
+        gradgr13 = zeros(T, ns, nbasis, nbasis)
+        gradgp1p1 = zeros(T, ns, nbasis, nbasis)
+        gradgr11p1 = zeros(T, ns, nbasis, nbasis)
+        gradgr13p1 = zeros(T, ns, nbasis, nbasis)
+        gradgp1p0 = zeros(T, ns, nbasis, nbasis)
+        gradgr11p0 = zeros(T, ns, nbasis, nbasis)
+        gradgr13p0 = zeros(T, ns, nbasis, nbasis)
+        new(
+            gradhp1,gradhr11,gradhr13,gradhp1p1,gradhr11p1,gradhr13p1,gradhp1p0,gradhr11p0,gradhr13p0,
+            gradgp1,gradgr11,gradgr13,gradgp1p1,gradgr11p1,gradgr13p1,gradgp1p0,gradgr11p0,gradgr13p0
+            )
+    end
+end
+
+mutable struct AveGradB{T<:Real}
+    gradBhp1::Array{T,3}
+    gradBhp3::Array{T,3}
+    gradBhr11::Array{T,3}
+    gradBhr13::Array{T,3}
+    gradBhr33::Array{T,3}
+    gradBhu1::Array{T,3}
+    gradBhu3::Array{T,3}
+    gradBhu33::Array{T,3}
+
+    gradBgp1::Array{T,3}
+    gradBgp3::Array{T,3}
+    gradBgr11::Array{T,3}
+    gradBgr13::Array{T,3}
+    gradBgr33::Array{T,3}
+    gradBgu1::Array{T,3}
+    gradBgu3::Array{T,3}
+    gradBgu33::Array{T,3}
+
+    function AveGradB(ns::Int, nbasis::Int)
+        gradBhp1 = zeros(T, ns, nbasis, nbasis)
+        gradBhp3 = zeros(T, ns, nbasis, nbasis)
+        gradBhr11 = zeros(T, ns, nbasis, nbasis)
+        gradBhr13 = zeros(T, ns, nbasis, nbasis)
+        gradBhr33 = zeros(T, ns, nbasis, nbasis)
+        gradBhu1 = zeros(T, ns, nbasis, nbasis)
+        gradBhu3 = zeros(T, ns, nbasis, nbasis)
+        gradBhu33 = zeros(T, ns, nbasis, nbasis)
+
+        gradBgp1 = zeros(T, ns, nbasis, nbasis)
+        gradBgp3 = zeros(T, ns, nbasis, nbasis)
+        gradBgr11 = zeros(T, ns, nbasis, nbasis)
+        gradBgr13 = zeros(T, ns, nbasis, nbasis)
+        gradBgr33 = zeros(T, ns, nbasis, nbasis)
+        gradBgu1 = zeros(T, ns, nbasis, nbasis)
+        gradBgu3 = zeros(T, ns, nbasis, nbasis)
+        gradBgu33 = zeros(T, ns, nbasis, nbasis)
+
+        new(
+            gradBhp1,gradBhp3,gradBhr11,gradBhr13,gradBhr33,gradBhu1,gradBhu3,gradBhu33,
+            gradBgp1,gradBgp3,gradBgr11,gradBgr13,gradBgr33,gradBgu1,gradBgu3,gradBgu33
+            )
+    end
+end

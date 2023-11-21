@@ -2,6 +2,7 @@ using Revise
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
+                        aveGrad::AveGrad{T},aveGradB::AveGradB{T},
                         nbasis::Int, ky::T,
                         amat::Matrix{K},bmat::Matrix{K},
                         ky_index::Int)::Tuple{Vector{K},Matrix{K}} where T<:Real where K<:Complex
@@ -740,13 +741,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         gradhr11p1 = 0.0
                         gradhr13p1 = 0.0
                     else
-                        error("NOT IMPLEMENTED YET -DSUN")
-                        gradhp1 = linsker*ave_gradhp1p0[is,ib,jb]
-                        gradhr11 = linsker*ave_gradhr11p0[is,ib,jb]
-                        gradhr13 = linsker*ave_gradhr13p0[is,ib,jb]
-                        gradhp1p1 = linsker*ave_gradhp1p1[is,ib,jb]
-                        gradhr11p1 = linsker*ave_gradhr11p1[is,ib,jb]
-                        gradhr13p1 = linsker*ave_gradhr13p1[is,ib,jb]
+                        @warn ("NOT TESTED eigensolver.jl ln 744")
+                        gradhp1 = linsker*aveGrad.gradhp1p0[is,ib,jb]
+                        gradhr11 = linsker*aveGrad.gradhr11p0[is,ib,jb]
+                        gradhr13 = linsker*aveGrad.gradhr13p0[is,ib,jb]
+                        gradhp1p1 = linsker*aveGrad.gradhp1p1[is,ib,jb]
+                        gradhr11p1 = linsker*aveGrad.gradhr11p1[is,ib,jb]
+                        gradhr13p1 = linsker*aveGrad.gradhr13p1[is,ib,jb]
                     end
 
                     if(nroot>6)
@@ -902,13 +903,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradgr11p1=0.0
                             gradgr13p1=0.0
                         else
-                            error("not implemented yet")
-                            gradgp1 = linsker*ave_gradgp1p0[is,ib,jb]
-                            gradgr11 = linsker*ave_gradgr11p0[is,ib,jb]
-                            gradgr13 = linsker*ave_gradgr13p0[is,ib,jb]
-                            gradgp1p1 = linsker*ave_gradgp1p1[is,ib,jb]
-                            gradgr11p1 = linsker*ave_gradgr11p1[is,ib,jb]
-                            gradgr13p1 = linsker*ave_gradgr13p1[is,ib,jb]
+                            @warn "NOT TESTED eigensolve.jl ln 906"
+                            gradgp1 = linsker*aveGrad.gradgp1p0[is,ib,jb]
+                            gradgr11 = linsker*aveGrad.gradgr11p0[is,ib,jb]
+                            gradgr13 = linsker*aveGrad.gradgr13p0[is,ib,jb]
+                            gradgp1p1 = linsker*aveGrad.gradgp1p1[is,ib,jb]
+                            gradgr11p1 = linsker*aveGrad.gradgr11p1[is,ib,jb]
+                            gradgr13p1 = linsker*aveGrad.gradgr13p1[is,ib,jb]
                         end
                     end  # nroot>6
 
@@ -946,25 +947,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradBgu33=0.0
                         end
                     else
-                        error("not implemented")
-                        gradB = gradB1*ave.gradB[ib,jb]
-                        gradBhp1=gradB1*ave_gradBhp1[is,ib,jb]
-                        gradBhp3=gradB1*ave_gradBhp3[is,ib,jb]
-                        gradBhr11=gradB1*ave_gradBhr11[is,ib,jb]
-                        gradBhr13=gradB1*ave_gradBhr13[is,ib,jb]
-                        gradBhr33=gradB1*ave_gradBhr33[is,ib,jb]
-                        gradBhu1=gradB1*ave_gradBhu1[is,ib,jb]
-                        gradBhu3=gradB1*ave_gradBhu3[is,ib,jb]
-                        gradBhu33=gradB1*ave_gradBhu33[is,ib,jb]
+                        @warn "NOT TESTED eigensolve.jl ln 950"
+                        gradB = gradB1*aveGradB.gradB[ib,jb]
+                        gradBhp1=gradB1*aveGradB.gradBhp1[is,ib,jb]
+                        gradBhp3=gradB1*aveGradB.gradBhp3[is,ib,jb]
+                        gradBhr11=gradB1*aveGradB.gradBhr11[is,ib,jb]
+                        gradBhr13=gradB1*aveGradB.gradBhr13[is,ib,jb]
+                        gradBhr33=gradB1*aveGradB.gradBhr33[is,ib,jb]
+                        gradBhu1=gradB1*aveGradB.gradBhu1[is,ib,jb]
+                        gradBhu3=gradB1*aveGradB.gradBhu3[is,ib,jb]
+                        gradBhu33=gradB1*aveGradB.gradBhu33[is,ib,jb]
                         if(nroot>6)
-                            gradBgp1=gradB1*ave_gradBgp1[is,ib,jb]
-                            gradBgp3=gradB1*ave_gradBgp3[is,ib,jb]
-                            gradBgr11=gradB1*ave_gradBgr11[is,ib,jb]
-                            gradBgr13=gradB1*ave_gradBgr13[is,ib,jb]
-                            gradBgr33=gradB1*ave_gradBgr33[is,ib,jb]
-                            gradBgu1=gradB1*ave_gradBgu1[is,ib,jb]
-                            gradBgu3=gradB1*ave_gradBgu3[is,ib,jb]
-                            gradBgu33=gradB1*ave_gradBgu33[is,ib,jb]
+                            gradBgp1=gradB1*aveGradB.gradBgp1[is,ib,jb]
+                            gradBgp3=gradB1*aveGradB.gradBgp3[is,ib,jb]
+                            gradBgr11=gradB1*aveGradB.gradBgr11[is,ib,jb]
+                            gradBgr13=gradB1*aveGradB.gradBgr13[is,ib,jb]
+                            gradBgr33=gradB1*aveGradB.gradBgr33[is,ib,jb]
+                            gradBgu1=gradB1*aveGradB.gradBgu1[is,ib,jb]
+                            gradBgu3=gradB1*aveGradB.gradBgu3[is,ib,jb]
+                            gradBgu33=gradB1*aveGradB.gradBgu33[is,ib,jb]
                         end
                     end
 
