@@ -218,19 +218,19 @@ mutable struct InputTJLF{T<:Real}
 
     UNITS::String
 
-    USE_TRANSPORT_MODEL::Union{Bool,Missing}
+    USE_TRANSPORT_MODEL::Union{Bool,Missing} ## used only for TGLF output
     USE_BPER::Union{Bool,Missing}
     USE_BPAR::Union{Bool,Missing}
     USE_MHD_RULE::Union{Bool,Missing}
     USE_BISECTION::Union{Bool,Missing}
     USE_INBOARD_DETRAPPED::Union{Bool,Missing}
-    USE_AVE_ION_GRID::Union{Bool,Missing} # not used?
-    NEW_EIKONAL::Union{Bool,Missing}
+    USE_AVE_ION_GRID::Union{Bool,Missing} ## have not seen be used
+    NEW_EIKONAL::Union{Bool,Missing} ## this seems useless, the flag has to be both true and false to do anything
     FIND_WIDTH::Union{Bool,Missing}
     IFLUX::Union{Bool,Missing}
     ADIABATIC_ELEC::Union{Bool,Missing}
 
-    GEOMETRY_FLAG::Union{Int,Missing} # used to specify geometry type
+    GEOMETRY_FLAG::Union{Int,Missing} ## used to specify other geometries, but I only use Miller so not really used
     SAT_RULE::Union{Int,Missing}
     NS::Union{Int,Missing}
     NMODES::Union{Int,Missing}
@@ -242,11 +242,11 @@ mutable struct InputTJLF{T<:Real}
     KYGRID_MODEL::Union{Int,Missing}
     XNU_MODEL::Union{Int,Missing}
     VPAR_MODEL::Union{Int,Missing}
-    B_MODEL_SA::Union{Int,Missing} # used for SA geometry
-    FT_MODEL_SA::Union{Int,Missing} # used for SA geometry
-    VPAR_SHEAR_MODEL::Union{Int,Missing} # commented out in TGLF
+    B_MODEL_SA::Union{Int,Missing} ## used for SA geometry
+    FT_MODEL_SA::Union{Int,Missing} ## used for SA geometry
+    VPAR_SHEAR_MODEL::Union{Int,Missing} ## commented out in TGLF
     IBRANCH::Union{Int,Missing}
-    WRITE_WAVEFUNCTION_FLAG::Union{Int,Missing} 
+    WRITE_WAVEFUNCTION_FLAG::Union{Int,Missing} ## used for IO, but not important
 
     ZS::Vector{T}
     MASS::Vector{T}
@@ -256,8 +256,8 @@ mutable struct InputTJLF{T<:Real}
     AS::Vector{T}
     VPAR::Vector{T}
     VPAR_SHEAR::Vector{T}
-    VNS_SHEAR::Vector{T}
-    VTS_SHEAR::Vector{T}
+    VNS_SHEAR::Vector{T} ## profile shear from EPS 2011, commented out in TGLF
+    VTS_SHEAR::Vector{T} ## profile shear from EPS 2011, commented out in TGLF
 
     WIDTH_SPECTRUM::Vector{T}
     KY_SPECTRUM::Vector{T}
@@ -267,7 +267,7 @@ mutable struct InputTJLF{T<:Real}
     SIGN_IT::T
     KY::T
 
-    VEXB::T
+    VEXB::T ## not used
     VEXB_SHEAR::T
     BETAE::T
     XNUE::T
@@ -304,13 +304,13 @@ mutable struct InputTJLF{T<:Real}
     Q_PRIME_LOC::T
     BETA_LOC::T
     KX0_LOC::T
-    RMIN_SA::T
-    RMAJ_SA::T
-    Q_SA::T
-    SHAT_SA::T
-    ALPHA_SA::T
-    XWELL_SA::T
-    THETA0_SA::T
+    RMIN_SA::T ## other geometry
+    RMAJ_SA::T ## other geometry
+    Q_SA::T ## other geometry
+    SHAT_SA::T ## other geometry
+    ALPHA_SA::T ## other geometry
+    XWELL_SA::T ## other geometry
+    THETA0_SA::T ## other geometry
 
     DAMP_PSI::T
     DAMP_SIG::T
@@ -323,7 +323,7 @@ mutable struct InputTJLF{T<:Real}
     GRADB_FACTOR::T
     FILTER::T
     THETA_TRAPPED::T
-    NN_MAX_ERROR::T
+    NN_MAX_ERROR::T ## i'm assuming used for NN? not used in TJLF
 
 
     function InputTJLF{T}(ns::Int,nky::Int) where T<:Real
