@@ -322,7 +322,7 @@ mutable struct InputTJLF{T<:Real}
             end
             if typeof(fieldvalue)<:Vector && fieldname!=:KY_SPECTRUM && fieldname!=:GAMMA_SPECTRUM
                 for val in fieldvalue
-                    @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
+                    @assert !isnan(val) "Did not properly populate inputTJLF for array $fieldname"
                 end
             end
         end
