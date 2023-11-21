@@ -22,7 +22,6 @@ function readInput(baseDirectory::String)::InputTJLF
     nky = -1
     kygrid_model = -1
     nwidth = -1
-    nmodes = -1
     for line in lines[1:length(lines)]
         line = split(line, "\n")
         line = split(line[1],"=")
@@ -41,13 +40,16 @@ function readInput(baseDirectory::String)::InputTJLF
     @assert nky!=-1 "did not find NKY"
     @assert kygrid_model!=-1 "did not find KYGRID_MODEL"
     @assert kygrid_model>=0 && kygrid_model <=5 "KYGRID_MODEL must be Int between 0 and 5"
-
     nky = get_ky_spectrum_size(nky,kygrid_model)
     ############# nky should equal NWIDTH ##################
     @assert nky == nwidth "ky spectrum size should equal width spectrum size"
 
+
+
     # create InputTJLF struct
     inputTJLF = InputTJLF{Float64}(ns,nwidth)
+    # fields that aren't used or implemented
+    deletedFields = ["USE_TRANSPORT_MODEL","GEOMETRY_FLAG","B_MODEL_SA","FT_MODEL_SA","VPAR_SHEAR_MODEL","WRITE_WAVEFUNCTION_FLAG","VTS_SHEAR","VNS_SHEAR","VEXB","RMIN_SA","RMAJ_SA","Q_SA","SHAT_SA","ALPHA_SA","XWELL_SA","THETA0_SA","NN_MAX_ERROR"]
 
     # go through each line of the input.tglf file
     for line in lines[1:length(lines)]
@@ -58,11 +60,14 @@ function readInput(baseDirectory::String)::InputTJLF
         line = split(line, "\n")
         line = split(line[1],"=")
 
+        if line[1] ∈ deletedFields continue end 
+
         # check for the species field since they are all named [field name]_[species number]
         check = match(r"_\d",line[1])
         
         if check !== nothing # is a species field
 
+            if replace(line[1], r"_\d"=>"") ∈ deletedFields continue end
             # alternative way of getting field nad species number
             # temp = split(line[1],"_")
             # get field and species number

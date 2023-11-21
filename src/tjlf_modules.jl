@@ -137,7 +137,6 @@ Base.@kwdef mutable struct InputTGLF
     _Qgb::Union{Float64,Missing} = missing
 
     # missing
-    USE_TRANSPORT_MODEL::Bool = true
     USE_BISECTION::Bool = true
     USE_INBOARD_DETRAPPED::Bool = false
     NEW_EIKONAL::Bool = true
@@ -145,38 +144,13 @@ Base.@kwdef mutable struct InputTGLF
     IFLUX::Bool = true
     ADIABATIC_ELEC::Bool = false
 
-    GEOMETRY_FLAG::Int = 1
     NWIDTH::Int = 21
     NXGRID::Int = 16
     VPAR_MODEL::Int = 0
-    FT_MODEL_SA::Int = 1
     VPAR_SHEAR_MODEL::Int = 1
     IBRANCH::Int = -1
-    WRITE_WAVEFUNCTION_FLAG::Int = 0
-
-    VNS_SHEAR_1::Float64 = 0.0
-    VNS_SHEAR_2::Float64 = 0.0
-    VNS_SHEAR_3::Float64 = 0.0
-    VNS_SHEAR_4::Float64 = 0.0
-    VNS_SHEAR_5::Float64 = 0.0
-    VNS_SHEAR_6::Float64 = 0.0
-    VNS_SHEAR_7::Float64 = 0.0
-    VNS_SHEAR_8::Float64 = 0.0
-    VNS_SHEAR_9::Float64 = 0.0
-    VNS_SHEAR_10::Float64 = 0.0
-    VTS_SHEAR_1::Float64 = 0.0
-    VTS_SHEAR_2::Float64 = 0.0
-    VTS_SHEAR_3::Float64 = 0.0
-    VTS_SHEAR_4::Float64 = 0.0
-    VTS_SHEAR_5::Float64 = 0.0
-    VTS_SHEAR_6::Float64 = 0.0
-    VTS_SHEAR_7::Float64 = 0.0
-    VTS_SHEAR_8::Float64 = 0.0
-    VTS_SHEAR_9::Float64 = 0.0
-    VTS_SHEAR_10::Float64 = 0.0
 
     KY::Float64 = 0.3
-    VEXB::Float64 = 0.0
     ALPHA_E::Float64 = 1.0
     ALPHA_P::Float64 = 1.0
     XNU_FACTOR::Float64 = 1.0
@@ -186,11 +160,6 @@ Base.@kwdef mutable struct InputTGLF
     WIDTH_MIN::Float64 = 0.3
     BETA_LOC::Float64 = 1.0
     KX0_LOC::Float64 = 1.0
-    RMIN_SA::Float64 = 0.5
-    RMAJ_SA::Float64 = 3.0
-    Q_SA::Float64 = 2.0
-    SHAT_SA::Float64 = 1.0
-    ALPHA_SA::Float64 = 0.0
     PARK::Float64 = 1.0
     GHAT::Float64 = 1.0
     GCHAT::Float64 = 1.0
@@ -199,7 +168,9 @@ Base.@kwdef mutable struct InputTGLF
     GRADB_FACTOR::Float64 = 0.0
     FILTER::Float64 = 2.0
     THETA_TRAPPED::Float64 = 0.7
-    NN_MAX_ERROR::Float64 = -1.0
+    ETG_FACTOR::Float64 = 1.25
+    DAMP_PSI::Float64 = 0.0
+    DAMP_SIG::Float64 = 0.0
 
 end
 
@@ -218,7 +189,6 @@ mutable struct InputTJLF{T<:Real}
 
     UNITS::String
 
-    USE_TRANSPORT_MODEL::Union{Bool,Missing} ## used only for TGLF output
     USE_BPER::Union{Bool,Missing}
     USE_BPAR::Union{Bool,Missing}
     USE_MHD_RULE::Union{Bool,Missing}
@@ -230,7 +200,6 @@ mutable struct InputTJLF{T<:Real}
     IFLUX::Union{Bool,Missing}
     ADIABATIC_ELEC::Union{Bool,Missing}
 
-    GEOMETRY_FLAG::Union{Int,Missing} ## used to specify other geometries, but I only use Miller so not really used
     SAT_RULE::Union{Int,Missing}
     NS::Union{Int,Missing}
     NMODES::Union{Int,Missing}
@@ -242,11 +211,7 @@ mutable struct InputTJLF{T<:Real}
     KYGRID_MODEL::Union{Int,Missing}
     XNU_MODEL::Union{Int,Missing}
     VPAR_MODEL::Union{Int,Missing}
-    B_MODEL_SA::Union{Int,Missing} ## used for SA geometry
-    FT_MODEL_SA::Union{Int,Missing} ## used for SA geometry
-    VPAR_SHEAR_MODEL::Union{Int,Missing} ## commented out in TGLF
     IBRANCH::Union{Int,Missing}
-    WRITE_WAVEFUNCTION_FLAG::Union{Int,Missing} ## used for IO, but not important
 
     ZS::Vector{T}
     MASS::Vector{T}
@@ -256,8 +221,6 @@ mutable struct InputTJLF{T<:Real}
     AS::Vector{T}
     VPAR::Vector{T}
     VPAR_SHEAR::Vector{T}
-    VNS_SHEAR::Vector{T} ## profile shear from EPS 2011, commented out in TGLF
-    VTS_SHEAR::Vector{T} ## profile shear from EPS 2011, commented out in TGLF
 
     WIDTH_SPECTRUM::Vector{T}
     KY_SPECTRUM::Vector{T}
@@ -267,7 +230,6 @@ mutable struct InputTJLF{T<:Real}
     SIGN_IT::T
     KY::T
 
-    VEXB::T ## not used
     VEXB_SHEAR::T
     BETAE::T
     XNUE::T
@@ -304,13 +266,6 @@ mutable struct InputTJLF{T<:Real}
     Q_PRIME_LOC::T
     BETA_LOC::T
     KX0_LOC::T
-    RMIN_SA::T ## other geometry
-    RMAJ_SA::T ## other geometry
-    Q_SA::T ## other geometry
-    SHAT_SA::T ## other geometry
-    ALPHA_SA::T ## other geometry
-    XWELL_SA::T ## other geometry
-    THETA0_SA::T ## other geometry
 
     DAMP_PSI::T
     DAMP_SIG::T
@@ -323,21 +278,18 @@ mutable struct InputTJLF{T<:Real}
     GRADB_FACTOR::T
     FILTER::T
     THETA_TRAPPED::T
-    NN_MAX_ERROR::T ## i'm assuming used for NN? not used in TJLF
-
 
     function InputTJLF{T}(ns::Int,nky::Int) where T<:Real
         new("",
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
+        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+        fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
         fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN,(nky)),
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,NaN,NaN,NaN,NaN,)
+        NaN,NaN,NaN,NaN,NaN,NaN,NaN,)
     end
 
     # create InputTJLF struct given a InputTGLF struct
