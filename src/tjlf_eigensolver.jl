@@ -2696,6 +2696,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         else
             @warn "no growth rate intial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
         end
+        @warn "no initial guess for ky = $(inputs.KY_SPECTRUM[ky_index])"
     end
 
     if inputs.IFLUX

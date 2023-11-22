@@ -39,7 +39,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         vexb_shear_kx0 = alpha_e_in*vexb_shear_s
 
         kyi = ky_spect.*(vs_2*mass_2/abs(zs_2))
-        wE = zeros(Float64, length(ky_spect))
+        wE = zeros(T, length(ky_spect))
 
         if(units_in=="GYRO")
             kx0_factor = abs(grad_r0^2/B_geo0)
@@ -63,7 +63,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
             if(abs(kymax_out*vzf_out*vexb_shear_kx0) > small)
                 kx0_e = -(0.32*vexb_shear_kx0).*((ky_spect./kymax_out).^0.3)./(ky_spect.*vzf_out)
             else
-                kx0_e = zeros(Float64,length(ky_spect))
+                kx0_e = zeros(T,length(ky_spect))
             end
         end
 
@@ -146,14 +146,14 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     end
 
     x = outHermite.x
-    kxx = Vector{Float64}(undef,nx)
-    wdx = Vector{Float64}(undef,nx)
-    wdpx = Vector{Float64}(undef,nx)
-    b0x = Vector{Float64}(undef,nx)
-    b2x = Vector{Float64}(undef,nx)
-    cx_tor_par = Vector{Float64}(undef,nx)
-    cx_tor_per = Vector{Float64}(undef,nx)
-    cx_par_par = Vector{Float64}(undef,nx)
+    kxx = Vector{T}(undef,nx)
+    wdx = Vector{T}(undef,nx)
+    wdpx = Vector{T}(undef,nx)
+    b0x = Vector{T}(undef,nx)
+    b2x = Vector{T}(undef,nx)
+    cx_tor_par = Vector{T}(undef,nx)
+    cx_tor_per = Vector{T}(undef,nx)
+    cx_par_par = Vector{T}(undef,nx)
     for i = 1:nx
         thx = width_in * x[i]
         sign_theta = ifelse(thx>=0, 1.0, -1.0)
@@ -223,7 +223,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     #*************************************************************
 
     nb_grid = 25
-    By = Vector{Float64}(undef, nb_grid+1)
+    By = Vector{T}(undef, nb_grid+1)
     pm = Matrix{Int}(undef, 2, nb_grid+1)
 
     Bmax, m_max = findmax(b_geo)
@@ -321,7 +321,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     ft = √(1.0 - Bmin/B_bounce)
     modB_min = abs(Bmin)
     modB_test = 0.5*(Bmax + Bmin)/Bmin
-    fts = zeros(Float64, ns)
+    fts = zeros(T, ns)
     for is = ns0:ns
         fts[is] = max(ft,0.01)
     end
@@ -355,7 +355,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         end
     end
 
-    return OutputGeometry{Float64}(kx0_e, fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
+    return OutputGeometry{T}(kx0_e, fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
 
 end
 
@@ -378,7 +378,7 @@ description:
     compute the geometric coefficients on the x-grid
 """
 #### LINES 220-326, 478 in tglf_geometry.f90
-function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+function get_sat_params(inputs::InputTJLF{T}, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
@@ -400,7 +400,7 @@ function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.0
     #*************************************************************
     # find length along magnetic field y
     #*************************************************************
-    y = zeros(Float64,ms+1)
+    y = zeros(T,ms+1)
     y[1]=0.0
     for m in 2:ms+1
         y[m] = y[m-1]+s_p[m]*ds*4.0/(pk_geo[m]+pk_geo[m-1])
@@ -462,7 +462,7 @@ function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.0
     # Additional outputs for SAT2 G1(theta), Gq(theta)
     theta_out = t_s  # theta grid over which everything is calculated.
 
-    return SaturationParameters{Float64}(SAT_geo0_out,SAT_geo1_out,SAT_geo2_out,
+    return SaturationParameters{T}(SAT_geo0_out,SAT_geo1_out,SAT_geo2_out,
                                     y, R_unit, B_unit_out[end], q_unit,
                                     R, Bp, B,
                                     Bt0_out, grad_r0_out,
@@ -481,8 +481,8 @@ end
 
 
 
-function mercier_luc(inputs::InputTJLF,
-    mts::Float64=5.0, ms::Int=128, small::Float64=0.00000001)
+function mercier_luc(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128, small::Float64=0.00000001) where T<:Real
+
     #-------------------------------------------
     # the following must be defined from a previous call to one of the
     # geometry routines miller_geo, fourier_geo,ELITE_geo and stored in tglf_sgrid:
@@ -509,14 +509,14 @@ function mercier_luc(inputs::InputTJLF,
     rmaj_input = inputs.RMAJ_LOC
     rmin_s = inputs.RMIN_LOC
     rmaj_s = inputs.RMAJ_LOC
-    b_geo = zeros(Float64, ms+1)
+    b_geo = zeros(T, ms+1)
 
     ### technically don't have to initialize here, but maybe better looking?
     ### if remove, switch .= to = for the below functions
-    Bt = zeros(Float64, ms+1)
-    B = zeros(Float64, ms+1)
-    pk_geo = zeros(Float64, ms+1)
-    qrat_geo = zeros(Float64, ms+1)
+    Bt = zeros(T, ms+1)
+    B = zeros(T, ms+1)
+    pk_geo = zeros(T, ms+1)
+    qrat_geo = zeros(T, ms+1)
 
 
 
@@ -529,9 +529,9 @@ function mercier_luc(inputs::InputTJLF,
 
 
     # note that the point 1 and ms+1 are the same so m+1->1 and m-1->ms-1 at m=0
-    s_p = zeros(Float64,ms+1)
-    r_curv = zeros(Float64,ms+1)
-    sin_u = zeros(Float64,ms+1)
+    s_p = zeros(T,ms+1)
+    r_curv = zeros(T,ms+1)
+    sin_u = zeros(T,ms+1)
     for m in 1:ms + 1
         m1 = ((ms + m - 2) % (ms+1)) + 1
         m2 = ((ms + m - 1) % (ms+1)) + 1
@@ -592,9 +592,9 @@ function mercier_luc(inputs::InputTJLF,
     #*************************************************************
     # # Compute Miller's D0 , Dp and Dff'p needed for kx.
     #*************************************************************
-    d_0 = zeros(Float64, ms+1)
-    d_p = zeros(Float64, ms+1)
-    d_ffp = zeros(Float64, ms+1)
+    d_0 = zeros(T, ms+1)
+    d_p = zeros(T, ms+1)
+    d_ffp = zeros(T, ms+1)
 
     dq1 = ds*s_p[1]*f/(R[1]*psi_x[1]^2)
     d0_s1 = -dq1*(2.0/r_curv[1] + 2.0*sin_u[1]/R[1])
@@ -636,9 +636,9 @@ function mercier_luc(inputs::InputTJLF,
     # Compute [[kx/ky]] (herein, kxoky_geo) from Waltz-Miller [2] paper.
     #*************************************************************
 
-    S_prime = zeros(Float64, ms+1)
-    kx_factor = zeros(Float64, ms+1)
-    kxoky_geo = zeros(Float64, ms+1)
+    S_prime = zeros(T, ms+1)
+    kx_factor = zeros(T, ms+1)
+    kxoky_geo = zeros(T, ms+1)
     for m = 1:ms+1
         S_prime[m] = -(d_0[m]+d_p[m]*p_prime_s+d_ffp[m]*ff_prime)
         kx_factor[m] = (psi_x[m]^2)/B[m]
@@ -646,7 +646,7 @@ function mercier_luc(inputs::InputTJLF,
     end
 
 
-    costheta_geo = zeros(Float64, ms+1)
+    costheta_geo = zeros(T, ms+1)
     #*************************************************************
     # Compute drift coefficients:
     #*************************************************************
@@ -665,7 +665,7 @@ function mercier_luc(inputs::InputTJLF,
     #*************************************************************
     # Functions which require theta-derivatives:
     #*************************************************************
-    sintheta_geo = zeros(Float64, ms+1)
+    sintheta_geo = zeros(T, ms+1)
     for m = 1:ms+1
 
         m1 = ((ms + m - 2) % (ms+1)) + 1
@@ -724,7 +724,7 @@ function mercier_luc(inputs::InputTJLF,
 end
 
 
-function miller_geo(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128)
+function miller_geo(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128)  where T<:Real
 
     rmin_loc = inputs.RMIN_LOC
     rmaj_loc = inputs.RMAJ_LOC
@@ -748,9 +748,9 @@ function miller_geo(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128)
     s_delta_loc = inputs.S_DELTA_LOC
     s_kappa_loc = inputs.S_KAPPA_LOC
 
-    R = zeros(Float64,ms+1)
-    Z = zeros(Float64,ms+1)
-    Bp = zeros(Float64,ms+1)
+    R = zeros(T,ms+1)
+    Z = zeros(T,ms+1)
+    Bp = zeros(T,ms+1)
 
 
     if(rmin_loc<0.00001) rmin_loc=0.00001 end
@@ -805,7 +805,7 @@ function miller_geo(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128)
     # by searching for the theta where dR**2 + dZ**2 >= ds**2 for a centered difference df=f(m+1)-f(m-1).
     # This keeps the finite difference error of dR/ds, dZ/ds on the s-grid small
 
-    t_s = zeros(Float64,ms+1)
+    t_s = zeros(T,ms+1)
     t_s[ms+1]=-2π
     # make a first guess based on theta=0.0
     theta = 0.0
@@ -839,7 +839,7 @@ function miller_geo(inputs::InputTJLF, mts::Float64=5.0, ms::Int=128)
 
     # Loop to compute most geometrical quantities needed for Mercie-Luc expansion
     # R, Z, R*Bp on flux surface s-grid
-    B_unit_out = zeros(Float64, ms + 1)
+    B_unit_out = zeros(T, ms + 1)
     # grad_r_out = zeros(Float64, ms + 1)
     B_unit = NaN
     for m in 1:ms+1

@@ -10,6 +10,10 @@ function run(inputTJLF::InputTJLF)
     return QL_weights, eigenvalue, QL_flux_out, flux_spectrum
 end
 
+function run(input_tjlfs::Vector{InputTJLF})
+    return collect(asyncmap(input_tjlf -> TJLF.run(input_tjlf), input_tjlfs))
+end
+
 
 function run(inputTGLF::InputTGLF)
     inputTJLF = InputTJLF{Float64}(inputTGLF)
