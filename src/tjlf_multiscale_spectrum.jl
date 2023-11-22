@@ -297,7 +297,7 @@ function intensity_sat(
         else
             ##### need to define rmin_input
             dlnpdr = (-p_prime_loc*(8.0π/beta_loc)*
-                (rmin_input/q_loc)*rmaj_input)
+                (inputs.RMIN_LOC/inputs.Q_LOC)*inputs.RMAJ_LOC)
         end
 
         if(dlnpdr > rlnp_cutoff) dlnpdr = rlnp_cutoff_in end

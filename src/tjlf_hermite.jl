@@ -24,8 +24,8 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     h0 = 1.0/π^0.25
     m = Int((nx+1)/2) ### NXGRID
 
-    y = Vector{Float64}(undef, m)
-    wy = Vector{Float64}(undef, m)
+    y = Vector{T}(undef, m)
+    wy = Vector{T}(undef, m)
     z = 0.0
     for i = m:-1:1
         # initial guess z
@@ -61,8 +61,8 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     end
     wy[1] = wy[1]/2
 
-    x = Vector{Float64}(undef, nx)
-    wx = Vector{Float64}(undef, nx)
+    x = Vector{T}(undef, nx)
+    wx = Vector{T}(undef, nx)
     for i = 1:m
         x[m+i-1] = y[i]
         x[i] = -y[m+1-i]
@@ -96,7 +96,7 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     #     They are orthonormal with error of 1.0E-8.
 
     h0 = √(2)/π^0.25
-    h = Matrix{Float64}(undef, nbasis, nx)
+    h = Matrix{T}(undef, nbasis, nx)
     h[1,:] .= h0
     h[2,:] .= x.*(√(2)*h0)
 
