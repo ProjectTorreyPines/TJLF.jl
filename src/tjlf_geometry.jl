@@ -34,7 +34,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
 
     # generalized quench rule kx0 shift
     most_unstable_gamma = gamma_matrix[1, :]
-    if(alpha_quench_in==0.0 && most_unstable_gamma[1]!=0.0)
+    if(alpha_quench_in==0.0)
         vexb_shear_s = vexb_shear * sign_IT
         vexb_shear_kx0 = alpha_e_in*vexb_shear_s
 
@@ -68,7 +68,8 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         end
 
         kx0_e = ifelse.(abs.(kx0_e) .> a0 , a0.*kx0_e./abs.(kx0_e) , kx0_e)
-        kx0_e = ifelse.(isnan.(kx0_e) , 0 , kx0_e)
+        kx0_e = ifelse.(isnan.(kx0_e) , 0.0, kx0_e)
+        kx0_e = ifelse.(isinf.(kx0_e) , 0.0, kx0_e)
 
         #### not in the Python
         # if(units_in=="GYRO")

@@ -2679,9 +2679,10 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                 λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LR,sigma=sigma,maxiter=50)
                 return λ, v
             catch
-                # println("can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index])")
+                @warn "can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index])"
             end
         end
+        @warn "no initial guess for ky = $(inputs.KY_SPECTRUM[ky_index])"
     end
 
     if inputs.IFLUX

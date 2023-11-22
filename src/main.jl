@@ -19,7 +19,7 @@ using Plots
 #******************************************************************************************************
 # location for the input.tglf file
 # baseDirectory = "../outputs/test_TM/simple_test/"
-baseDirectory = "../outputs/test_TM/nmodes2/"
+baseDirectory = "../outputs/test_TM/TIM_CASE/"
 
 inputTJLF = readInput(baseDirectory)
 inputTJLF2 = readInput(baseDirectory)
