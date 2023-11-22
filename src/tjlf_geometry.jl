@@ -68,7 +68,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         end
 
         kx0_e = ifelse.(abs.(kx0_e) .> a0 , a0.*kx0_e./abs.(kx0_e) , kx0_e)
-        kx0_e = ifelse.(isinf.(kx0_e) , 0.0 , kx0_e)
+        kx0_e = ifelse.(isnan.(kx0_e) || isinf.(kx0_e), 0.0 , kx0_e)
 
         #### not in the Python
         # if(units_in=="GYRO")
