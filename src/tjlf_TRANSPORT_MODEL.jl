@@ -114,13 +114,40 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     ky = inputs.KY_SPECTRUM[ky_index]
 
-    if(inputs.NEW_EIKONAL) # not sure what this is -DSUN
-        # println("this is 1")
-        nmodes_out, gamma_nb_min_out,
-        gamma_out, freq_out,
-        particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index)
+    if(inputs.FIND_WIDTH)
+        if(inputs.NEW_EIKONAL)
+            # println("this is 1")
+            nmodes_out, gamma_nb_min_out,
+            gamma_out, freq_out,
+            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index)
+        else
+            error("NOT IMPLEMENTED YET -DSUN")
+        end
     else
-        error("NOT IMPLEMENTED YET -DSUN")
+        # use new nbasis value
+        nbasis = inputs.NBASIS_MAX
+        gamma_nb_min_out = NaN
+        # println("this is XII")
+        nmodes_out, gamma_out, freq_out,
+        particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
+        ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
+
+        if(inputs.USE_INBOARD_DETRAPPED && inputs.IBRANCH==-1) # check for inward ballooning modes
+            b_geo = satParams.B_geo
+            Bmax,_ = findmax(b_geo)
+            Bmin,_ = findmin(b_geo)
+            modB_test = 0.5*(Bmax + Bmin)/Bmin
+            if(ft_test > modB_test)
+                ft_min = 0.01
+                outputGeo = xgrid_functions_geo(inputs, satParams, outputHermite, ky, ky_index; kx0_e)
+                outputGeo.fts .= ft_min
+                @warn "NOT TESTED TM.jl ln 144"
+                # println("this is XIII")
+                nmodes_out, gamma_out, freq_out,
+                particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
+                _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+            end
+        end
     end
 
     unstable = true
