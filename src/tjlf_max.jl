@@ -48,12 +48,12 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     original_bpar = inputs.USE_BPAR
     original_width = inputs.WIDTH_SPECTRUM[ky_index]
     ### change input values
-    # inputs.IBRANCH = -1
+    inputs.IBRANCH = -1
     
-    # if(sat_rule_in==2 || sat_rule_in==3)
-    #     inputs.USE_BPER = false
-    #     inputs.USE_BPAR = false
-    # end
+    if(sat_rule_in==2 || sat_rule_in==3)
+        inputs.USE_BPER = false
+        inputs.USE_BPAR = false
+    end
     nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
 
     if(alpha_p_in > 0.0)
@@ -276,14 +276,14 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     gamma_nb_min_out = gamma_max
 
     ### reset values
-    # inputs.IBRANCH = original_ibranch
+    inputs.IBRANCH = original_ibranch
     if(gamma_max!=0.0) # refine eigenvalue with more basis functions
         # use new nbasis value
         nbasis = inputs.NBASIS_MAX
-        # if(sat_rule_in==2 || sat_rule_in==3)
-        #     inputs.USE_BPER = original_bper
-        #     inputs.USE_BPAR = original_bpar
-        # end
+        if(sat_rule_in==2 || sat_rule_in==3)
+            inputs.USE_BPER = original_bper
+            inputs.USE_BPAR = original_bpar
+        end
         # println("this is XII")
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
