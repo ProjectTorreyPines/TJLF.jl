@@ -27,13 +27,13 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
 
     ns::Int = inputs.NS
 
-    ave = Ave{Float64}(ns, nbasis)
-    aveH = AveH{Float64}(ns, nbasis)
-    aveWH = AveWH{Float64}(ns, nbasis)
+    ave = Ave{T}(ns, nbasis)
+    aveH = AveH{T}(ns, nbasis)
+    aveWH = AveWH{T}(ns, nbasis)
     aveKH = AveKH(ns, nbasis)
 
-    aveG = AveG{Float64}(ns, nbasis)
-    aveWG = AveWG{Float64}(ns, nbasis)
+    aveG = AveG{T}(ns, nbasis)
+    aveWG = AveWG{T}(ns, nbasis)
     aveKG = AveKG(ns, nbasis)
 
     FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky, nbasis)

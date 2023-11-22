@@ -263,8 +263,8 @@ mutable struct InputTJLF{T<:Real}
     KY_SPECTRUM::Vector{T}
     GAMMA_SPECTRUM::Vector{T}
 
-    SIGN_BT::T
-    SIGN_IT::T
+    SIGN_BT::Int
+    SIGN_IT::Int
     KY::T
 
     VEXB::T
@@ -277,7 +277,7 @@ mutable struct InputTJLF{T<:Real}
     ALPHA_MACH::T
     ALPHA_E::T
     ALPHA_P::T
-    ALPHA_QUENCH::T
+    ALPHA_QUENCH::Int
     ALPHA_ZF::T
     XNU_FACTOR::T
     DEBYE_FACTOR::T
@@ -332,8 +332,8 @@ mutable struct InputTJLF{T<:Real}
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
         fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN,(nky)),
-        NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
+        0,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
+        NaN,NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
@@ -365,18 +365,19 @@ mutable struct InputTJLF{T<:Real}
         end
         inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
 
-        for fieldname in fieldnames(inputTJLF)
-            fieldvalue = getfield(inputTJLF,fieldname)
-            if typeof(fieldvalue)<:Real
-                @assert !isnan(fieldvalue) && !ismissing(fieldvalue) "Did not properly populate inputTJLF for $fieldname"
+        field_names = fieldnames(InputTJLF)
+        for field_name in field_names
+            field_value = getfield(inputTJLF, field_name)
+            if typeof(field_value)<:Real
+                @assert !isnan(field_value) && !ismissing(field_value) "Did not properly populate inputTJLF for $field_name"
             end
-            if typeof(fieldvalue)<:Vector && fieldname!=:KY_SPECTRUM && fieldname!=:GAMMA_SPECTRUM
-                for val in fieldvalue
+            if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:GAMMA_SPECTRUM
+                for val in field_value
                     @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
                 end
             end
         end
-
+    
         return inputTJLF
     end
 end
