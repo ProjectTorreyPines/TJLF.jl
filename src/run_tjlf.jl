@@ -10,8 +10,16 @@ function run(inputTJLF::InputTJLF)
     return QL_weights, eigenvalue, QL_flux_out, flux_spectrum
 end
 
-function run(input_tjlfs::Vector{InputTJLF})
-    return collect(asyncmap(input_tjlf -> TJLF.run(input_tjlf), input_tjlfs))
+function run_tjlf(inputTJLF::InputTJLF)
+    outputHermite = gauss_hermite(inputTJLF)
+    satParams = get_sat_params(inputTJLF)
+    inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
+    QL_weights, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+    return  sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weights)[1]
+end
+
+function run_tjlf(input_tjlfs::Vector{InputTJLF})
+    return collect(asyncmap(input_tjlf -> TJLF.run_tjlf(input_tjlf), input_tjlfs))
 end
 
 

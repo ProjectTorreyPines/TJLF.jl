@@ -281,15 +281,15 @@ mutable struct InputTJLF{T<:Real}
 
     function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
         new("",
-            missing, missing, missing, missing, missing, missing, missing, missing, missing, missing,
-            missing, missing, missing, missing, missing, missing, missing, missing, missing, missing, missing, missing,
-            fill(NaN, (ns)), fill(NaN, (ns)), fill(NaN, (ns)), fill(NaN, (ns)), fill(NaN, (ns)), fill(NaN, (ns)), fill(NaN, (ns)), fill(NaN, (ns)),
-            fill(NaN, (nky)), fill(NaN, (nky)), fill(NaN, (nky)),
-            0, 0, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN,
-            NaN, NaN, 0, NaN, NaN, NaN, NaN, NaN, NaN, NaN,
-            NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN,
-            NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN,
-            NaN, NaN, NaN, NaN, NaN, NaN, NaN,)
+        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+        fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
+        fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN,(nky)),
+        0,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
+        NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
+        NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
+        NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
+        NaN,NaN,NaN,NaN,NaN,NaN,NaN,)
     end
 
     # create InputTJLF struct given a InputTGLF struct
