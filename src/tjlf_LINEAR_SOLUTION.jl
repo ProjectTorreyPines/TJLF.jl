@@ -570,22 +570,22 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     psi = zeros(ComplexF64, nbasis)
     bsig = zeros(ComplexF64, nbasis)
     U0 = sum((alpha_mach_in * sign_It_in) .* vpar .* zs .^ 2 .* as ./ taus) ### defined in startup.f90
-    phi .= sum(ave.p0inv * (n[:, ns0:ns] * Diagonal((as.*zs)[ns0:ns])), dims=2)
+    @views phi .= sum(ave.p0inv * (n[:, ns0:ns] * Diagonal((as.*zs)[ns0:ns])), dims=2)
     if (inputs.USE_BPER)
         psi .= (betae_psi .* sum(ave.b0inv * (u_par[:, ns0:ns] * Diagonal((as.*zs.*vs)[ns0:ns])), dims=2))
         if (vpar_model_in == 0)
-            phi .= phi .+ (U0 * betae_psi) .* sum(ave.bpinv * (u_par[:, ns0:ns] * Diagonal((as.*zs.*vs)[ns0:ns])), dims=2)
-            psi .= psi .- (U0 * betae_psi) .* sum(ave.bpinv * (n[:, ns0:ns] * Diagonal((as.*zs)[ns0:ns])), dims=2)
+            @views phi .= phi .+ (U0 * betae_psi) .* sum(ave.bpinv * (u_par[:, ns0:ns] * Diagonal((as.*zs.*vs)[ns0:ns])), dims=2)
+            @views psi .= psi .- (U0 * betae_psi) .* sum(ave.bpinv * (n[:, ns0:ns] * Diagonal((as.*zs)[ns0:ns])), dims=2)
         end
     end
     if (inputs.USE_BPAR)
-        bsig .= -betae_sig .* (1.5 .* p_tot[:, ns0:ns] .- 0.5 .* p_par[:, ns0:ns]) * (as.*taus)[ns0:ns]
+        @views bsig .= -betae_sig .* (1.5 .* p_tot[:, ns0:ns] .- 0.5 .* p_par[:, ns0:ns]) * (as.*taus)[ns0:ns]
     end
 
     # add the adiabatic terms to the total moments
-    n[:, ns0:ns] .= n[:, ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns])) #### outer product to make matrix, idk why its this order tbh -DSUN
-    p_par[:, ns0:ns] .= p_par[:, ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns]))
-    p_tot[:, ns0:ns] .= p_tot[:, ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns]))
+    @views n[:, ns0:ns] .= n[:, ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns])) #### outer product to make matrix, idk why its this order tbh -DSUN
+    @views p_par[:, ns0:ns] .= p_par[:, ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns]))
+    @views p_tot[:, ns0:ns] .= p_tot[:, ns0:ns] .- (phi .* transpose((zs./taus)[ns0:ns]))
 
     # compute phi_norm, psi_norm, sig_norm
     phi_norm = real(adjoint(phi) * phi)
@@ -621,15 +621,15 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
     stress_correction = fill(1.0, ns - ns0 + 1)
     if (sat_rule_in == 0)
-        wp = (ky * abs(alpha_p_in)) .* aveH.hp1[ns0:ns, 1, 1] .* vpar_shear ./ vs
+        @views wp = (ky * abs(alpha_p_in)) .* aveH.hp1[ns0:ns, 1, 1] .* vpar_shear ./ vs
         stress_correction .= (imag(freq_QL) .+ 2.0 .* wp) ./ (imag(freq_QL) .+ wp)
     end
     stress_correction = Diagonal(stress_correction)
 
-    stress_par[:, ns0:ns, 1] .= u_par[:, ns0:ns] * stress_correction
-    stress_par[:, ns0:ns, 2] .= p_par[:, ns0:ns] * stress_correction
-    stress_per[:, ns0:ns, 1] .= ((im * ky) .* ave.kx) * (1.5 .* p_tot[:, ns0:ns] .- 0.5 .* p_par[:, ns0:ns])   # (is,j) x (j,i)
-    stress_per[:, ns0:ns, 2] .= ((im * ky) .* ave.kx) * (1.5 .* q_tot[:, ns0:ns] .- 0.5 .* q_par[:, ns0:ns])
+    @views stress_par[:, ns0:ns, 1] .= u_par[:, ns0:ns] * stress_correction
+    @views stress_par[:, ns0:ns, 2] .= p_par[:, ns0:ns] * stress_correction
+    @views stress_per[:, ns0:ns, 1] .= ((im * ky) .* ave.kx) * (1.5 .* p_tot[:, ns0:ns] .- 0.5 .* p_par[:, ns0:ns])   # (is,j) x (j,i)
+    @views stress_per[:, ns0:ns, 2] .= ((im * ky) .* ave.kx) * (1.5 .* q_tot[:, ns0:ns] .- 0.5 .* q_par[:, ns0:ns])
 
 
     # compute the quasilinear weights for the fluxes
@@ -641,45 +641,45 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
     ### real() with an im in it is funky
     #### CHECK THIS PLEASE
-    particle_weight[1, ns0:ns] .= vec(real.(im .* adjoint(phi) * n[:, ns0:ns]))
-    energy_weight[1, ns0:ns] .= vec(real.(im .* adjoint(phi) * p_tot[:, ns0:ns]))
-    stress_par_weight[1, ns0:ns] .= vec(real.(im .* adjoint(phi) * (ave.c_par_par * stress_par[:, ns0:ns, 1])))
-    stress_tor_weight[1, ns0:ns] .= vec(real.(im .* adjoint(phi) * (ave.c_tor_par * stress_par[:, ns0:ns, 1]
+    @views particle_weight[1, ns0:ns] .= vec(real.(im .* adjoint(phi) * n[:, ns0:ns]))
+    @views energy_weight[1, ns0:ns] .= vec(real.(im .* adjoint(phi) * p_tot[:, ns0:ns]))
+    @views stress_par_weight[1, ns0:ns] .= vec(real.(im .* adjoint(phi) * (ave.c_par_par * stress_par[:, ns0:ns, 1])))
+    @views stress_tor_weight[1, ns0:ns] .= vec(real.(im .* adjoint(phi) * (ave.c_tor_par * stress_par[:, ns0:ns, 1]
                                                                     .+
                                                                     ave.c_tor_per * stress_per[:, ns0:ns, 1])))
-    exchange_weight[1, ns0:ns] .= vec(real.((im * freq_QL) .* adjoint(phi) * (n[:, ns0:ns])) * Diagonal(zs[ns0:ns]))
+                                                                    @views exchange_weight[1, ns0:ns] .= vec(real.((im * freq_QL) .* adjoint(phi) * (n[:, ns0:ns])) * Diagonal(zs[ns0:ns]))
 
 
     if (inputs.USE_BPER)
-        particle_weight[2, ns0:ns] .= -vec(real.(im .* adjoint(psi) * u_par[:, ns0:ns]) * Diagonal(vs[ns0:ns]))
-        energy_weight[2, ns0:ns] .= -vec(real.(im .* adjoint(psi) * q_tot[:, ns0:ns]) * Diagonal(vs[ns0:ns]))
-        exchange_weight[2, ns0:ns] .= -vec(real.((im * freq_QL) .* adjoint(psi) * u_par[:, ns0:ns]) * Diagonal((zs.*vs)[ns0:ns]))
-        stress_par_weight[2, ns0:ns] .= -vec(real.(im .* adjoint(psi) * (ave.c_par_par * stress_par[:, ns0:ns, 2])))
-        stress_tor_weight[2, ns0:ns] .= -vec(real.(im .* adjoint(psi) * (ave.c_tor_par * stress_par[:, ns0:ns, 2]
+        @views particle_weight[2, ns0:ns] .= -vec(real.(im .* adjoint(psi) * u_par[:, ns0:ns]) * Diagonal(vs[ns0:ns]))
+        @views energy_weight[2, ns0:ns] .= -vec(real.(im .* adjoint(psi) * q_tot[:, ns0:ns]) * Diagonal(vs[ns0:ns]))
+        @views exchange_weight[2, ns0:ns] .= -vec(real.((im * freq_QL) .* adjoint(psi) * u_par[:, ns0:ns]) * Diagonal((zs.*vs)[ns0:ns]))
+        @views stress_par_weight[2, ns0:ns] .= -vec(real.(im .* adjoint(psi) * (ave.c_par_par * stress_par[:, ns0:ns, 2])))
+        @views stress_tor_weight[2, ns0:ns] .= -vec(real.(im .* adjoint(psi) * (ave.c_tor_par * stress_par[:, ns0:ns, 2]
                                                                          .+
                                                                          ave.c_tor_per * stress_per[:, ns0:ns, 2])))
     end
     if (inputs.USE_BPAR)
-        particle_weight[3, ns0:ns] .= vec(real.(im .* adjoint(bsig) * (1.5 * p_tot[:, ns0:ns] .- 0.5 * p_par[:, ns0:ns]) * Diagonal((taus./zs)[ns0:ns])))
-        exchange_weight[3, ns0:ns] .= vec(real.(adjoint((-im * freq_QL) .* bsig) * (1.5 * p_tot[:, ns0:ns] .- 0.5 * p_par[:, ns0:ns])) * Diagonal(taus[ns0:ns]))
+        @views particle_weight[3, ns0:ns] .= vec(real.(im .* adjoint(bsig) * (1.5 * p_tot[:, ns0:ns] .- 0.5 * p_par[:, ns0:ns]) * Diagonal((taus./zs)[ns0:ns])))
+        @views exchange_weight[3, ns0:ns] .= vec(real.(adjoint((-im * freq_QL) .* bsig) * (1.5 * p_tot[:, ns0:ns] .- 0.5 * p_par[:, ns0:ns])) * Diagonal(taus[ns0:ns]))
     end
 
-    particle_weight[:, ns0:ns] .= ky .* (particle_weight[:, ns0:ns] * Diagonal(as[ns0:ns])) ./ phi_norm
-    energy_weight[:, ns0:ns] .= (1.5 * ky) .* (energy_weight[:, ns0:ns] * Diagonal((as.*taus)[ns0:ns])) ./ phi_norm
-    stress_par_weight[:, ns0:ns] .= ky .* (stress_par_weight[:, ns0:ns] * Diagonal((as.*mass.*vs)[ns0:ns])) ./ phi_norm
-    stress_tor_weight[:, ns0:ns] .= ky .* sign_It_in .* (stress_tor_weight[:, ns0:ns] * Diagonal((mass.*as.*vs)[ns0:ns])) ./ phi_norm
-    exchange_weight[:, ns0:ns] .= (exchange_weight[:, ns0:ns] * Diagonal(as[ns0:ns])) ./ phi_norm
+    @views particle_weight[:, ns0:ns] .= ky .* (particle_weight[:, ns0:ns] * Diagonal(as[ns0:ns])) ./ phi_norm
+    @views energy_weight[:, ns0:ns] .= (1.5 * ky) .* (energy_weight[:, ns0:ns] * Diagonal((as.*taus)[ns0:ns])) ./ phi_norm
+    @views stress_par_weight[:, ns0:ns] .= ky .* (stress_par_weight[:, ns0:ns] * Diagonal((as.*mass.*vs)[ns0:ns])) ./ phi_norm
+    @views stress_tor_weight[:, ns0:ns] .= ky .* sign_It_in .* (stress_tor_weight[:, ns0:ns] * Diagonal((mass.*as.*vs)[ns0:ns])) ./ phi_norm
+    @views exchange_weight[:, ns0:ns] .= (exchange_weight[:, ns0:ns] * Diagonal(as[ns0:ns])) ./ phi_norm
 
 
     #  add the vpar shifts to the total  moments
     if (vpar_model_in == 0)
         vpar_s = (alpha_mach_in * sign_It_in) .* vpar
-        n[:, ns0:ns] = psi .* transpose((vpar_s.*zs./taus)[ns0:ns]) ### outer product is slightly weird
-        u_par[:, ns0:ns] = phi .* transpose((-(vpar_s ./ vs).*(zs./taus))[ns0:ns])
-        p_par[:, ns0:ns] = psi .* transpose((vpar_s.*(zs./taus))[ns0:ns])
-        p_tot[:, ns0:ns] = psi .* transpose((vpar_s.*(zs./taus))[ns0:ns])
-        q_par[:, ns0:ns] = phi .* transpose((-3 .* (vpar_s./vs).*(zs./taus))[ns0:ns])
-        q_tot[:, ns0:ns] = phi .* transpose((-(5 / 3).*(vpar_s./vs).*(zs./taus))[ns0:ns])
+        @views n[:, ns0:ns] = psi .* transpose((vpar_s.*zs./taus)[ns0:ns]) ### outer product is slightly weird
+        @views u_par[:, ns0:ns] = phi .* transpose((-(vpar_s ./ vs).*(zs./taus))[ns0:ns])
+        @views p_par[:, ns0:ns] = psi .* transpose((vpar_s.*(zs./taus))[ns0:ns])
+        @views p_tot[:, ns0:ns] = psi .* transpose((vpar_s.*(zs./taus))[ns0:ns])
+        @views q_par[:, ns0:ns] = phi .* transpose((-3 .* (vpar_s./vs).*(zs./taus))[ns0:ns])
+        @views q_tot[:, ns0:ns] = phi .* transpose((-(5 / 3).*(vpar_s./vs).*(zs./taus))[ns0:ns])
     end
 
 
@@ -703,8 +703,8 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
 
     #compute electron density-temperature phase
-    Ne_Te_cos = real(adjoint(n[:, 1]) * temp[:, 1])
-    Ne_Te_sin = imag(adjoint(n[:, 1]) * temp[:, 1])
+    @views Ne_Te_cos = real(adjoint(n[:, 1]) * temp[:, 1])
+    @views Ne_Te_sin = imag(adjoint(n[:, 1]) * temp[:, 1])
     Ne_Te_phase = atan(Ne_Te_sin, Ne_Te_cos)
 
     #compute species density-temperature phase
@@ -712,8 +712,8 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     Ns_Ts_cos = zeros(Float64, ns)
     Ns_Ts_sin = zeros(Float64, ns)
 
-    Ns_Ts_cos .= vec(sum(real(conj(n[:, ns0:ns]) .* temp[:, ns0:ns]), dims=1))
-    Ns_Ts_sin .= vec(sum(imag(conj(n[:, ns0:ns]) .* temp[:, ns0:ns]), dims=1))
+    @views Ns_Ts_cos .= vec(sum(real(conj(n[:, ns0:ns]) .* temp[:, ns0:ns]), dims=1))
+    @views Ns_Ts_sin .= vec(sum(imag(conj(n[:, ns0:ns]) .* temp[:, ns0:ns]), dims=1))
     Ns_Ts_phase .= atan.(Ns_Ts_sin, Ns_Ts_cos)
 
     return Ns_Ts_phase, Ne_Te_phase,

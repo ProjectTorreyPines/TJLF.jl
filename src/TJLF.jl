@@ -6,6 +6,7 @@ import LinearAlgebra.LAPACK.ggev!
 import LinearAlgebra.LAPACK.gesv!
 using Arpack # use version 0.5.3
 using SparseArrays
+using StaticArrays
 # using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem
 
 include("tjlf_modules.jl")

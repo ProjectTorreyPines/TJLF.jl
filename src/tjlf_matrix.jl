@@ -27,13 +27,13 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
 
     ns::Int = inputs.NS
 
-    ave = Ave{T}(ns, nbasis)
-    aveH = AveH{T}(ns, nbasis)
-    aveWH = AveWH{T}(ns, nbasis)
+    ave = Ave{Float64}(ns, nbasis)
+    aveH = AveH{Float64}(ns, nbasis)
+    aveWH = AveWH{Float64}(ns, nbasis)
     aveKH = AveKH(ns, nbasis)
 
-    aveG = AveG{T}(ns, nbasis)
-    aveWG = AveWG{T}(ns, nbasis)
+    aveG = AveG{Float64}(ns, nbasis)
+    aveWG = AveWG{Float64}(ns, nbasis)
     aveKG = AveKG(ns, nbasis)
 
     aveGrad = AveGrad{Float64}(ns, nbasis)
@@ -244,47 +244,29 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             outer!(aveG.gw333, h, dvec, is)
         end
     end
-
-    cut = abs.(aveH.hn) .< zero_cut
-    aveH.hn[cut] .= 0
-    cut .= abs.(aveH.hp1) .< zero_cut
-    aveH.hp1[cut] .= 0
-    cut .= abs.(aveH.hp3) .< zero_cut
-    aveH.hp3[cut] .= 0
-    cut .= abs.(aveH.hr11) .< zero_cut
-    aveH.hr11[cut] .= 0
-    cut .= abs.(aveH.hr13) .< zero_cut
-    aveH.hr13[cut] .= 0
-    cut .= abs.(aveH.hr33) .< zero_cut
-    aveH.hr33[cut] .= 0
-    cut .= abs.(aveH.hw113) .< zero_cut
-    aveH.hw113[cut] .= 0
-    cut .= abs.(aveH.hw133) .< zero_cut
-    aveH.hw133[cut] .= 0
-    cut .= abs.(aveH.hw333) .< zero_cut
-    aveH.hw333[cut] .= 0
-
-    if(nroot>6)
-        cut .= abs.(aveG.gn) .< zero_cut
-        aveG.gn[cut] .= 0
-        cut .= abs.(aveG.gp1) .< zero_cut
-        aveG.gp1[cut] .= 0
-        cut .= abs.(aveG.gp3) .< zero_cut
-        aveG.gp3[cut] .= 0
-        cut .= abs.(aveG.gr11) .< zero_cut
-        aveG.gr11[cut] .= 0
-        cut .= abs.(aveG.gr13) .< zero_cut
-        aveG.gr13[cut] .= 0
-        cut .= abs.(aveG.gr33) .< zero_cut
-        aveG.gr33[cut] .= 0
-        cut .= abs.(aveG.gw113) .< zero_cut
-        aveG.gw113[cut] .= 0
-        cut .= abs.(aveG.gw133) .< zero_cut
-        aveG.gw133[cut] .= 0
-        cut .= abs.(aveG.gw333) .< zero_cut
-        aveG.gw333[cut] .= 0
+    
+    @inbounds for k47 in eachindex(aveH.hn)
+        (abs(aveH.hn[k47]) < zero_cut) && (aveH.hn[k47] = 0)
+        (abs(aveH.hp1[k47]) < zero_cut) && (aveH.hp1[k47] = 0)
+        (abs(aveH.hp3[k47]) < zero_cut) && (aveH.hp3[k47] = 0)
+        (abs(aveH.hr11[k47]) < zero_cut) && (aveH.hr11[k47] = 0)
+        (abs(aveH.hr13[k47]) < zero_cut) && (aveH.hr13[k47] = 0)
+        (abs(aveH.hr33[k47]) < zero_cut) && (aveH.hr33[k47] = 0)
+        (abs(aveH.hw113[k47]) < zero_cut) && (aveH.hw113[k47] = 0)
+        (abs(aveH.hw133[k47]) < zero_cut) && (aveH.hw133[k47] = 0)
+        (abs(aveH.hw333[k47]) < zero_cut) && (aveH.hw333[k47] = 0)
+        if (nroot > 6)
+            (abs(aveG.gn[k47]) < zero_cut) && (aveG.gn[k47] = 0)
+            (abs(aveG.gp1[k47]) < zero_cut) && (aveG.gp1[k47] = 0)
+            (abs(aveG.gp3[k47]) < zero_cut) && (aveG.gp3[k47] = 0)
+            (abs(aveG.gr11[k47]) < zero_cut) && (aveG.gr11[k47] = 0)
+            (abs(aveG.gr13[k47]) < zero_cut) && (aveG.gr13[k47] = 0)
+            (abs(aveG.gr33[k47]) < zero_cut) && (aveG.gr33[k47] = 0)
+            (abs(aveG.gw113[k47]) < zero_cut) && (aveG.gw113[k47] = 0)
+            (abs(aveG.gw133[k47]) < zero_cut) && (aveG.gw133[k47] = 0)
+            (abs(aveG.gw333[k47]) < zero_cut) && (aveG.gw333[k47] = 0)
+        end
     end
-
 end
 
 
@@ -376,26 +358,18 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
         end
     end
 
-    cut = abs.(ave.wdh) .< zero_cut
-    ave.wdh[cut] .= 0.0
-    cut .= abs.(ave.wdg) .< zero_cut
-    ave.wdg[cut] .= 0.0
-    cut .= abs.(ave.b0) .< zero_cut
-    ave.b0[cut] .= 0.0
-    cut .= abs.(ave.lnB) .< zero_cut
-    ave.lnB[cut] .= 0.0
-    cut .= abs.(ave.p0inv) .< zero_cut
-    ave.p0inv[cut] .= 0.0
-    cut .= abs.(ave.p0) .< zero_cut
-    ave.p0[cut] .= 0.0
-    cut .= abs.(ave.kx) .< zero_cut
-    ave.kx[cut] .= 0.0
-    cut .= abs.(ave.c_tor_par) .< zero_cut
-    ave.c_tor_par[cut] .= 0.0
-    cut .= abs.(ave.c_tor_per) .< zero_cut
-    ave.c_tor_per[cut] .= 0.0
-    cut .= abs.(ave.c_par_par) .< zero_cut
-    ave.c_par_par[cut] .= 0.0
+    @inbounds for k47 in eachindex(ave.wdh)
+        (abs(ave.wdh[k47]) < zero_cut) && (ave.wdh[k47] = 0)
+        (abs(ave.wdg[k47]) < zero_cut) && (ave.wdg[k47] = 0)
+        (abs(ave.b0[k47]) < zero_cut) && (ave.b0[k47] = 0)
+        (abs(ave.lnB[k47]) < zero_cut) && (ave.lnB[k47] = 0)
+        (abs(ave.p0inv[k47]) < zero_cut) && (ave.p0inv[k47] = 0)
+        (abs(ave.p0[k47]) < zero_cut) && (ave.p0[k47] = 0)
+        (abs(ave.kx[k47]) < zero_cut) && (ave.kx[k47] = 0)
+        (abs(ave.c_tor_par[k47]) < zero_cut) && (ave.c_tor_par[k47] = 0)
+        (abs(ave.c_tor_per[k47]) < zero_cut) && (ave.c_tor_per[k47] = 0)
+        (abs(ave.c_par_par[k47]) < zero_cut) && (ave.c_par_par[k47] = 0)
+    end
 
     ave.gradB .= (ave.kpar*ave.lnB) .- (ave.lnB*ave.kpar)
 
