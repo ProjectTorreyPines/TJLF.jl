@@ -19,7 +19,12 @@ function run_tjlf(inputTJLF::InputTJLF)
 end
 
 function run_tjlf(input_tjlfs::Vector{InputTJLF})
-    return collect(asyncmap(input_tjlf -> TJLF.run_tjlf(input_tjlf), input_tjlfs))
+    outputs = Vector{Array{Float64, 3}}(undef,length(input_tjlfs))
+    Threads.@threads for idx in eachindex(input_tjlfs)
+        @time outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
+    end
+        
+    return outputs
 end
 
 
