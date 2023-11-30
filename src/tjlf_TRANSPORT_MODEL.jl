@@ -47,7 +47,6 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
         inputs.IFLUX = false # do not compute QL on first pass
         #Threads.@threads 
         for ky_index = eachindex(ky_spect)
-            inputs.IFLUX = false
             widthPass!(inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
         end
         kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1]) # spectral shift
@@ -55,7 +54,6 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
         inputs.IFLUX = true # do not compute QL on first pass
         #Threads.@threads 
         for ky_index = eachindex(ky_spect)
-            inputs.IFLUX = original_iflux
             secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index)
         end
 
@@ -74,7 +72,6 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
         #Threads.@threads 
         for ky_index = eachindex(ky_spect)
             # println("this is b")
-            inputs.IFLUX = original_iflux # compute QL on second pass
             secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index)
         end
 
@@ -120,6 +117,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     ky = inputs.KY_SPECTRUM[ky_index]
 
     if(inputs.FIND_WIDTH)
+        inputs.IFLUX = false
         if(inputs.NEW_EIKONAL)
             # println("this is 1")
             nmodes_out, gamma_nb_min_out,
@@ -129,6 +127,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             error("NOT IMPLEMENTED YET -DSUN")
         end
     else
+        inputs.IFLUX = true
         # use new nbasis value
         nbasis = inputs.NBASIS_MAX
         gamma_nb_min_out = NaN

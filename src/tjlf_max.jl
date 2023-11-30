@@ -284,6 +284,9 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             inputs.USE_BPER = original_bper
             inputs.USE_BPAR = original_bpar
         end
+        if inputs.ALPHA_QUENCH!=0.0 || inputs.VEXB_SHEAR*inputs.SIGN_IT==0.0
+            inputs.IFLUX = true # only calculate fluxes for onePass!
+        end
         # println("this is XII")
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
@@ -309,6 +312,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         end
 
         gamma_max = findmax(gamma_out)[1]  # works for both ibranch_in cases
+        inputs.IFLUX = false # return IFLUX to false in case was switched for onePass!
 
     end
 
