@@ -1,4 +1,5 @@
 using Revise
+const l = ReentrantLock()
 """
     function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T,kx0_e::T = 0.0,gamma_reference_kx0::Union{Vector{T},Missing} = missing,freq_reference_kx0::Union{Vector{T},Missing} = missing)
 
@@ -254,8 +255,10 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 # if false#Threads.nthreads()>1
                 #     eigenvector = v[:,jmax[imax]]
                 if inputs.FIND_WIDTH || isnan(v[1,1]) || inputs.GAMMA_SPECTRUM[ky_index] == 0.0
+                    Threads.lock(l)
                     _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
                     eigenvector = vec[:,1]
+                    Threads.unlock(l)
                 else
                     eigenvector = v[:, jmax[imax]]
                 end
