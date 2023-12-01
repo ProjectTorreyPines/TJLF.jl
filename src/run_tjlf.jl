@@ -21,9 +21,9 @@ end
 function run_tjlf(input_tjlfs::Vector{InputTJLF})
     outputs = Vector{Array{Float64, 3}}(undef,length(input_tjlfs))
     Threads.@threads for idx in eachindex(input_tjlfs)
-        @time outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
+        outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
     end
-        
+
     return outputs
 end
 

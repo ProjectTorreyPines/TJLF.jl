@@ -1,6 +1,6 @@
 const nf = 40
 const na = 13
-const h = Vector{Float64}(undef, na) #### CAUSES ERROR IN MULTITHREADING
+# const h = Vector{Float64}(undef, na) #### CAUSES ERROR IN MULTITHREADING
 
 function FLR_Hn(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
 #******************************************************************
@@ -45,7 +45,7 @@ function FLR_Hn(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_Hn
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
@@ -123,7 +123,7 @@ function FLR_dHp1(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHp1
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
@@ -201,7 +201,7 @@ function FLR_dHp3(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHp3
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
@@ -279,7 +279,7 @@ function FLR_dHr11(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHr11
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
@@ -355,7 +355,7 @@ function FLR_dHr13(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHr13
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
@@ -431,7 +431,7 @@ function FLR_dHr33(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHr33
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
@@ -508,7 +508,7 @@ function FLR_dHw113(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHw113
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
@@ -585,7 +585,7 @@ function FLR_dHw133(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHw133
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
@@ -663,7 +663,7 @@ function FLR_dHw333(ft::T, b::T; b2=b^2, b25 = b^2.5)::T where T<:Real
     y5 = FLR_constants.y5
     g = FLR_constants.g
     a = FLR_constants.a_dHw333
-    #h = Vector{Float64}(undef, na)
+    h = Vector{Float64}(undef, na)
 
     for i = 1:4
         h[i] = b/(y4[i] + b2)
