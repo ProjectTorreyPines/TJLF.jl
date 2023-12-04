@@ -32,7 +32,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             nbasis::Int,
             vexb_shear_s::T,
             ky_index::Int;
-            kx0_e::T = 0.0,
+            kx0_e::T = NaN,
             gamma_reference_kx0::Vector{T} = T[],
             freq_reference_kx0::Vector{T} = T[],
             outputGeo::Union{OutputGeometry{T},Missing} = missing) where T <: Real
