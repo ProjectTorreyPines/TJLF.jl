@@ -237,7 +237,7 @@ function intensity_sat(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
-    QL_weights::Array{T,5}, ### taken from the output file
+    QL_weights::Array{T,5},
     expsub::T=2.0,
     return_phi_params::Bool=false) where T<:Real
 
@@ -762,7 +762,7 @@ end
 
 
 """
-    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Matrix{T},QL::Array{T,5},etg_fact::T=1.25,c0::T=32.48,c1::T=0.534,exp1::T=1.547,cx_cy::T=0.56,alpha_x::T=1.15)where T <: Real
+    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Matrix{T},QL::Array{T,5})where T <: Real
 
 parameters:
     inputs              - InputTJLF struct constructed using the input.TGLF file
@@ -782,13 +782,7 @@ function sum_ky_spectrum(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
-    QL_weights::Array{T,5},
-    etg_fact::T=1.25,
-    c0::T=32.48,
-    c1::T=0.534,
-    exp1::T=1.547,
-    cx_cy::T=0.56,
-    alpha_x::T=1.15
+    QL_weights::Array{T,5}
 )where T <: Real
 
     sat_rule_in = inputs.SAT_RULE

@@ -10,7 +10,6 @@ return:
 description:
     parse through a input.tglf file found in baseDirectory parameter, creates a inputTJLF struct and populates the fields
     based off the values in the file. has some check to make sure the file is written properly
-
 """
 function readInput(baseDirectory::String)::InputTJLF
     # gets the input.tglf file

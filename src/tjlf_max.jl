@@ -21,8 +21,7 @@ outputs:
     exchange_QL_out                     - exchange QL flux
 
 description:
-    finds the width using the WIDTH from the InputTJLF as an initial guess,
-    returns the number of unstable modes, the eigenvalues, and QL fluxes after 
+    finds the width using the WIDTH from the InputTJLF as an initial guess, returns the number of unstable modes, the eigenvalues, and QL fluxes after 
     getting the proper width value
 """
 function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky::T, vexb_shear_s::T, ky_index::Int) where T<:Real
@@ -92,7 +91,6 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     for i = 1:nt
         tp = tmin + (i-1)*dt
         inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
-        new_width = true
         # println("this is I")
         nmodes_out, gamma_out, freq_out,
         _,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
@@ -318,7 +316,6 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     end
 
     if(gamma_max==0.0)
-        # set the saved width to be negative if invalid, avoids finding false values
         inputs.WIDTH_SPECTRUM[ky_index] = original_width
         if(sat_rule_in==2 || sat_rule_in==3)
             inputs.USE_BPER = original_bper
@@ -338,6 +335,4 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     return nmodes_out, gamma_nb_min_out, gamma_out, freq_out,
     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
     
-    
-
 end

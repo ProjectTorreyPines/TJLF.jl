@@ -13,8 +13,8 @@ outputs:
                                           type: (gamma, frequency)
 
 description:
-    Main transport model subroutine.
-    Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity and fluxes.
+    Main transport model function.
+    Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity, and fluxes.
 """
 
 function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
@@ -90,14 +90,18 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 
 """
-    function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+    function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},vexb_shear_s::T,eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    vexb_shear_s::T                     - exb value, VEXB_SHEAR*SIGN_IT from input.tglf file
+    eigenvalue_spectrum_out::Array{T,3} - eigenvalue output array (mode, ky, type)
+    QL_weights::Array{T,5}              - QL weights output array (field, species, mode, ky, type)
+    ky_index::Int                       - index used for multithreading
 
-outputs:
+outputs (writen to, not outputed):
     QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
     eigenvalue_spectrum_out             - 3d array of eigenvalues (mode, ky, type)
@@ -177,16 +181,16 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 """
-    function firstPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+    function firstPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    firstPass_eigenvalue::Array{T,3}    - eigenvalue output array (mode, ky, type)
+    ky_index::Int                       - index used for multithreading
 
-outputs:
-    QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
-                                          type: (particle, energy, torodial stress, parallel stress, exchange)
+outputs (writen to, not outputed):
     firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
                                           type: (gamma, frequency)
 
@@ -225,14 +229,16 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 """
-    function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+    function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    firstPass_eigenvalue::Array{T,3}    - eigenvalue output array (mode, ky, type)
+    ky_index::Int                       - index used for multithreading
 
-outputs:
+outputs (writen to, not outputed):
     firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
                                           type: (gamma, frequency)
 
@@ -293,15 +299,18 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 """
-    function secondPass(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},firstPass_eigenvalue::Array{T,3}) 
+    function secondPass!(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},kx0_e::T,firstPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    kx0_e::T                            - spectral shift calculated using first/width pass eigenvalues
     firstPass_eigenvalue::Array{T,3}    - array of eigenvalues found in first pass
+    QL_weights::Array{T,5}              - QL weights output array (field, species, mode, ky, type)
+    ky_index::Int                       - index used for multithreading
 
-outputs:
+outputs (writen to, not outputed):
     QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
 
@@ -317,14 +326,10 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     nbasis_max_in = inputs.NBASIS_MAX
     nbasis_min_in = inputs.NBASIS_MIN
-    nx = 2*inputs.NXGRID - 1
     vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
 
     # saturation values
     R_unit = satParams.R_unit
-    q_unit = satParams.q_unit
-
-    # mask_save::Vector{Int} = zeros(Int, nky)
 
     # initialize reference eigenvalue arrays
     gamma_reference_kx0 = similar(firstPass_eigenvalue[:,1,1])
