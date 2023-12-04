@@ -1,4 +1,20 @@
-using Revise
+"""
+    function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,aveGrad::AveGrad{T},aveGradB::AveGradB{T},nbasis::Int, ky::T,amat::Matrix{K},bmat::Matrix{K},ky_index::Int) where T<:Real where K<:Complex
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    ave::Ave{T}                         - structs created in tjlf_matrix.jl
+    nbasis::Int                         - used to determine size of the matrix
+    ky::T                               - current ky value
+    amat/bmat::Matrix{K}                - matrix to be populated
+    ky_index::Int                       - index used for multithreading
+
+outputs:
+    eigenvalues::Complex                - eigenvalues of the matrices
+
+description:
+    uses the structs calculated in tjlf_matrix.jl to populate matrix amat and bmat, solves the generalized eigenvalue problem for only the eigenvalues, returns those eigenvalues
+"""
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,

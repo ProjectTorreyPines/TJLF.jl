@@ -1,7 +1,7 @@
 using Revise
 const l = ReentrantLock()
 """
-    function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T,kx0_e::T = 0.0,gamma_reference_kx0::Union{Vector{T},Missing} = missing,freq_reference_kx0::Union{Vector{T},Missing} = missing)
+    function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T;kx0_e::T = NaN,gamma_reference_kx0::Vector{T} = T[],freq_reference_kx0::Vector{T} = T[],outputGeo::Union{OutputGeometry{T},Missing} = missing) where T <: Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -10,7 +10,7 @@ parameters:
     ky::T                               - ky value
     nbasis::Int                         - number of basis for matrix dimension
     vexb_shear_s::T                     - e x b shear value (=VEXB_SHEAR*SIGN_IT)
-    kx0_e::T = 0.0                      - kx0_e value calculated on second pass with eigen values from first pass
+    kx0_e::T = NaN                      - kx0_e value calculated on second pass with eigen values from first pass
     gamma_reference_kx0                 - gamma vector if second pass
     freq_reference_kx0                  - freq vector if second pass
 

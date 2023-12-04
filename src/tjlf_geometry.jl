@@ -1,18 +1,18 @@
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Vector{T}, small::T=0.00000001) where T<:Real
+    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};small::T=0.00000001)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    gamma_modes::Vector{T}              - growth rate eigenvalues for each mode
+    gamma_matrix::Vector{T}             - growth rate eigenvalues for each mode
 
 outputs:
-    kx0_e                               - value of kx0_e given the gamma value
+    kx0_e                               - value of kx0_e for tge given gamma value
 
 description:
-    calculate kx0_e given the growthrate during second pass of TM
+    calculate kx0_e (spectral shift) given the growthrate used for the second pass of TM
 """
-function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T},
+function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};
     small::T=0.00000001) where T<:Real
     sign_IT = inputs.SIGN_IT
     vexb_shear = inputs.VEXB_SHEAR
@@ -29,8 +29,6 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
 
     grad_r0 = satParams.grad_r0
     B_geo0 = satParams.B_geo[1]
-
-    # kx0 = kx0_loc/ky # note that kx0 is kx/ky
 
     # generalized quench rule kx0 shift
     most_unstable_gamma = gamma_matrix[1, :]
@@ -70,38 +68,31 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         kx0_e = ifelse.(abs.(kx0_e) .> a0 , a0.*kx0_e./abs.(kx0_e) , kx0_e)
         kx0_e = ifelse.(isnan.(kx0_e) .|| isinf.(kx0_e), 0.0 , kx0_e)
 
-        #### not in the Python
-        # if(units_in=="GYRO")
-        #     kx0 = sign_Bt_in*kx0_e # cancel the sign_Bt_in factor in kxx below
-        # else
-        #     if(sat_rule_in.eq.1)kx0 = sign_Bt_in*kx0_e/(2.1)end  # goes with xnu_model=2
-        #     if(sat_rule_in.eq.2 .OR. sat_rule_in.eq.3)kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out^2 end     # goes with xnu_model=3, the factor 0.7/grad_r0_out^2 is needed for stress_tor
-        #     # note kx0 = alpha_e*gamma_ExB_HB/gamma Hahm - Burrell form of gamma_ExB
-        #     # The 2.1 effectively increases ay0 & ax0 and reduces toroidal stress to agree with CGYRO
-        # end
     end
 
     return kx0_e
 end
 
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, kx0_e::T=0.0,mts::T=5.0, ms::Int=128, small::T=0.00000001)
+    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, ky_index::Int; kx0_e::T=NaN, ms::Int=128)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
     ky::T                               - ky value
+    ky_index::Int                       - index used for multithreading
+    kx0_e::T=NaN                        - spectral shift provided for second pass 
 
 outputs:
     OutputGeometry{Float64}()           - OutputGeometry struct for different WIDTHS value
 
 description:
-    create the OutputGeometry struct for the specific WIDTHS value
+    create the OutputGeometry struct for the specific WIDTHS value used to calculate Ave structs (tjlf_matrix.jl) used in eigenmatrix population
 """
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T},
-    ky::T, ky_index::Int; kx0_e::T=NaN,
-    mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+    ky::T, ky_index::Int;
+    kx0_e::T=NaN, ms::Int=128) where T<:Real
 
     width_in = inputs.WIDTH_SPECTRUM[ky_index]
     sat_rule_in = inputs.SAT_RULE
@@ -369,7 +360,7 @@ end
 
 
 """
-    function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+    function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -381,7 +372,7 @@ description:
     compute the geometric coefficients on the x-grid
 """
 #### LINES 220-326, 478 in tglf_geometry.f90
-function get_sat_params(inputs::InputTJLF{T}, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
@@ -484,7 +475,7 @@ end
 
 
 
-function mercier_luc(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128, small::Float64=0.00000001) where T<:Real
+function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
     #-------------------------------------------
     # the following must be defined from a previous call to one of the
@@ -727,7 +718,7 @@ function mercier_luc(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128, small:
 end
 
 
-function miller_geo(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128)  where T<:Real
+function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where T<:Real
 
     rmin_loc = inputs.RMIN_LOC
     rmaj_loc = inputs.RMAJ_LOC

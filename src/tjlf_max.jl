@@ -1,5 +1,5 @@
 """
-    function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky::T, vexb_shear_s::T) where T<:Real
+    function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky::T, vexb_shear_s::T, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -7,6 +7,7 @@ parameters:
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
     ky::T                               - value of ky
     vexb_shear_s::T                     - e x b shear value (=VEXB_SHEAR*SIGN_IT)
+    ky_index::Int                       - index used for multithreading
 
 outputs:
     nmodes_out                          - number of most unstable modes calculated
