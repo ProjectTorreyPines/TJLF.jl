@@ -40,7 +40,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     width_min = inputs.WIDTH_MIN
-    width_max = abs(inputs.WIDTH_SPECTRUM[ky_index])
+    width_max = abs(inputs.WIDTH)
 
     ### original values
     original_ibranch = inputs.IBRANCH
