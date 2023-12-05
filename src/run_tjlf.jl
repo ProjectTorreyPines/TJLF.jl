@@ -20,8 +20,17 @@ end
 
 function run_tjlf(input_tjlfs::Vector{InputTJLF})
     outputs = Vector{Array{Float64, 3}}(undef,length(input_tjlfs))
-    Threads.@threads for idx in eachindex(input_tjlfs)
-        outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
+    original_BLAS = BLAS.get_num_threads()
+    BLAS.set_num_threads(1)
+    try
+        Threads.@threads for idx in eachindex(input_tjlfs)
+            outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
+        end
+    catch e
+        BLAS.set_num_threads(original_BLAS)
+        rethrow(e)
+    finally
+        BLAS.set_num_threads(original_BLAS)
     end
 
     return outputs
