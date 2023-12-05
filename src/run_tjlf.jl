@@ -26,9 +26,6 @@ function run_tjlf(input_tjlfs::Vector{InputTJLF})
         Threads.@threads for idx in eachindex(input_tjlfs)
             outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
         end
-    catch e
-        BLAS.set_num_threads(original_BLAS)
-        rethrow(e)
     finally
         BLAS.set_num_threads(original_BLAS)
     end
