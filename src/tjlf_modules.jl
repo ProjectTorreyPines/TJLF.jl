@@ -224,7 +224,8 @@ mutable struct InputTJLF{T<:Real}
 
     WIDTH_SPECTRUM::Vector{T}
     KY_SPECTRUM::Vector{T}
-    GAMMA_SPECTRUM::Vector{T}
+    EIGEN_SPECTRUM::Vector{ComplexF64}
+    FIND_EIGEN::Bool
 
     SIGN_BT::Int
     SIGN_IT::Int
@@ -284,7 +285,7 @@ mutable struct InputTJLF{T<:Real}
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
-        fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN,(nky)),
+        fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN*im,(nky)),true,
         0,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
@@ -322,7 +323,7 @@ mutable struct InputTJLF{T<:Real}
                 @assert !ismissing(field_value) || !isnan(field_value) "Did not properly populate inputTJLF for $field_name"
             end
 
-            if typeof(field_value) <: Vector && field_name != :KY_SPECTRUM && field_name != :GAMMA_SPECTRUM
+            if typeof(field_value) <: Vector && field_name != :KY_SPECTRUM && field_name != :EIGEN_SPECTRUM
                 for val in field_value
                     @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
                 end

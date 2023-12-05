@@ -29,7 +29,7 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
     original_iflux = inputs.IFLUX
 
     ### output values
-    firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2)
+    firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2) # output eigenvalue spectrum is from the first pass
     QL_weights::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
 
     # compute the flux spectrum and eigenvalues
@@ -77,6 +77,9 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
 
     end
     inputs.IFLUX = original_iflux
+    if inputs.FIND_EIGEN
+        inputs.EIGEN_SPECTRUM .= firstPass_eigenvalue[1,:,1].+firstPass_eigenvalue[1,:,2].*im
+    end
 
     return QL_weights, firstPass_eigenvalue
 

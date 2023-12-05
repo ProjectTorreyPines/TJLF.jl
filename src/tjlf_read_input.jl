@@ -126,7 +126,7 @@ function readInput(baseDirectory::String)::InputTJLF
 
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
     inputTJLF.KY_SPECTRUM .= NaN
-    inputTJLF.GAMMA_SPECTRUM .= NaN
+    inputTJLF.EIGEN_SPECTRUM .= NaN
 
     # double check struct is properly populated
     field_names = fieldnames(InputTJLF)
@@ -135,7 +135,7 @@ function readInput(baseDirectory::String)::InputTJLF
         if typeof(field_value)<:Real
             @assert !isnan(field_value) && !ismissing(field_value) "Did not properly populate inputTJLF for $field_name"
         end
-        if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:GAMMA_SPECTRUM
+        if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:EIGEN_SPECTRUM
             for val in field_value
                 @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
             end
