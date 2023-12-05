@@ -1,3 +1,4 @@
+const l2 = ReentrantLock()
 """
     function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,aveGrad::AveGrad{T},aveGradB::AveGradB{T},nbasis::Int, ky::T,amat::Matrix{K},bmat::Matrix{K},ky_index::Int) where T<:Real where K<:Complex
 
@@ -2688,31 +2689,22 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # find the eigenvalues and eigenvectors
     #*************************************************************
 
-
-    # if Threads.nthreads() > 1
-    #     if inputs.IFLUX
-    #         (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
-    #         return alpha./beta, vr
-    #     else
-    #         (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
-    #         return alpha./beta, fill(NaN*im,(1,1))
-    #     end
-    # end
-
-    # # calculate eigenvalues/eigenvectors
-    # if !inputs.FIND_WIDTH && !isnan(inputs.GAMMA_SPECTRUM[1])
-    #     sigma = inputs.GAMMA_SPECTRUM[ky_index]
-    #     if sigma != 0.0 
-    #         try
-    #             λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LM,sigma=sigma,maxiter=50)
-    #             return λ, v
-    #         catch
-    #             @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
-    #         end
-    #     else
-    #         @warn "no growth rate intial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
-    #     end
-    # end
+    # calculate eigenvalues/eigenvectors
+    if !inputs.FIND_EIGEN && !isnan(inputs.EIGEN_SPECTRUM[1])
+        sigma = inputs.EIGEN_SPECTRUM[ky_index]
+        if sigma != 0.0 
+            try
+                Threads.lock(l2)
+                λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LM,sigma=sigma,maxiter=50)
+                Threads.unlock(l2)
+                return λ, v
+            catch
+                @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
+            end
+        else
+            @warn "no growth rate intial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
+        end
+    end
 
     if inputs.IFLUX
         amat_copy = copy(amat)
@@ -2722,8 +2714,6 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
     end
     return alpha./beta, fill(NaN*im,(1,1))
-    # return alpha, beta
-
 
     ### not supported
     # print("kyrlov: ")

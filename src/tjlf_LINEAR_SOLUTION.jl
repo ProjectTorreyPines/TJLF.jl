@@ -253,7 +253,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 # calculate eigenvector with Arpack.jl, very slightly slower
                 # if false#Threads.nthreads()>1
                 #     eigenvector = v[:,jmax[imax]]
-                if inputs.FIND_WIDTH || isnan(v[1,1]) || inputs.GAMMA_SPECTRUM[ky_index] == 0.0
+                if inputs.FIND_EIGEN || isnan(v[1,1])
                     Threads.lock(l)
                     _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
                     eigenvector = vec[:,1]
