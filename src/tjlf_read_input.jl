@@ -76,6 +76,11 @@ function readInput(baseDirectory::String)::InputTJLF
             if parse(Int,speciesIndex) > ns continue end
             # set the value to the species field vectors
             getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
+
+        # species vector as a vector
+        elseif line[2][1] == '['
+            field = Symbol(line[1])
+            getfield(inputTJLF, field) .= [parse(Float64,item) for item in split(line[2][2:end-1],",")]
         
         else # if not for the species vector
 
@@ -127,6 +132,7 @@ function readInput(baseDirectory::String)::InputTJLF
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
     inputTJLF.KY_SPECTRUM .= NaN
     inputTJLF.EIGEN_SPECTRUM .= NaN
+    inputTJLF.EIGEN_SPECTRUM2 .= NaN
 
     # double check struct is properly populated
     field_names = fieldnames(InputTJLF)
@@ -135,7 +141,7 @@ function readInput(baseDirectory::String)::InputTJLF
         if typeof(field_value)<:Real
             @assert !isnan(field_value) && !ismissing(field_value) "Did not properly populate inputTJLF for $field_name"
         end
-        if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:EIGEN_SPECTRUM
+        if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:EIGEN_SPECTRUM && field_name!=:EIGEN_SPECTRUM2
             for val in field_value
                 @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
             end
