@@ -5,7 +5,11 @@ Things to note: in the InputTJLF struct, WIDTH_SPECTRUM and EIGEN_SPECTRUM are n
 
 Currently, Arpack.jl's eigs(), used in tjlf_LINEAR_SOLUTION.jl and tjlf_eigensolver.jl, is a fast iterative solver. In tjlf_LINEAR_SOLUTION.jl, eigs() is used to solve for the eigenvector instead of rewriting the generalized eigenvalue problem as a system of linear equations like TGLF which is potentially a little troublesome. It is also used in tjlf_eigensolver.jl if you provide a EIGEN_SPECTRUM and set FIND_WIDTH to false. eigs() does a shift and inverse iteration to solve the generalized eigenvalue problem, specifying sigma tells the solver to look for eigenvalues near sigma, it works best if you set which=:LM telling eigs() the type of eigenvalue to compute. I have tried which=:LR (LM is largest magnitude and LR is largest real part), but sometimes the solver will find "fake" eigenvalues with very large real and imaginary parts. I have found using :LM and setting sigma as the most unstable mode from the first run works.
 
-NOTE: Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. Arpack.jl's eigs() is NOT thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
+NOTE: If you are getting:
+Error: XYAUPD_Exception: Maximum number of iterations taken. All possible eigenvalues of OP has been found.
+│ IPARAM(5) returns the number of wanted converged Ritz values.
+│   info = 1
+Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. Arpack.jl's eigs() is NOT thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
 
 There are some 3D and 5D arrays where the indices are not obvious. They are specified in the function comments where they appear, but I will repeat them here:
 QL_weights::Array{5} - (field, species, mode, ky, type)
