@@ -222,10 +222,12 @@ mutable struct InputTJLF{T<:Real}
     VPAR::Vector{T}
     VPAR_SHEAR::Vector{T}
 
+    # NOT IN TGLF
     WIDTH_SPECTRUM::Vector{T}
     KY_SPECTRUM::Vector{T}
     EIGEN_SPECTRUM::Vector{ComplexF64}
     FIND_EIGEN::Bool
+    # NOT IN TGLF
 
     SIGN_BT::Int
     SIGN_IT::Int
