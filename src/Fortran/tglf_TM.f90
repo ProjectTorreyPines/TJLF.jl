@@ -97,7 +97,7 @@
         do j=1,3
            do m=1,nmodes_in
              do i=1,nky
-               write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
+            !    write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
              enddo  ! i
           enddo ! m
         enddo  ! j
