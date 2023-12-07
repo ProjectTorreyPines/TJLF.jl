@@ -19,7 +19,6 @@ function readInput(filename::String)::InputTJLF
     ns = -1
     nky = -1
     kygrid_model = -1
-    nwidth = -1
     for line in lines[1:length(lines)]
         line = split(line, "\n")
         line = split(line[1],"=")
@@ -29,8 +28,6 @@ function readInput(filename::String)::InputTJLF
             nky = parse(Int, strip(line[2]))
         elseif line[1] == "KYGRID_MODEL"
             kygrid_model = parse(Int, strip(line[2]))
-        elseif line[1] == "NWIDTH"
-            nwidth = parse(Int, strip(line[2]))
         end
     end
     # make sure ns is defined
@@ -39,13 +36,11 @@ function readInput(filename::String)::InputTJLF
     @assert kygrid_model!=-1 "did not find KYGRID_MODEL"
     @assert kygrid_model>=0 && kygrid_model <=5 "KYGRID_MODEL must be Int between 0 and 5"
     nky = get_ky_spectrum_size(nky,kygrid_model)
-    ############# nky should equal NWIDTH ##################
-    @assert nky == nwidth "ky spectrum size should equal width spectrum size"
 
 
 
     # create InputTJLF struct
-    inputTJLF = InputTJLF{Float64}(ns,nwidth)
+    inputTJLF = InputTJLF{Float64}(ns,nky)
     # fields that aren't used or implemented
     deletedFields = ["USE_TRANSPORT_MODEL","GEOMETRY_FLAG","B_MODEL_SA","FT_MODEL_SA","VPAR_SHEAR_MODEL","WRITE_WAVEFUNCTION_FLAG","VTS_SHEAR","VNS_SHEAR","VEXB","RMIN_SA","RMAJ_SA","Q_SA","SHAT_SA","ALPHA_SA","XWELL_SA","THETA0_SA","NN_MAX_ERROR"]
 
