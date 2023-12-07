@@ -21,11 +21,11 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     ky_spect = inputs.KY_SPECTRUM
     alpha_zf = inputs.ALPHA_ZF
 
-    zs_2 = inputs.ZS[2]
-    taus_2 = inputs.TAUS[2]
-    mass_2 = inputs.MASS[2]
-
-    rho_ion =  √(taus_2*mass_2) / abs(zs_2)
+    if inputs.USE_AVE_ION_GRID
+        rho_ion = sum(√(inputs.TAUS[2:end].*inputs.MASS[2:end])./ abs.(inputs.ZS[2:end]))
+    else
+        rho_ion = √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
+    end
 
     # find the local maximum of most_unstable_gamma/ky_spect with the largest most_unstable_gamma/ky_spect^2
     kycut = 0.8/rho_ion

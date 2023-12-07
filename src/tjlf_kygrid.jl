@@ -18,7 +18,11 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
     nky_in = inputs.NKY
     spectrum_type = inputs.KYGRID_MODEL
     rho_e = √(inputs.TAUS[1]*inputs.MASS[1])/ abs(inputs.ZS[1])
-    rho_ion = √(inputs.TAUS[2]*inputs.MASS[2])/ abs(inputs.ZS[2])
+    if inputs.USE_AVE_ION_GRID
+        rho_ion = sum(√(inputs.TAUS[2:end].*inputs.MASS[2:end])./ abs.(inputs.ZS[2:end]))
+    else
+        rho_ion = √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
+    end
 
     ### value from modules.f90
     ky_min = 0.05
