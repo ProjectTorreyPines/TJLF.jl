@@ -1,0 +1,21 @@
+ !This file has all of the scalar staturation parameters used for different SAT_RULE options
+ SAT_RULE =            2
+ UNITS = CGYRO   
+ XNU_MODEL =            3
+ !   SAT0 model 
+ ETG_FACTOR =    1.2500000000000000     
+ B_unit =    1.0000000000000000     
+ R_unit =    3.5788275102520837     
+ q_unit =    1.2526721442287048     
+ !   SAT1 & SAT2 models 
+ ALPHA_ZF =   -1.0000000000000000     
+ SAT_geo0_out =    1.0000000000000000     
+ SAT_geo1_out =   0.59611047709548703     
+ SAT_geo2_out =   0.27324308159128413     
+ Bt0_out =   0.70406184825116913     
+ B_geo0_out =   0.61547234154146513     
+ grad_r0_out =    1.1781899162484462     
+ rho_ion =    1.0438985422759401     
+ rho_e =    1.6501895868673771E-002
+ kymax_out =   0.33871301352073896     
+ vzf_out =   0.64116935222392601     
