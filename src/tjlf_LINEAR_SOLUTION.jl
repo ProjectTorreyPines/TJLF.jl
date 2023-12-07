@@ -241,6 +241,12 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         kx_bar_out = zeros(Float64, nmodes_out)
         kpar_bar_out = zeros(Float64, nmodes_out)
 
+        if nmodes_out > 1
+            inputs.EIGEN_SPECTRUM2[ky_index] = eigenvalues[jmax[1]]
+        else
+            inputs.EIGEN_SPECTRUM2[ky_index] = 0.0
+        end
+
         # used for computing eigenvector
         # zmat = similar(amat)
         # small::ComplexF64 = 1.0e-13

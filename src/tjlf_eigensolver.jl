@@ -2690,8 +2690,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     #*************************************************************
 
     # calculate eigenvalues/eigenvectors
-    if !inputs.FIND_EIGEN && !isnan(inputs.EIGEN_SPECTRUM[1])
-        sigma = inputs.EIGEN_SPECTRUM[ky_index]
+    if !inputs.FIND_EIGEN
+        sigma = 0.0
+        if inputs.IFLUX && !isnan(inputs.EIGEN_SPECTRUM2[ky_index])
+            sigma = inputs.EIGEN_SPECTRUM2[ky_index]
+        elseif !isnan(inputs.EIGEN_SPECTRUM[ky_index])
+            sigma = inputs.EIGEN_SPECTRUM[ky_index]
+        end
+
         if sigma != 0.0 
             try
                 Threads.lock(l2)
