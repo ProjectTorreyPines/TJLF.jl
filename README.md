@@ -8,10 +8,12 @@ Currently, Arpack.jl's eigs(), used in tjlf_LINEAR_SOLUTION.jl and tjlf_eigensol
 NOTE: If you are getting:
 
 Error: XYAUPD_Exception: Maximum number of iterations taken. All possible eigenvalues of OP has been found.
+
 │ IPARAM(5) returns the number of wanted converged Ritz values.
+
 │   info = 1
 
-Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. Arpack.jl's eigs() is NOT thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
+Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. Also, Arpack.jl's eigs() is NOT thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
 
 There are some 3D and 5D arrays where the indices are not obvious. They are specified in the function comments where they appear, but I will repeat them here:
 QL_weights::Array{5} - (field, species, mode, ky, type)
