@@ -295,9 +295,7 @@ function intensity_sat(
             ptot = 0.0
             for i in 1:ns
                 ptot = ptot + inputs.AS[i]*inputs.TAUS[i]
-                dlnpdr = (dlnpdr +
-                    inputs.AS[i]*inputs.TAUS[i]*
-                    (inputs.RLNS[i]+inputs.RLTS[i]))
+                dlnpdr = dlnpdr + inputs.AS[i]*inputs.TAUS[i]*(inputs.RLNS[i]+inputs.RLTS[i])
             end
             ### kwargs["RMAJ_LOC"] used for rmaj_input
             dlnpdr = rmaj_loc*dlnpdr/max(ptot,0.01)
@@ -337,7 +335,6 @@ function intensity_sat(
     #     cz1=0.90*czf
     #     cz2=1.0*czf
     # end
-
 
     ### coefficents for SAT_RULE = 2
     if(sat_rule_in == 2 || sat_rule_in == 3)
