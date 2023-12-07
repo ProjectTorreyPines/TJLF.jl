@@ -22,7 +22,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     alpha_zf = inputs.ALPHA_ZF
 
     if inputs.USE_AVE_ION_GRID
-        rho_ion = sum(√(inputs.TAUS[2:end].*inputs.MASS[2:end])./ abs.(inputs.ZS[2:end]))
+        rho_ion = sum(√.(inputs.TAUS[2:end].*inputs.MASS[2:end])./ abs.(inputs.ZS[2:end]))
     else
         rho_ion = √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
     end
