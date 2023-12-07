@@ -298,7 +298,8 @@ mutable struct InputTJLF{T<:Real}
     # create InputTJLF struct given a InputTGLF struct
     function InputTJLF{T}(inputTGLF::InputTGLF) where {T<:Real}
 
-        inputTJLF = InputTJLF{T}(inputTGLF.NS, inputTGLF.NWIDTH)
+        nky = get_ky_spectrum_size(inputTGLF.NKY,inputTGLF.KYGRID_MODEL)
+        inputTJLF = InputTJLF{T}(inputTGLF.NS, nky)
 
         for fieldname in fieldnames(inputTGLF)
             if occursin(r"\d", String(fieldname)) || fieldname == :_Qgb # species parameter
