@@ -7,19 +7,13 @@ using Revise
 include("../src/TJLF.jl")
 using .TJLF
 using Plots
-# using Lowess
-# using Interpolations
-# using ImageFiltering
-# using KernelDensity
-# using Distributions
-# using SmoothingSplines
 
 #******************************************************************************************************
 # Read input.tglf
 #******************************************************************************************************
 # location for the input.tglf file
-# baseDirectory = "../outputs/test_TM/simple_test/"
-baseDirectory = "../outputs/test_TM/TIM_CASE/"
+baseDirectory = "../outputs/test_TM/simple_test/"
+# baseDirectory = "../outputs/test_TM/nmodes2/"
 
 inputTJLF = readInput(baseDirectory)
 inputTJLF2 = readInput(baseDirectory)
@@ -27,7 +21,6 @@ inputTJLF2 = readInput(baseDirectory)
 #*******************************************************************************************************
 #   start running stuff
 #*******************************************************************************************************
-
 outputHermite = gauss_hermite(inputTJLF)
 satParams = get_sat_params(inputTJLF)
 inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
@@ -58,25 +51,6 @@ end
 # @codewarning
 using BenchmarkTools
 @btime tjlf_TM(inputTJLF2, satParams, outputHermite)
-
-#*******************************************************************************************************
-#   plot smoothed QL flux
-#*******************************************************************************************************
-
-plot(inputTJLF.KY_SPECTRUM, flux_out[1,1,1,:,2], title="electron energy flux", xlabel="ky", ylabel="flux", label = "original data")
-# itp = interpolate((inputTJLF2.KY_SPECTRUM,), fluxes2[1,2,1,:,2], Gridded(Linear()))
-# x_new = [(inputTJLF2.KY_SPECTRUM[i] + inputTJLF2.KY_SPECTRUM[i+1]) / 2.0 for i in 1:20]
-# pushfirst!(x_new, inputTJLF2.KY_SPECTRUM[1])
-# push!(x_new, inputTJLF2.KY_SPECTRUM[end])
-# y_new = itp(x_new)
-# itp = interpolate((x_new,), y_new, Gridded(Linear()))
-# y_new = itp(inputTJLF2.KY_SPECTRUM)
-# plot!(inputTJLF2.KY_SPECTRUM, y_new, title="ion energy flux", xlabel="ky", ylabel="flux", label = "smooth data")
-
-
-spl = fit(SmoothingSpline, inputTJLF2.KY_SPECTRUM, fluxes2[1,1,1,:,2], 0.5)
-plot!(inputTJLF2.KY_SPECTRUM, predict(spl), title="electron energy flux", xlabel="ky", ylabel="flux", label = "gaussian smoothed data")
-
 
 #*******************************************************************************************************
 #   plot QL weights with varied RLTS2
@@ -155,6 +129,7 @@ xlims!(0, .5)
 #   plot integral energy fluxes with varied input variable
 #*******************************************************************************************************
 
+begin
 xGrid = []
 electronEnergy = []
 electronEnergyZF = []
@@ -162,40 +137,46 @@ electronEnergyZF = []
 electronEnergy2 = []
 electronEnergy2ZF = []
 # ionEnergy2 = []
-for val in 0.1:0.1:6.1
+# plot()
+@time for val in 0.1:0.5:6.1
     inputTJLF.RLTS[2] = val
     inputTJLF2.RLTS[2] = val
     push!(xGrid,val)
 
-    inputTJLF.ALPHA_ZF = 1.0
-    weights_out, eigenvalue, QL_flux_out, flux_out = TJLF.run(inputTJLF)
-    push!(electronEnergy,QL_flux_out[1,1,1])
-    inputTJLF.ALPHA_ZF = -1.0
-    weights_out, eigenvalue, QL_flux_out, flux_out = TJLF.run(inputTJLF)
-    push!(electronEnergyZF,QL_flux_out[1,1,1])
-    # plot!(inputTJLF.KY_SPECTRUM, eigenvalue[1,:,1]./inputTJLF.KY_SPECTRUM, title="second mode; find width; ITG", xlabel="ky", ylabel="gamma", label = "RLTS_2 = $val")
+    # inputTJLF.ALPHA_ZF = 1.0
+    # weights_out, eigenvalue, QL_flux_out, flux_out = TJLF.run(inputTJLF)
+    # push!(electronEnergy,QL_flux_out[1,1,1])
+    # inputTJLF.ALPHA_ZF = -1.0
+    # weights_out, eigenvalue, QL_flux_out, flux_out = TJLF.run(inputTJLF)
+    # push!(electronEnergyZF,QL_flux_out[1,1,1])
+    # display(scatter!(inputTJLF.KY_SPECTRUM, eigenvalue[1,:,1]./inputTJLF.KY_SPECTRUM, title="gamma spectrum; ITG", xlabel="ky", ylabel="gamma/ky", label = "RLTS_2 = $val"))
     # plot!(inputTJLF.KY_SPECTRUM, weights_out[1,1,1,:,2], title="energy weight before integral", xlabel="ky", ylabel="flux", label = "RLTS_2 = $val")
     # plot!(inputTJLF.KY_SPECTRUM, intensity[:,1], title="phinorm", xlabel="ky", ylabel="phinorm", label = "RLTS_2 = $val")
     # push!(ionEnergy,QL_flux_out[1,2,2])
 
-    inputTJLF2.ALPHA_ZF = 1.0
+    inputTJLF2.ALPHA_ZF = -1.0
     weights_out2, eigenvalue2, QL_flux_out2, _ = TJLF.run(inputTJLF2)
     push!(electronEnergy2,QL_flux_out2[1,1,1])
-    inputTJLF2.ALPHA_ZF = -1.0
-    weights_out2, eigenvalue2, QL_flux_out2, _, = TJLF.run(inputTJLF2)
-    push!(electronEnergy2ZF,QL_flux_out2[1,1,1])
+    # inputTJLF2.ALPHA_ZF = -1.0
+    # weights_out2, eigenvalue2, QL_flux_out2, _, = TJLF.run(inputTJLF2)
+    # push!(electronEnergy2ZF,QL_flux_out2[1,1,1])
 end
-# xlims!(0.1, 0.4)
+end
+# vline!([0.24465894629054544], linestyle=:dash, color=:black, label = "kymin")
+# plot!(xscale=:log10, yscale=:log10)
+# ylims!(0.1,1)
+# ylims!(0.9,2)
+# xlims!(0.1, 0.3)
 # ylims!(0,.5)
 # display(plot!(legendfontsize=3))
 plot(xGrid, electronEnergy, title="particle flux vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="particle flux", label = "find widths,α_zf = 1")
-plot!(xGrid, electronEnergy2, title="particle flux vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="particle flux", label = "fixed widths; α_zf = 1")
+plot!(xGrid, electronEnergy2, title="particle flux vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="particle flux", label = "fixed widths; α_zf = 1; tol = 1e-2")
 plot!(xGrid, electronEnergyZF, title="particle flux vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="particle flux", label = "find widths; α_zf = -1")
 plot!(xGrid, electronEnergy2ZF, title="particle flux vs RLTS_2; ITG", xlabel="RLTS_2", ylabel="particle flux", label = "fixed widths; α_zf = -1")
 vline!([3], linestyle=:dash, color=:black, label = "width value")
 
 #*******************************************************************************************************
-#   compare flux/eigenvalues to Fortran
+#   compare weights/eigenvalues to Fortran
 #*******************************************************************************************************
 
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
@@ -215,21 +196,22 @@ QLw = reshape(ql, (ntype, nky, nmodes, nfield, nspecies))
 QL_data = permutedims(QLw,(4,5,3,2,1)) # (nf,ns,nm,nky,ntype)
 
 # (nf,ns,nm,nky,ntype)
-plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,1], label="Fortran")
-plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,1], label="Julia", title="particle flux")
+begin
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,1]; label="Fortran")
+display(plot!(inputTJLF.KY_SPECTRUM, QL_weight[1,1,1,:,1]; label="Julia", title="particle flux"))
 
-plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,2], label="Fortran")
-plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,2], label="Julia", title="energy flux")
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,2]; label="Fortran")
+display(plot!(inputTJLF.KY_SPECTRUM, QL_weight[1,1,1,:,2]; label="Julia", title="energy flux"))
 
-plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,5], label="Fortran")
-plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,5], label="Julia", title="exchange flux")
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,5]; label="Fortran")
+display(plot!(inputTJLF.KY_SPECTRUM, QL_weight[1,1,1,:,5]; label="Julia", title="exchange flux"))
 
-plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,3], label="Fortran", title="toroidal stress")
-plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,3], label="Julia", title="toroidal stress",linestyle=:dash)
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,3]; label="Fortran", title="toroidal stress")
+display(plot!(inputTJLF.KY_SPECTRUM, QL_weight[1,1,1,:,3]; label="Julia", title="toroidal stress",linestyle=:dash))
 
-plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,4], label="Fortran", title="parallel stress")
-plot!(inputTJLF.KY_SPECTRUM, fluxes[1,1,1,:,4], label="Julia", title="parallel stress",linestyle=:dash)
-
+plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,4]; label="Fortran", title="parallel stress")
+display(plot!(inputTJLF.KY_SPECTRUM, QL_weight[1,1,1,:,4]; label="Julia", title="parallel stress",linestyle=:dash))
+end
 
 # Get eigenvalue spectrum
 nmodes = inputTJLF.NMODES
@@ -238,17 +220,19 @@ lines = readlines(fileDirectory)
 lines = split(join(lines[3:length(lines)]))
 lines = [parse(Float64, l) for l in lines]
 
+begin
 gamma = []
 freq = []
 for k in 1:nmodes
     push!(gamma, lines[2k-1:2*nmodes:end])
     push!(freq, lines[2k:2*nmodes:end])
 end
+gammaJulia = eigenvalue[:,:,1]
+freqJulia = eigenvalue[:,:,2]
 
-gammaJulia = eigenvalue[1,:,1]
-freqJulia = eigenvalue[1,:,2]
-
-plot(inputTJLF.KY_SPECTRUM, freq, label="Fortran")
-plot!(inputTJLF.KY_SPECTRUM, freqJulia, label="Julia", title="Frequency",linestyle=:dash)
-plot(inputTJLF.KY_SPECTRUM, gamma, label="Fortran")
-plot!(inputTJLF.KY_SPECTRUM, gammaJulia, label="Julia", title="Growth Rate",linestyle=:dash)
+plot(inputTJLF.KY_SPECTRUM, freq; label="Fortran")
+display(plot!(inputTJLF.KY_SPECTRUM, freqJulia[1,:]; label="Julia", title="Frequency",linestyle=:dash))
+# display(plot!(inputTJLF.KY_SPECTRUM, freqJulia[2,:], label="Julia", title="Frequency",linestyle=:dash))
+plot(inputTJLF.KY_SPECTRUM, gamma; label="Fortran")
+display(plot!(inputTJLF.KY_SPECTRUM, gammaJulia[1,:]; label="Julia", title="Growth Rate",linestyle=:dash))
+end

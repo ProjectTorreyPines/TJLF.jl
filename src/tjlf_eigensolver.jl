@@ -1,10 +1,28 @@
-using Revise
+const l2 = ReentrantLock()
+"""
+    function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,aveGrad::AveGrad{T},aveGradB::AveGradB{T},nbasis::Int, ky::T,amat::Matrix{K},bmat::Matrix{K},ky_index::Int) where T<:Real where K<:Complex
+
+parameters:
+    inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
+    ave::Ave{T}                         - structs created in tjlf_matrix.jl
+    nbasis::Int                         - used to determine size of the matrix
+    ky::T                               - current ky value
+    amat/bmat::Matrix{K}                - matrix to be populated
+    ky_index::Int                       - index used for multithreading
+
+outputs:
+    eigenvalues::Complex                - eigenvalues of the matrices
+
+description:
+    uses the structs calculated in tjlf_matrix.jl to populate matrix amat and bmat, solves the generalized eigenvalue problem for only the eigenvalues, returns those eigenvalues
+"""
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
+                        aveGrad::AveGrad{T},aveGradB::AveGradB{T},
                         nbasis::Int, ky::T,
-                        amat::Matrix{K},bmat::Matrix{K};
-                        ky_index::Int=-1)::Tuple{Vector{K},Matrix{K}} where T<:Real where K<:Complex
+                        amat::Matrix{K},bmat::Matrix{K},
+                        ky_index::Int) where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -28,7 +46,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     vs2 = √(taus[2] / mass[2])
     vs1 = √(taus[1] / mass[1])
 
-    width_in = inputs.WIDTH
+    width_in = inputs.WIDTH_SPECTRUM[ky_index]
     use_bpar_in = inputs.USE_BPAR
     use_bper_in = inputs.USE_BPER
     vpar_model_in = inputs.VPAR_MODEL
@@ -218,17 +236,17 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     vb10_i = uv_constants.vb[20]
 
     # GLF parallel closure coefficients
-    bpar_HP = 3 + (32 - 9π)/(3π - 8)
-    bper_DH = 1
-    dper_DH = √(π/2)
-    dpar_HP = 2*√(2π)/(3π - 8)
+    bpar_HP = 3.0 + (32.0 - 9.0π)/(3.0π - 8.0)
+    bper_DH = 1.0
+    dper_DH = √(π/2.0)
+    dpar_HP = 2.0*√(2.0π)/(3.0π - 8.0)
 
     b1 = bpar_HP
     d1 = dpar_HP
     b3 = bper_DH
     d3 = dper_DH
-    b33 = (b1 - b3)/3
-    d33 = (d1 - d3)/3
+    b33 = (b1 - b3)/3.0
+    d33 = (d1 - d3)/3.0
 
     # include R(theta)/R0 factor like gyro convetions. Note that sign_Bt_in is in ave_c_tor_par
     vpar_shear = Vector{Float64}(undef, ns)
@@ -309,7 +327,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         xnu_bndry = (1.0 - ft2)*xnu_a*xnu_b
 
         xnu_n_b     = xnu_factor_in*xnu_bndry*xnu_p1_1
-        xnu_p3_b    =  xnu_n_b
+        xnu_p3_b    = xnu_n_b
         xnu_p1_b    = xnu_n_b
         xnu_u_b     = xnu_factor_in*xnu_bndry*xnu_q1_q1_1
         xnu_q3_b    = xnu_u_b
@@ -324,7 +342,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
     cnuei = 0.0
     if(xnu_model>=2) cnuei = xnue_s end
-    kparvthe = abs(k_par0)*vs1/√(2)
+    kparvthe = abs(k_par0)*vs1/√(2.0)
     kparvthe = max(kparvthe,1.0E-10)
 
     #*************************************************************
@@ -740,13 +758,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         gradhr11p1 = 0.0
                         gradhr13p1 = 0.0
                     else
-                        error("NOT IMPLEMENTED YET -DSUN")
-                        gradhp1 = linsker*ave_gradhp1p0[is,ib,jb]
-                        gradhr11 = linsker*ave_gradhr11p0[is,ib,jb]
-                        gradhr13 = linsker*ave_gradhr13p0[is,ib,jb]
-                        gradhp1p1 = linsker*ave_gradhp1p1[is,ib,jb]
-                        gradhr11p1 = linsker*ave_gradhr11p1[is,ib,jb]
-                        gradhr13p1 = linsker*ave_gradhr13p1[is,ib,jb]
+                        @warn ("NOT TESTED eigensolver.jl ln 744")
+                        gradhp1 = linsker*aveGrad.gradhp1p0[is,ib,jb]
+                        gradhr11 = linsker*aveGrad.gradhr11p0[is,ib,jb]
+                        gradhr13 = linsker*aveGrad.gradhr13p0[is,ib,jb]
+                        gradhp1p1 = linsker*aveGrad.gradhp1p1[is,ib,jb]
+                        gradhr11p1 = linsker*aveGrad.gradhr11p1[is,ib,jb]
+                        gradhr13p1 = linsker*aveGrad.gradhr13p1[is,ib,jb]
                     end
 
                     if(nroot>6)
@@ -902,13 +920,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradgr11p1=0.0
                             gradgr13p1=0.0
                         else
-                            error("not implemented yet")
-                            gradgp1 = linsker*ave_gradgp1p0[is,ib,jb]
-                            gradgr11 = linsker*ave_gradgr11p0[is,ib,jb]
-                            gradgr13 = linsker*ave_gradgr13p0[is,ib,jb]
-                            gradgp1p1 = linsker*ave_gradgp1p1[is,ib,jb]
-                            gradgr11p1 = linsker*ave_gradgr11p1[is,ib,jb]
-                            gradgr13p1 = linsker*ave_gradgr13p1[is,ib,jb]
+                            @warn "NOT TESTED eigensolve.jl ln 906"
+                            gradgp1 = linsker*aveGrad.gradgp1p0[is,ib,jb]
+                            gradgr11 = linsker*aveGrad.gradgr11p0[is,ib,jb]
+                            gradgr13 = linsker*aveGrad.gradgr13p0[is,ib,jb]
+                            gradgp1p1 = linsker*aveGrad.gradgp1p1[is,ib,jb]
+                            gradgr11p1 = linsker*aveGrad.gradgr11p1[is,ib,jb]
+                            gradgr13p1 = linsker*aveGrad.gradgr13p1[is,ib,jb]
                         end
                     end  # nroot>6
 
@@ -946,25 +964,25 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradBgu33=0.0
                         end
                     else
-                        error("not implemented")
-                        gradB = gradB1*ave.gradB[ib,jb]
-                        gradBhp1=gradB1*ave_gradBhp1[is,ib,jb]
-                        gradBhp3=gradB1*ave_gradBhp3[is,ib,jb]
-                        gradBhr11=gradB1*ave_gradBhr11[is,ib,jb]
-                        gradBhr13=gradB1*ave_gradBhr13[is,ib,jb]
-                        gradBhr33=gradB1*ave_gradBhr33[is,ib,jb]
-                        gradBhu1=gradB1*ave_gradBhu1[is,ib,jb]
-                        gradBhu3=gradB1*ave_gradBhu3[is,ib,jb]
-                        gradBhu33=gradB1*ave_gradBhu33[is,ib,jb]
+                        @warn "NOT TESTED eigensolve.jl ln 950"
+                        gradB = gradB1*aveGradB.gradB[ib,jb]
+                        gradBhp1=gradB1*aveGradB.gradBhp1[is,ib,jb]
+                        gradBhp3=gradB1*aveGradB.gradBhp3[is,ib,jb]
+                        gradBhr11=gradB1*aveGradB.gradBhr11[is,ib,jb]
+                        gradBhr13=gradB1*aveGradB.gradBhr13[is,ib,jb]
+                        gradBhr33=gradB1*aveGradB.gradBhr33[is,ib,jb]
+                        gradBhu1=gradB1*aveGradB.gradBhu1[is,ib,jb]
+                        gradBhu3=gradB1*aveGradB.gradBhu3[is,ib,jb]
+                        gradBhu33=gradB1*aveGradB.gradBhu33[is,ib,jb]
                         if(nroot>6)
-                            gradBgp1=gradB1*ave_gradBgp1[is,ib,jb]
-                            gradBgp3=gradB1*ave_gradBgp3[is,ib,jb]
-                            gradBgr11=gradB1*ave_gradBgr11[is,ib,jb]
-                            gradBgr13=gradB1*ave_gradBgr13[is,ib,jb]
-                            gradBgr33=gradB1*ave_gradBgr33[is,ib,jb]
-                            gradBgu1=gradB1*ave_gradBgu1[is,ib,jb]
-                            gradBgu3=gradB1*ave_gradBgu3[is,ib,jb]
-                            gradBgu33=gradB1*ave_gradBgu33[is,ib,jb]
+                            gradBgp1=gradB1*aveGradB.gradBgp1[is,ib,jb]
+                            gradBgp3=gradB1*aveGradB.gradBgp3[is,ib,jb]
+                            gradBgr11=gradB1*aveGradB.gradBgr11[is,ib,jb]
+                            gradBgr13=gradB1*aveGradB.gradBgr13[is,ib,jb]
+                            gradBgr33=gradB1*aveGradB.gradBgr33[is,ib,jb]
+                            gradBgu1=gradB1*aveGradB.gradBgu1[is,ib,jb]
+                            gradBgu3=gradB1*aveGradB.gradBgu3[is,ib,jb]
+                            gradBgu33=gradB1*aveGradB.gradBgu33[is,ib,jb]
                         end
                     end
 
@@ -2671,18 +2689,21 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # find the eigenvalues and eigenvectors
     #*************************************************************
 
-    ### only calculate the eigenvalues
-    if !inputs.FIND_WIDTH && ky_index != -1
-        sigma = inputs.GAMMA_SPECTRUM[ky_index]
+    # calculate eigenvalues/eigenvectors
+    if !inputs.FIND_EIGEN && !isnan(inputs.EIGEN_SPECTRUM[1])
+        sigma = inputs.EIGEN_SPECTRUM[ky_index]
         if sigma != 0.0 
             try
-                λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LR,sigma=sigma,maxiter=50)
+                Threads.lock(l2)
+                λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LM,sigma=sigma,maxiter=50)
+                Threads.unlock(l2)
                 return λ, v
             catch
-                @warn "can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index])"
+                @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
             end
+        else
+            @warn "no growth rate intial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
         end
-        @warn "no initial guess for ky = $(inputs.KY_SPECTRUM[ky_index])"
     end
 
     if inputs.IFLUX
@@ -2730,7 +2751,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # bmat = sparse(bmat)
     # amat = amat + diagm(ones(size(A, 1)).*im)
     # bmat = bmat + diagm(ones(size(A, 1)).*im)
-    # λ, _ = eigs(sparse(amat),sparse(bmat),nev=2, which=:LR, tol = 0.1)
+    # λ, _ = eigs(sparse(amat),sparse(bmat),nev=2, which=:LM, tol = 0.1)
     # return λ
 
 end

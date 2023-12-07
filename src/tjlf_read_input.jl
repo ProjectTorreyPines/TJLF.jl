@@ -10,19 +10,15 @@ return:
 description:
     parse through a input.tglf file found in baseDirectory parameter, creates a inputTJLF struct and populates the fields
     based off the values in the file. has some check to make sure the file is written properly
-
 """
-function readInput(baseDirectory::String)::InputTJLF
+function readInput(filename::String)::InputTJLF
     # gets the input.tglf file
-    fileDirectory = joinpath(baseDirectory, "input.tglf")
-    lines = readlines(fileDirectory)
+    lines = readlines(filename)
 
     # finds the # of species to create Vectors later
     ns = -1
     nky = -1
     kygrid_model = -1
-    nwidth = -1
-    nmodes = -1
     for line in lines[1:length(lines)]
         line = split(line, "\n")
         line = split(line[1],"=")
@@ -32,8 +28,6 @@ function readInput(baseDirectory::String)::InputTJLF
             nky = parse(Int, strip(line[2]))
         elseif line[1] == "KYGRID_MODEL"
             kygrid_model = parse(Int, strip(line[2]))
-        elseif line[1] == "NWIDTH"
-            nwidth = parse(Int, strip(line[2]))
         end
     end
     # make sure ns is defined
@@ -41,13 +35,14 @@ function readInput(baseDirectory::String)::InputTJLF
     @assert nky!=-1 "did not find NKY"
     @assert kygrid_model!=-1 "did not find KYGRID_MODEL"
     @assert kygrid_model>=0 && kygrid_model <=5 "KYGRID_MODEL must be Int between 0 and 5"
-
     nky = get_ky_spectrum_size(nky,kygrid_model)
-    ############# nky should equal NWIDTH ##################
-    @assert nky == nwidth "ky spectrum size should equal width spectrum size"
+
+
 
     # create InputTJLF struct
-    inputTJLF = InputTJLF{Float64}(ns,nwidth)
+    inputTJLF = InputTJLF{Float64}(ns,nky)
+    # fields that aren't used or implemented
+    deletedFields = ["USE_TRANSPORT_MODEL","GEOMETRY_FLAG","B_MODEL_SA","FT_MODEL_SA","VPAR_SHEAR_MODEL","WRITE_WAVEFUNCTION_FLAG","VTS_SHEAR","VNS_SHEAR","VEXB","RMIN_SA","RMAJ_SA","Q_SA","SHAT_SA","ALPHA_SA","XWELL_SA","THETA0_SA","NN_MAX_ERROR"]
 
     # go through each line of the input.tglf file
     for line in lines[1:length(lines)]
@@ -58,11 +53,14 @@ function readInput(baseDirectory::String)::InputTJLF
         line = split(line, "\n")
         line = split(line[1],"=")
 
+        if line[1] ∈ deletedFields continue end 
+
         # check for the species field since they are all named [field name]_[species number]
         check = match(r"_\d",line[1])
         
         if check !== nothing # is a species field
 
+            if replace(line[1], r"_\d"=>"") ∈ deletedFields continue end
             # alternative way of getting field nad species number
             # temp = split(line[1],"_")
             # get field and species number
@@ -72,6 +70,11 @@ function readInput(baseDirectory::String)::InputTJLF
             if parse(Int,speciesIndex) > ns continue end
             # set the value to the species field vectors
             getfield(inputTJLF, speciesField)[parse(Int,speciesIndex)] = parse(Float64,strip(line[2], ['\'','.',' ']))
+
+        # species vector as a vector
+        elseif line[2][1] == '['
+            field = Symbol(line[1])
+            getfield(inputTJLF, field) .= [parse(Float64,item) for item in split(line[2][2:end-1],",")]
         
         else # if not for the species vector
 
@@ -122,7 +125,8 @@ function readInput(baseDirectory::String)::InputTJLF
 
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
     inputTJLF.KY_SPECTRUM .= NaN
-    inputTJLF.GAMMA_SPECTRUM .= NaN
+    inputTJLF.EIGEN_SPECTRUM .= NaN
+    inputTJLF.EIGEN_SPECTRUM2 .= NaN
 
     # double check struct is properly populated
     field_names = fieldnames(InputTJLF)
@@ -131,7 +135,7 @@ function readInput(baseDirectory::String)::InputTJLF
         if typeof(field_value)<:Real
             @assert !isnan(field_value) && !ismissing(field_value) "Did not properly populate inputTJLF for $field_name"
         end
-        if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:GAMMA_SPECTRUM
+        if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:EIGEN_SPECTRUM && field_name!=:EIGEN_SPECTRUM2
             for val in field_value
                 @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
             end

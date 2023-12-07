@@ -303,7 +303,7 @@ for dir_name in tests
 
         # inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
         # inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
-        # inputTJLF2.GAMMA_SPECTRUM .= eigenvalue[inputTJLF.NMODES,:,1]
+        # inputTJLF2.EIGEN_SPECTRUM .= eigenvalue[inputTJLF.NMODES,:,1]
         # inputTJLF2.FIND_WIDTH = false
 
         # fluxes2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)

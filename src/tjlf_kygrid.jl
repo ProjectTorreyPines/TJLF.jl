@@ -1,13 +1,12 @@
 """
-    function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Tuple{Vector{T}, Int} where T<:Real
+    function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     grad_r0::T                          - value from SaturationParameters struct from tjlf_geometry.jl
 
 outputs:
-    ky_spectrum                         - array of floats that form the ky grid
-    nky                                 - size of the ky_spectrum array
+    ky_spectrum::Vector{T}              - array of floats that form the ky grid
 
 description:
     the input file provides the type of kygrid to create (values 1 to 5) and this function creates it accordingly
@@ -19,7 +18,11 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
     nky_in = inputs.NKY
     spectrum_type = inputs.KYGRID_MODEL
     rho_e = √(inputs.TAUS[1]*inputs.MASS[1])/ abs(inputs.ZS[1])
-    rho_ion = √(inputs.TAUS[2]*inputs.MASS[2])/ abs(inputs.ZS[2])
+    if inputs.USE_AVE_ION_GRID
+        rho_ion = sum(√(inputs.TAUS[2:end].*inputs.MASS[2:end])./ abs.(inputs.ZS[2:end]))
+    else
+        rho_ion = √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
+    end
 
     ### value from modules.f90
     ky_min = 0.05

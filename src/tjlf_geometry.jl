@@ -1,18 +1,18 @@
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T}, small::T=0.00000001) where T<:Real
+    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};small::T=0.00000001)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
-    gamma_matrix::Matrix{T}             - growth rate eigenvalues (mode, ky)
+    gamma_matrix::Vector{T}             - growth rate eigenvalues for each mode
 
 outputs:
-    kx0_e                               - value of kx0_e given the gamma value
+    kx0_e                               - value of kx0_e for tge given gamma value
 
 description:
-    calculate kx0_e given the growthrate during second pass of TM
+    calculate kx0_e (spectral shift) given the growthrate used for the second pass of TM
 """
-function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T},
+function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};
     small::T=0.00000001) where T<:Real
     sign_IT = inputs.SIGN_IT
     vexb_shear = inputs.VEXB_SHEAR
@@ -29,8 +29,6 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
 
     grad_r0 = satParams.grad_r0
     B_geo0 = satParams.B_geo[1]
-
-    # kx0 = kx0_loc/ky # note that kx0 is kx/ky
 
     # generalized quench rule kx0 shift
     most_unstable_gamma = gamma_matrix[1, :]
@@ -68,44 +66,37 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         end
 
         kx0_e = ifelse.(abs.(kx0_e) .> a0 , a0.*kx0_e./abs.(kx0_e) , kx0_e)
-        kx0_e = ifelse.(isnan.(kx0_e) , 0.0, kx0_e)
-        kx0_e = ifelse.(isinf.(kx0_e) , 0.0, kx0_e)
+        kx0_e = ifelse.(isnan.(kx0_e) .|| isinf.(kx0_e), 0.0 , kx0_e)
 
-        #### not in the Python
-        # if(units_in=="GYRO")
-        #     kx0 = sign_Bt_in*kx0_e # cancel the sign_Bt_in factor in kxx below
-        # else
-        #     if(sat_rule_in.eq.1)kx0 = sign_Bt_in*kx0_e/(2.1)end  # goes with xnu_model=2
-        #     if(sat_rule_in.eq.2 .OR. sat_rule_in.eq.3)kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out^2 end     # goes with xnu_model=3, the factor 0.7/grad_r0_out^2 is needed for stress_tor
-        #     # note kx0 = alpha_e*gamma_ExB_HB/gamma Hahm - Burrell form of gamma_ExB
-        #     # The 2.1 effectively increases ay0 & ax0 and reduces toroidal stress to agree with CGYRO
-        # end
     end
 
     return kx0_e
 end
 
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, kx0_e::T=0.0,mts::T=5.0, ms::Int=128, small::T=0.00000001)
+    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, ky_index::Int; kx0_e::T=NaN, ms::Int=128)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
     ky::T                               - ky value
+    ky_index::Int                       - index used for multithreading
+    kx0_e::T=NaN                        - spectral shift provided for second pass 
 
 outputs:
     OutputGeometry{Float64}()           - OutputGeometry struct for different WIDTHS value
 
 description:
-    create the OutputGeometry struct for the specific WIDTHS value
+    create the OutputGeometry struct for the specific WIDTHS value used to calculate Ave structs (tjlf_matrix.jl) used in eigenmatrix population
 """
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T},
-    ky::T, kx0_e::T=0.0,
-    mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+    ky::T, ky_index::Int;
+    kx0_e::T=NaN, ms::Int=128) where T<:Real
 
-    width_in = inputs.WIDTH
+    width_in = inputs.WIDTH_SPECTRUM[ky_index]
     sat_rule_in = inputs.SAT_RULE
+    alpha_quench_in = inputs.ALPHA_QUENCH
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
@@ -139,11 +130,13 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     f = satParams.Bt0 * inputs.RMAJ_LOC # Bt0_out = f/rmaj_input defined
 
     kx0 = inputs.KX0_LOC/ky
-    if(inputs.UNITS=="GYRO")
-        kx0 = sign_Bt_in*kx0_e
-    else
-       if(sat_rule_in==1) kx0 = sign_Bt_in*kx0_e/(2.1) end
-       if(sat_rule_in==2 || sat_rule_in==3) kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out^2 end
+    if(alpha_quench_in==0.0 && !isnan(kx0_e))
+        if(inputs.UNITS=="GYRO")
+            kx0 = sign_Bt_in*kx0_e
+        else
+            if(sat_rule_in==1) kx0 = sign_Bt_in*kx0_e/(2.1) end
+            if(sat_rule_in==2 || sat_rule_in==3) kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out^2 end
+        end
     end
 
     x = outHermite.x
@@ -356,7 +349,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         end
     end
 
-    return OutputGeometry{T}(0, fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
+    return OutputGeometry{T}(kx0_e, fts, kxx,wdx,wdpx,b0x,b2x,cx_tor_par,cx_tor_per,cx_par_par)
 
 end
 
@@ -367,7 +360,7 @@ end
 
 
 """
-    function get_sat_params(inputs::InputTJLF, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+    function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -379,7 +372,7 @@ description:
     compute the geometric coefficients on the x-grid
 """
 #### LINES 220-326, 478 in tglf_geometry.f90
-function get_sat_params(inputs::InputTJLF{T}, mts::T=5.0, ms::Int=128, small::T=0.00000001) where T<:Real
+function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
@@ -482,7 +475,7 @@ end
 
 
 
-function mercier_luc(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128, small::Float64=0.00000001) where T<:Real
+function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
     #-------------------------------------------
     # the following must be defined from a previous call to one of the
@@ -725,7 +718,7 @@ function mercier_luc(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128, small:
 end
 
 
-function miller_geo(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128)  where T<:Real
+function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where T<:Real
 
     rmin_loc = inputs.RMIN_LOC
     rmaj_loc = inputs.RMAJ_LOC
@@ -841,7 +834,8 @@ function miller_geo(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128)  where 
     # Loop to compute most geometrical quantities needed for Mercie-Luc expansion
     # R, Z, R*Bp on flux surface s-grid
     B_unit_out = zeros(T, ms + 1)
-    # grad_r_out = zeros(T, ms + 1)
+    # grad_r_out = zeros(Float64, ms + 1)
+    B_unit = NaN
     for m in 1:ms+1
         theta = t_s[m]
         arg_r = theta + x_delta*sin(theta)
@@ -865,10 +859,10 @@ function miller_geo(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128)  where 
 
         grad_r = abs(l_t/det)
         if m==1
-            global B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
-            if(drmindx_loc==1.0) global B_unit=1.0 end # Waltz-Miller convention
+            B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
+            if(drmindx_loc==1.0) B_unit=1.0 end # Waltz-Miller convention
         end
-        B_unit_out[m] = B_unit
+        
         # grad_r_out[m] = grad_r
 
         # changes q_s to q_loc
@@ -877,6 +871,7 @@ function miller_geo(inputs::InputTJLF{T}, mts::Float64=5.0, ms::Int=128)  where 
         q_prime_s = q_prime_s / B_unit
 
     end
+    B_unit_out .= B_unit
 
     return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, ds, t_s
 end

@@ -21,11 +21,11 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     ky_spect = inputs.KY_SPECTRUM
     alpha_zf = inputs.ALPHA_ZF
 
-    zs_2 = inputs.ZS[2]
-    taus_2 = inputs.TAUS[2]
-    mass_2 = inputs.MASS[2]
-
-    rho_ion =  √(taus_2*mass_2) / abs(zs_2)
+    if inputs.USE_AVE_ION_GRID
+        rho_ion = sum(√(inputs.TAUS[2:end].*inputs.MASS[2:end])./ abs.(inputs.ZS[2:end]))
+    else
+        rho_ion = √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
+    end
 
     # find the local maximum of most_unstable_gamma/ky_spect with the largest most_unstable_gamma/ky_spect^2
     kycut = 0.8/rho_ion
@@ -237,7 +237,7 @@ function intensity_sat(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
-    QL_weights::Array{T,5}, ### taken from the output file
+    QL_weights::Array{T,5},
     expsub::T=2.0,
     return_phi_params::Bool=false) where T<:Real
 
@@ -628,7 +628,8 @@ function intensity_sat(
                 if(ky0>kyetg) gammaeff = gammaeff * √(ky0/kyetg) end
 
                 field_spectrum_out[j,i] = measure*cnorm*((gammaeff/(kx_width*ky0))/(1.0+ay*kx^2))^2
-                                if(units_in != "GYRO")
+                                
+                if(units_in != "GYRO")
                     field_spectrum_out[j,i] = sat_geo_factor*field_spectrum_out[j,i]
                 end
                 gammaeff_out[j, i] = gammaeff
@@ -761,7 +762,7 @@ end
 
 
 """
-    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Matrix{T},QL::Array{T,5},etg_fact::T=1.25,c0::T=32.48,c1::T=0.534,exp1::T=1.547,cx_cy::T=0.56,alpha_x::T=1.15)where T <: Real
+    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Matrix{T},QL::Array{T,5})where T <: Real
 
 parameters:
     inputs              - InputTJLF struct constructed using the input.TGLF file
@@ -781,13 +782,7 @@ function sum_ky_spectrum(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
-    QL_weights::Array{T,5},
-    etg_fact::T=1.25,
-    c0::T=32.48,
-    c1::T=0.534,
-    exp1::T=1.547,
-    cx_cy::T=0.56,
-    alpha_x::T=1.15
+    QL_weights::Array{T,5}
 )where T <: Real
 
     sat_rule_in = inputs.SAT_RULE

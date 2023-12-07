@@ -137,7 +137,6 @@ Base.@kwdef mutable struct InputTGLF
     _Qgb::Union{Float64,Missing} = missing
 
     # missing
-    USE_TRANSPORT_MODEL::Bool = true
     USE_BISECTION::Bool = true
     USE_INBOARD_DETRAPPED::Bool = false
     NEW_EIKONAL::Bool = true
@@ -145,38 +144,13 @@ Base.@kwdef mutable struct InputTGLF
     IFLUX::Bool = true
     ADIABATIC_ELEC::Bool = false
 
-    GEOMETRY_FLAG::Int = 1
     NWIDTH::Int = 21
     NXGRID::Int = 16
     VPAR_MODEL::Int = 0
-    FT_MODEL_SA::Int = 1
     VPAR_SHEAR_MODEL::Int = 1
     IBRANCH::Int = -1
-    WRITE_WAVEFUNCTION_FLAG::Int = 0
-
-    VNS_SHEAR_1::Float64 = 0.0
-    VNS_SHEAR_2::Float64 = 0.0
-    VNS_SHEAR_3::Float64 = 0.0
-    VNS_SHEAR_4::Float64 = 0.0
-    VNS_SHEAR_5::Float64 = 0.0
-    VNS_SHEAR_6::Float64 = 0.0
-    VNS_SHEAR_7::Float64 = 0.0
-    VNS_SHEAR_8::Float64 = 0.0
-    VNS_SHEAR_9::Float64 = 0.0
-    VNS_SHEAR_10::Float64 = 0.0
-    VTS_SHEAR_1::Float64 = 0.0
-    VTS_SHEAR_2::Float64 = 0.0
-    VTS_SHEAR_3::Float64 = 0.0
-    VTS_SHEAR_4::Float64 = 0.0
-    VTS_SHEAR_5::Float64 = 0.0
-    VTS_SHEAR_6::Float64 = 0.0
-    VTS_SHEAR_7::Float64 = 0.0
-    VTS_SHEAR_8::Float64 = 0.0
-    VTS_SHEAR_9::Float64 = 0.0
-    VTS_SHEAR_10::Float64 = 0.0
 
     KY::Float64 = 0.3
-    VEXB::Float64 = 0.0
     ALPHA_E::Float64 = 1.0
     ALPHA_P::Float64 = 1.0
     XNU_FACTOR::Float64 = 1.0
@@ -186,11 +160,6 @@ Base.@kwdef mutable struct InputTGLF
     WIDTH_MIN::Float64 = 0.3
     BETA_LOC::Float64 = 1.0
     KX0_LOC::Float64 = 1.0
-    RMIN_SA::Float64 = 0.5
-    RMAJ_SA::Float64 = 3.0
-    Q_SA::Float64 = 2.0
-    SHAT_SA::Float64 = 1.0
-    ALPHA_SA::Float64 = 0.0
     PARK::Float64 = 1.0
     GHAT::Float64 = 1.0
     GCHAT::Float64 = 1.0
@@ -199,7 +168,9 @@ Base.@kwdef mutable struct InputTGLF
     GRADB_FACTOR::Float64 = 0.0
     FILTER::Float64 = 2.0
     THETA_TRAPPED::Float64 = 0.7
-    NN_MAX_ERROR::Float64 = -1.0
+    ETG_FACTOR::Float64 = 1.25
+    DAMP_PSI::Float64 = 0.0
+    DAMP_SIG::Float64 = 0.0
 
 end
 
@@ -218,19 +189,17 @@ mutable struct InputTJLF{T<:Real}
 
     UNITS::String
 
-    USE_TRANSPORT_MODEL::Union{Bool,Missing}
     USE_BPER::Union{Bool,Missing}
     USE_BPAR::Union{Bool,Missing}
     USE_MHD_RULE::Union{Bool,Missing}
     USE_BISECTION::Union{Bool,Missing}
     USE_INBOARD_DETRAPPED::Union{Bool,Missing}
-    USE_AVE_ION_GRID::Union{Bool,Missing} # not used?
-    NEW_EIKONAL::Union{Bool,Missing}
+    USE_AVE_ION_GRID::Union{Bool,Missing} ## have not seen be used
+    NEW_EIKONAL::Union{Bool,Missing} ## this seems useless, the flag has to be both true and false to do anything
     FIND_WIDTH::Union{Bool,Missing}
     IFLUX::Union{Bool,Missing}
     ADIABATIC_ELEC::Union{Bool,Missing}
 
-    GEOMETRY_FLAG::Union{Int,Missing} # used to specify geometry type
     SAT_RULE::Union{Int,Missing}
     NS::Union{Int,Missing}
     NMODES::Union{Int,Missing}
@@ -242,11 +211,7 @@ mutable struct InputTJLF{T<:Real}
     KYGRID_MODEL::Union{Int,Missing}
     XNU_MODEL::Union{Int,Missing}
     VPAR_MODEL::Union{Int,Missing}
-    B_MODEL_SA::Union{Int,Missing} # used for SA geometry
-    FT_MODEL_SA::Union{Int,Missing} # used for SA geometry
-    VPAR_SHEAR_MODEL::Union{Int,Missing} # commented out in TGLF
     IBRANCH::Union{Int,Missing}
-    WRITE_WAVEFUNCTION_FLAG::Union{Int,Missing} 
 
     ZS::Vector{T}
     MASS::Vector{T}
@@ -256,24 +221,24 @@ mutable struct InputTJLF{T<:Real}
     AS::Vector{T}
     VPAR::Vector{T}
     VPAR_SHEAR::Vector{T}
-    VNS_SHEAR::Vector{T}
-    VTS_SHEAR::Vector{T}
 
+    # NOT IN TGLF
     WIDTH_SPECTRUM::Vector{T}
     KY_SPECTRUM::Vector{T}
-    GAMMA_SPECTRUM::Vector{T}
+    EIGEN_SPECTRUM::Vector{ComplexF64}
+    FIND_EIGEN::Bool
+    # NOT IN TGLF
 
     SIGN_BT::Int
     SIGN_IT::Int
     KY::T
 
-    VEXB::T
     VEXB_SHEAR::T
     BETAE::T
     XNUE::T
     ZEFF::T
     DEBYE::T
-    
+
     ALPHA_MACH::T
     ALPHA_E::T
     ALPHA_P::T
@@ -283,7 +248,7 @@ mutable struct InputTJLF{T<:Real}
     DEBYE_FACTOR::T
     ETG_FACTOR::T
     RLNP_CUTOFF::T
-    
+
     WIDTH::T
     WIDTH_MIN::T
 
@@ -304,13 +269,6 @@ mutable struct InputTJLF{T<:Real}
     Q_PRIME_LOC::T
     BETA_LOC::T
     KX0_LOC::T
-    RMIN_SA::T
-    RMAJ_SA::T
-    Q_SA::T
-    SHAT_SA::T
-    ALPHA_SA::T
-    XWELL_SA::T
-    THETA0_SA::T
 
     DAMP_PSI::T
     DAMP_SIG::T
@@ -323,61 +281,58 @@ mutable struct InputTJLF{T<:Real}
     GRADB_FACTOR::T
     FILTER::T
     THETA_TRAPPED::T
-    NN_MAX_ERROR::T
 
-
-    function InputTJLF{T}(ns::Int,nky::Int) where T<:Real
+    function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
         new("",
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
-        fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN,(nky)),
+        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+        fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
+        fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN*im,(nky)),true,
         0,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
+        NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,NaN,NaN,NaN,NaN,)
+        NaN,NaN,NaN,NaN,NaN,NaN,NaN,)
     end
 
     # create InputTJLF struct given a InputTGLF struct
-    function InputTJLF{T}(inputTGLF::InputTGLF) where T<:Real
+    function InputTJLF{T}(inputTGLF::InputTGLF) where {T<:Real}
 
-        inputTJLF = InputTJLF{T}(inputTGLF.NS,inputTGLF.NWIDTH)
+        nky = get_ky_spectrum_size(inputTGLF.NKY,inputTGLF.KYGRID_MODEL)
+        inputTJLF = InputTJLF{T}(inputTGLF.NS, nky)
 
         for fieldname in fieldnames(inputTGLF)
-            if occursin(r"\d",String(fieldname)) || fieldname==:_Qgb # species parameter
+            if occursin(r"\d", String(fieldname)) || fieldname == :_Qgb # species parameter
                 continue
             end
-            setfield!(inputTJLF,fieldname,getfield(inputTGLF,fieldname))
+            setfield!(inputTJLF, fieldname, getfield(inputTGLF, fieldname))
         end
         for i in 1:inputTGLF.NS
-            inputTJLF.ZS[i] = getfield(inputTGLF,Symbol("ZS_",i))
-            inputTJLF.AS[i] = getfield(inputTGLF,Symbol("AS_",i))
-            inputTJLF.MASS[i] = getfield(inputTGLF,Symbol("MASS_",i))
-            inputTJLF.RLNS[i] = getfield(inputTGLF,Symbol("RLNS_",i))
-            inputTJLF.RLTS[i] = getfield(inputTGLF,Symbol("RLTS_",i))
-            inputTJLF.TAUS[i] = getfield(inputTGLF,Symbol("TAUS_",i))
-            inputTJLF.VPAR[i] = getfield(inputTGLF,Symbol("VPAR_",i))
-            inputTJLF.VPAR_SHEAR[i] = getfield(inputTGLF,Symbol("VPAR_SHEAR_",i))
-            inputTJLF.VNS_SHEAR[i] = getfield(inputTGLF,Symbol("VNS_SHEAR_",i))
-            inputTJLF.VTS_SHEAR[i] = getfield(inputTGLF,Symbol("VTS_SHEAR_",i))
+            inputTJLF.ZS[i] = getfield(inputTGLF, Symbol("ZS_", i))
+            inputTJLF.AS[i] = getfield(inputTGLF, Symbol("AS_", i))
+            inputTJLF.MASS[i] = getfield(inputTGLF, Symbol("MASS_", i))
+            inputTJLF.RLNS[i] = getfield(inputTGLF, Symbol("RLNS_", i))
+            inputTJLF.RLTS[i] = getfield(inputTGLF, Symbol("RLTS_", i))
+            inputTJLF.TAUS[i] = getfield(inputTGLF, Symbol("TAUS_", i))
+            inputTJLF.VPAR[i] = getfield(inputTGLF, Symbol("VPAR_", i))
+            inputTJLF.VPAR_SHEAR[i] = getfield(inputTGLF, Symbol("VPAR_SHEAR_", i))
         end
         inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
 
         field_names = fieldnames(InputTJLF)
         for field_name in field_names
             field_value = getfield(inputTJLF, field_name)
-            if typeof(field_value)<:Real
-                @assert !isnan(field_value) && !ismissing(field_value) "Did not properly populate inputTJLF for $field_name"
+            if typeof(field_value) <: Missing || typeof(field_value) <: Real
+                @assert !ismissing(field_value) || !isnan(field_value) "Did not properly populate inputTJLF for $field_name"
             end
-            if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:GAMMA_SPECTRUM
+
+            if typeof(field_value) <: Vector && field_name != :KY_SPECTRUM && field_name != :EIGEN_SPECTRUM
                 for val in field_value
                     @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
                 end
             end
         end
-    
+
         return inputTJLF
     end
 end
@@ -388,15 +343,14 @@ end
 ##########################################################
 
 struct OutputHermite{T<:Real}
-
     x::Vector{T}
     wx::Vector{T}
     h::Matrix{T}
-    _dvec::Vector{T}
+    _dvec::Matrix{T}
 end
 
-function OutputHermite(x, wx, h)
-    _dvec = similar(wx)
+function OutputHermite(x, wx, h, nky::Int)
+    _dvec = Matrix{typeof(wx[1])}(undef, size(wx, 1), nky)
     return OutputHermite(x, wx, h, _dvec)
 end
 
@@ -488,7 +442,7 @@ mutable struct Ave{T<:Real}
     kpar_eff::Array{ComplexF64,3}
     modkpar_eff::Array{ComplexF64,3}
 
-    function Ave{T}(ns::Int, nbasis::Int) where T<:Real
+    function Ave{T}(ns::Int, nbasis::Int) where {T<:Real}
         kx = zeros(T, nbasis, nbasis)
         wdh = zeros(T, nbasis, nbasis)
         modwdh = zeros(T, nbasis, nbasis)
@@ -512,10 +466,10 @@ mutable struct Ave{T<:Real}
 
 
         new(kx,
-        wdh,modwdh,wdg,modwdg,
-        gradB,b0,b0inv,lnB,p0,p0inv,bp,bpinv,
-        c_par_par,c_tor_par,c_tor_per,
-        kpar,modkpar,kpar_eff,modkpar_eff)
+            wdh, modwdh, wdg, modwdg,
+            gradB, b0, b0inv, lnB, p0, p0inv, bp, bpinv,
+            c_par_par, c_tor_par, c_tor_per,
+            kpar, modkpar, kpar_eff, modkpar_eff)
     end
 end
 
@@ -573,7 +527,7 @@ mutable struct AveH{T<:Real}
     hw133bp::Array{T,3}
     hw333bp::Array{T,3}
 
-    function AveH{T}(ns::Int, nbasis::Int) where T<:Real
+    function AveH{T}(ns::Int, nbasis::Int) where {T<:Real}
         hn = zeros(T, ns, nbasis, nbasis)
         hp1 = zeros(T, ns, nbasis, nbasis)
         hp3 = zeros(T, ns, nbasis, nbasis)
@@ -621,12 +575,12 @@ mutable struct AveH{T<:Real}
         hw333bp = zeros(T, ns, nbasis, nbasis)
 
         new(
-            hn,hp1,hp3,hr11,hr13,hr33,hw113,hw133,hw333,
-            ht1,ht3,hu1,hu3,hu33,hu3ht1,hu33ht1,hu3ht3,hu33ht3,
-            hnp0,hp1p0,hp3p0,hr11p0,hr13p0,hr33p0,c_tor_par_hp1p0,c_tor_par_hr11p0,c_tor_par_hr13p0,
-            hnb0,hp1b0,hp3b0,hr11b0,hr13b0,hr33b0,hw113b0,hw133b0,hw333b0,
-            hnbp,hp1bp,hp3bp,hr11bp,hr13bp,hr33bp,hw113bp,hw133bp,hw333bp
-            )
+            hn, hp1, hp3, hr11, hr13, hr33, hw113, hw133, hw333,
+            ht1, ht3, hu1, hu3, hu33, hu3ht1, hu33ht1, hu3ht3, hu33ht3,
+            hnp0, hp1p0, hp3p0, hr11p0, hr13p0, hr33p0, c_tor_par_hp1p0, c_tor_par_hr11p0, c_tor_par_hr13p0,
+            hnb0, hp1b0, hp3b0, hr11b0, hr13b0, hr33b0, hw113b0, hw133b0, hw333b0,
+            hnbp, hp1bp, hp3bp, hr11bp, hr13bp, hr33bp, hw113bp, hw133bp, hw333bp
+        )
     end
 
 end
@@ -666,7 +620,7 @@ mutable struct AveWH{T<:Real}
     wdhr11bp::Array{T,3}
     wdhr13bp::Array{T,3}
 
-    function AveWH{T}(ns::Int, nbasis::Int) where T<:Real
+    function AveWH{T}(ns::Int, nbasis::Int) where {T<:Real}
         wdhp1p0 = zeros(T, ns, nbasis, nbasis)
         wdhr11p0 = zeros(T, ns, nbasis, nbasis)
         wdhr13p0 = zeros(T, ns, nbasis, nbasis)
@@ -699,11 +653,11 @@ mutable struct AveWH{T<:Real}
         wdhr13bp = zeros(T, ns, nbasis, nbasis)
 
         new(
-            wdhp1p0,wdhr11p0,wdhr13p0,wdht1,wdht3,wdhu1,wdhu3,wdhu3ht1,wdhu3ht3,wdhu33,wdhu33ht1,wdhu33ht3,
-            modwdht1,modwdht3,modwdhu1,modwdhu3,modwdhu3ht1,modwdhu3ht3,modwdhu33,modwdhu33ht1,modwdhu33ht3,
-            wdhp1b0,wdhr11b0,wdhr13b0,
-            wdhp1bp,wdhr11bp,wdhr13bp
-            )
+            wdhp1p0, wdhr11p0, wdhr13p0, wdht1, wdht3, wdhu1, wdhu3, wdhu3ht1, wdhu3ht3, wdhu33, wdhu33ht1, wdhu33ht3,
+            modwdht1, modwdht3, modwdhu1, modwdhu3, modwdhu3ht1, modwdhu3ht3, modwdhu33, modwdhu33ht1, modwdhu33ht3,
+            wdhp1b0, wdhr11b0, wdhr13b0,
+            wdhp1bp, wdhr11bp, wdhr13bp
+        )
     end
 
 end
@@ -754,10 +708,10 @@ mutable struct AveKH
         kparhr13bp = zeros(ComplexF64, ns, nbasis, nbasis)
 
         new(
-            kparhnp0,kparhp1p0,kparhp3p0,kparhu1,kparhu3,kparht1,kparht3,modkparhu1,modkparhu3,
-            kparhp1b0,kparhr11b0,kparhr13b0,
-            kparhnbp,kparhp3bp,kparhp1bp,kparhr11bp,kparhr13bp
-            )
+            kparhnp0, kparhp1p0, kparhp3p0, kparhu1, kparhu3, kparht1, kparht3, modkparhu1, modkparhu3,
+            kparhp1b0, kparhr11b0, kparhr13b0,
+            kparhnbp, kparhp3bp, kparhp1bp, kparhr11bp, kparhr13bp
+        )
     end
 end
 
@@ -815,7 +769,7 @@ mutable struct AveG{T<:Real}
     gw133bp::Array{T,3}
     gw333bp::Array{T,3}
 
-    function AveG{T}(ns::Int, nbasis::Int) where T<:Real
+    function AveG{T}(ns::Int, nbasis::Int) where {T<:Real}
         gn = zeros(T, ns, nbasis, nbasis)
         gp1 = zeros(T, ns, nbasis, nbasis)
         gp3 = zeros(T, ns, nbasis, nbasis)
@@ -867,12 +821,12 @@ mutable struct AveG{T<:Real}
         gw333bp = zeros(T, ns, nbasis, nbasis)
 
         new(
-            gn,gp1,gp3,gr11,gr13,gr33,gw113,gw133,gw333,
-            gt1,gt3,gu1,gu3,gu33,gu3gt1,gu3gt3,gu33gt1,gu33gt3,
-            gnp0,gp1p0,gp3p0,gr11p0,gr13p0,gr33p0,c_tor_par_gp1p0,c_tor_par_gr11p0,c_tor_par_gr13p0,
-            gnb0,gp1b0,gp3b0,gr11b0,gr13b0,gr33b0,gw113b0,gw133b0,gw333b0,
-            gnbp,gp1bp,gp3bp,gr11bp,gr13bp,gr33bp,gw113bp,gw133bp,gw333bp
-            )
+            gn, gp1, gp3, gr11, gr13, gr33, gw113, gw133, gw333,
+            gt1, gt3, gu1, gu3, gu33, gu3gt1, gu3gt3, gu33gt1, gu33gt3,
+            gnp0, gp1p0, gp3p0, gr11p0, gr13p0, gr33p0, c_tor_par_gp1p0, c_tor_par_gr11p0, c_tor_par_gr13p0,
+            gnb0, gp1b0, gp3b0, gr11b0, gr13b0, gr33b0, gw113b0, gw133b0, gw333b0,
+            gnbp, gp1bp, gp3bp, gr11bp, gr13bp, gr33bp, gw113bp, gw133bp, gw333bp
+        )
     end
 end
 
@@ -910,7 +864,7 @@ mutable struct AveWG{T<:Real}
     wdgr11bp::Array{T,3}
     wdgr13bp::Array{T,3}
 
-    function AveWG{T}(ns::Int, nbasis::Int) where T<:Real
+    function AveWG{T}(ns::Int, nbasis::Int) where {T<:Real}
         wdgp1p0 = zeros(T, ns, nbasis, nbasis)
         wdgr11p0 = zeros(T, ns, nbasis, nbasis)
         wdgr13p0 = zeros(T, ns, nbasis, nbasis)
@@ -943,11 +897,11 @@ mutable struct AveWG{T<:Real}
         wdgr13bp = zeros(T, ns, nbasis, nbasis)
 
         new(
-            wdgp1p0,wdgr11p0,wdgr13p0,wdgu1,wdgu3,wdgu33,wdgt1,wdgt3,wdgu3gt1,wdgu3gt3,wdgu33gt1,wdgu33gt3,
-            modwdgu1,modwdgu3,modwdgu33,modwdgt1,modwdgt3,modwdgu3gt1,modwdgu3gt3,modwdgu33gt1,modwdgu33gt3,
-            wdgp1b0,wdgr11b0,wdgr13b0,
-            wdgp1bp,wdgr11bp,wdgr13bp
-            )
+            wdgp1p0, wdgr11p0, wdgr13p0, wdgu1, wdgu3, wdgu33, wdgt1, wdgt3, wdgu3gt1, wdgu3gt3, wdgu33gt1, wdgu33gt3,
+            modwdgu1, modwdgu3, modwdgu33, modwdgt1, modwdgt3, modwdgu3gt1, modwdgu3gt3, modwdgu33gt1, modwdgu33gt3,
+            wdgp1b0, wdgr11b0, wdgr13b0,
+            wdgp1bp, wdgr11bp, wdgr13bp
+        )
     end
 end
 
@@ -995,9 +949,106 @@ mutable struct AveKG
         kpargr13bp = zeros(ComplexF64, ns, nbasis, nbasis)
 
         new(
-            kpargnp0,kpargp1p0,kpargp3p0,kpargu1,kpargu3,kpargt1,kpargt3,modkpargu1,modkpargu3,
-            kpargp1b0,kpargr11b0,kpargr13b0,
-            kpargnbp,kpargp3bp,kpargp1bp,kpargr11bp,kpargr13bp
-            )
+            kpargnp0, kpargp1p0, kpargp3p0, kpargu1, kpargu3, kpargt1, kpargt3, modkpargu1, modkpargu3,
+            kpargp1b0, kpargr11b0, kpargr13b0,
+            kpargnbp, kpargp3bp, kpargp1bp, kpargr11bp, kpargr13bp
+        )
+    end
+end
+
+
+
+
+mutable struct AveGrad{T<:Real}
+    gradhp1::Array{T,3}
+    gradhr11::Array{T,3}
+    gradhr13::Array{T,3}
+    gradhp1p1::Array{T,3}
+    gradhr11p1::Array{T,3}
+    gradhr13p1::Array{T,3}
+    gradhp1p0::Array{T,3}
+    gradhr11p0::Array{T,3}
+    gradhr13p0::Array{T,3}
+
+    gradgp1::Array{T,3}
+    gradgr11::Array{T,3}
+    gradgr13::Array{T,3}
+    gradgp1p1::Array{T,3}
+    gradgr11p1::Array{T,3}
+    gradgr13p1::Array{T,3}
+    gradgp1p0::Array{T,3}
+    gradgr11p0::Array{T,3}
+    gradgr13p0::Array{T,3}
+
+    function AveGrad{T}(ns::Int, nbasis::Int) where {T<:Real}
+        gradhp1 = zeros(T, ns, nbasis, nbasis)
+        gradhr11 = zeros(T, ns, nbasis, nbasis)
+        gradhr13 = zeros(T, ns, nbasis, nbasis)
+        gradhp1p1 = zeros(T, ns, nbasis, nbasis)
+        gradhr11p1 = zeros(T, ns, nbasis, nbasis)
+        gradhr13p1 = zeros(T, ns, nbasis, nbasis)
+        gradhp1p0 = zeros(T, ns, nbasis, nbasis)
+        gradhr11p0 = zeros(T, ns, nbasis, nbasis)
+        gradhr13p0 = zeros(T, ns, nbasis, nbasis)
+
+        gradgp1 = zeros(T, ns, nbasis, nbasis)
+        gradgr11 = zeros(T, ns, nbasis, nbasis)
+        gradgr13 = zeros(T, ns, nbasis, nbasis)
+        gradgp1p1 = zeros(T, ns, nbasis, nbasis)
+        gradgr11p1 = zeros(T, ns, nbasis, nbasis)
+        gradgr13p1 = zeros(T, ns, nbasis, nbasis)
+        gradgp1p0 = zeros(T, ns, nbasis, nbasis)
+        gradgr11p0 = zeros(T, ns, nbasis, nbasis)
+        gradgr13p0 = zeros(T, ns, nbasis, nbasis)
+
+        new(
+            gradhp1, gradhr11, gradhr13, gradhp1p1, gradhr11p1, gradhr13p1, gradhp1p0, gradhr11p0, gradhr13p0,
+            gradgp1, gradgr11, gradgr13, gradgp1p1, gradgr11p1, gradgr13p1, gradgp1p0, gradgr11p0, gradgr13p0
+        )
+    end
+end
+
+mutable struct AveGradB{T<:Real}
+    gradBhp1::Array{T,3}
+    gradBhp3::Array{T,3}
+    gradBhr11::Array{T,3}
+    gradBhr13::Array{T,3}
+    gradBhr33::Array{T,3}
+    gradBhu1::Array{T,3}
+    gradBhu3::Array{T,3}
+    gradBhu33::Array{T,3}
+
+    gradBgp1::Array{T,3}
+    gradBgp3::Array{T,3}
+    gradBgr11::Array{T,3}
+    gradBgr13::Array{T,3}
+    gradBgr33::Array{T,3}
+    gradBgu1::Array{T,3}
+    gradBgu3::Array{T,3}
+    gradBgu33::Array{T,3}
+
+    function AveGradB{T}(ns::Int, nbasis::Int) where {T<:Real}
+        gradBhp1 = zeros(T, ns, nbasis, nbasis)
+        gradBhp3 = zeros(T, ns, nbasis, nbasis)
+        gradBhr11 = zeros(T, ns, nbasis, nbasis)
+        gradBhr13 = zeros(T, ns, nbasis, nbasis)
+        gradBhr33 = zeros(T, ns, nbasis, nbasis)
+        gradBhu1 = zeros(T, ns, nbasis, nbasis)
+        gradBhu3 = zeros(T, ns, nbasis, nbasis)
+        gradBhu33 = zeros(T, ns, nbasis, nbasis)
+
+        gradBgp1 = zeros(T, ns, nbasis, nbasis)
+        gradBgp3 = zeros(T, ns, nbasis, nbasis)
+        gradBgr11 = zeros(T, ns, nbasis, nbasis)
+        gradBgr13 = zeros(T, ns, nbasis, nbasis)
+        gradBgr33 = zeros(T, ns, nbasis, nbasis)
+        gradBgu1 = zeros(T, ns, nbasis, nbasis)
+        gradBgu3 = zeros(T, ns, nbasis, nbasis)
+        gradBgu33 = zeros(T, ns, nbasis, nbasis)
+
+        new(
+            gradBhp1, gradBhp3, gradBhr11, gradBhr13, gradBhr33, gradBhu1, gradBhu3, gradBhu33,
+            gradBgp1, gradBgp3, gradBgr11, gradBgr13, gradBgr33, gradBgu1, gradBgu3, gradBgu33
+        )
     end
 end
