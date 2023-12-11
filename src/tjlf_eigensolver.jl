@@ -2738,26 +2738,4 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # end
     # return alpha./beta, vr
 
-    ### about the same
-    # print("eigen: ")
-    # @time begin
-    # solution = eigen!(amat, bmat)
-    # end
-    # return solution.values, solution.vectors
-    
-    ### slower
-    # if inputs.IFLUX
-    #     amat_copy = copy(amat)
-    #     bmat_copy = copy(bmat)
-    #     (alpha, beta, _, _) = ggev!('N','N',amat_copy,bmat_copy)
-    # else
-    #     (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
-    # end
-    # amat = sparse(amat)
-    # bmat = sparse(bmat)
-    # amat = amat + diagm(ones(size(A, 1)).*im)
-    # bmat = bmat + diagm(ones(size(A, 1)).*im)
-    # λ, _ = eigs(sparse(amat),sparse(bmat),nev=2, which=:LM, tol = 0.1)
-    # return λ
-
 end

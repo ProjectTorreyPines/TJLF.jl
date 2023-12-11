@@ -77,9 +77,8 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
 
     end
     inputs.IFLUX = original_iflux
-    if inputs.FIND_EIGEN
-        inputs.EIGEN_SPECTRUM .= firstPass_eigenvalue[1,:,1].+firstPass_eigenvalue[1,:,2].*im
-    end
+    
+    inputs.EIGEN_SPECTRUM .= firstPass_eigenvalue[1,:,1].+firstPass_eigenvalue[1,:,2].*im
 
     return QL_weights, firstPass_eigenvalue
 

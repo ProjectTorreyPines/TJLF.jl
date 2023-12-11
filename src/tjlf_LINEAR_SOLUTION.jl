@@ -67,26 +67,21 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             # MILLER geometry
             igeo = 1
             if (igeo == 1)
-                #### i think this is for like debugging? like you can look at trace_path to help figure out what ran
-                # trace_path[4]=1
                 # miller_geo(inputs)
                 # mercier_luc(inputs)
             # FOURIER geometry
             elseif(igeo==2)
-                error("sorry fourier geometry not implemented yet :(")
-                # trace_path[5]=1
+                error("sorry fourier geometry not implemented :(")
                 fourier_geo(inputs)
             # ELITE geometry
             elseif(igeo==3)
-                error("sorry fourier geometry not implemented yet :(")
-                #trace_path[8]=1
+                error("sorry fourier geometry not implemented :(")
                 ELITE_geo(inputs)
             end
             # compute the eikonal functions for general geometry (igeo>0)
             # if(igeo > 0) mercier_luc(inputs) end
         end
         new_geometry = false
-
 
         #  load the x-grid eikonal functions v_QL_out,b0x
         if(ismissing(outputGeo))
@@ -247,18 +242,16 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             inputs.EIGEN_SPECTRUM2[ky_index] = 0.0
         end
 
-        # used for computing eigenvector
+        # # used for computing eigenvector
         # zmat = similar(amat)
         # small::ComplexF64 = 1.0e-13
         for imax = 1:nmodes_out
             if (jmax[imax] > 0)
-                # calculate eigenvector
+                # # calculate eigenvector
                 # v = fill(small,iur)
+                # # alpha and beta from eigensolver.jl
                 # zmat = beta[jmax[imax]].*amat .- (small.+alpha[jmax[imax]]).*bmat
                 # gesv!(zmat,v)
-                # calculate eigenvector with Arpack.jl, very slightly slower
-                # if false#Threads.nthreads()>1
-                #     eigenvector = v[:,jmax[imax]]
                 if inputs.FIND_EIGEN || isnan(v[1,1])
                     Threads.lock(l)
                     _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
