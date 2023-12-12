@@ -4,7 +4,7 @@ include("../src/TJLF.jl")
 using ..TJLF
 
 
-# saturation rule test
+# tglf regression test
 directory = "../outputs/tglf_regression/"
 tests = readdir(directory)
 
@@ -15,22 +15,20 @@ testFolders = [joinpath(directory,item) for item in readdir(directory) if isdir(
 for baseDirectory in testFolders
     @testset "$baseDirectory" begin
         
-        fileDirectory = joinpath(baseDirectory, "out.tglf.QL_flux_spectrum")
+        fileDirectory = joinpath(baseDirectory, "out.tglf.gbflux")
         lines = readlines(fileDirectory)
-        (ntype, nspecies, nfield, nky, nmodes) = parse.(Int32, split(lines[4]))
-        fluxesFortran = Vector{Float64}()
-        for line in lines[7:length(lines)]
-            line = split(line)
-            if any(occursin.(["m","s"],string(line))) continue end
-            for x in line
-                push!(fluxesFortran,parse(Float64, string(x)))
-            end
+        fluxesFortran = parse.(Float64,split(lines[1]))
+        
+        inputTJLF = readInput(baseDirectory*"/input.tglf")
+        fluxesJulia = sum(TJLF.run_tjlf(inputTJLF),dims=1)[1,:,:]
+        
+
+        for i in 1:3*inputTJLF.NS
+            @test isapprox(sum(fluxesJulia[i]),sum(fluxesFortran[i]), atol=1e-2)
         end
-        
-        inputTJLF = readInput(baseDirectory)
-        fluxesJulia, _, _, _ = TJLF.run(inputTJLF)
-        
-        @test isapprox(sum(fluxesJulia),sum(fluxesFortran), rtol=1e-6)
+        for i in 3*inputTJLF.NS+1:4*inputTJLF.NS
+            @test isapprox(sum(fluxesJulia[i+inputTJLF.NS]),sum(fluxesFortran[i]), atol=1e-2)
+        end
     end
 
 end
