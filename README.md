@@ -3,17 +3,31 @@ Tglf in Julia Learned from Fortran (TJLF)
 
 # InputTJLF
 
-The InputTJLF struct can be populated with an InputTGLF struct, the translation is done in the tjlf_modules.jl file, but there are parameters missing between the two. The structure can also be populated with a input.tjlf file (not .gen) if you pass the file directory to the readInput() function. 
+The InputTJLF struct can be populated with an InputTGLF struct, the translation is done in the tjlf_modules.jl file, but there are parameters missing between the two. The structure can also be populated with a input.tglf file (not .gen) if you pass the file directory to the readInput() function. 
 
-Currently, InputTJLF structs do NOT have any default values and should throw an error if it is not properly populated, this is to ensure the user is fully aware of the parameters they are using.
+Currently, InputTJLF structs do NOT have any default values (maybe like one or two exceptions) and should throw an error if it is not properly populated, this is to ensure the user is fully aware of the parameters they are using.
 
-### New Parameters
+## New Parameters
 
- WIDTH_SPECTRUM and EIGEN_SPECTRUM are new features from TGLF used to cut down eigensolver calls. KY_SPECTRUM is also an addition that saves the ky grid. FIND_WIDTH is used differently than in TGLF, if false, TJLF skips calls to tjlf_max.jl since you externally provide the WIDTH_SPECTRUM that would be calculated in tjlf_max.jl. FIND_EIGEN is a new flag that tells the code if you also provide an EIGEN_SPECTRUM from previous runs so that you can use eigs() instead of ggev!() in tjlf_eigensolver.jl to find the eigenvalues. This feature is typically used when changing gradients during flux matching a specific radial points. Changing the gradients affects the widths and eigenvalues very little allowing you to reduce calls to eigenvalue solvers which typically costs ~90% of the runtime.
+InputTJLF mostly follows the input.tglf file variables, but there are a couple new things
 
-### Deleted Parameters
+FIND_WIDTH::Bool - this is in the input.tglf file, but is used different than in the Fortran, I have repurposed this variable to be a flag to tell the code whether or not we are providing an external width spectrum to avoid extra calls to tjlf_max.jl that solves for width (see [Eigenvalue Solver](#eigenvalue-solver))
 
-I deleted the parameters in the InputTJLF struct that are old and not used. I left comments and deleted them in commit b9a9c99b40a3ba5fcbc683eb94df4ec8b6fd5671 and commit 18f810fdf277a691b584f987781b976cccdcbb5b
+WIDTH_SPECTRUM::Vector - external width spectrum used if FIND_WIDTH is FALSE. If FIND_WIDTH is TRUE, this Vector will be populated with widths for each ky grid point. The idea is that you can run with FIND_WIDTH set as TRUE, it will automatically save the width spectrum, you can then change the gradients of that particular struct, and then change the FIND_WIDTH flag to FALSE. Or, you can easily save this value to other InputTJLF struct, not sure why you would necessarily, but the information is here.
+
+FIND_EIGEN::Bool - this flag tells the code which solver to use when solving for the eigenvalues, if unsure, FIND_EIGEN as TRUE is more robust (see [Eigenvalue Solver](#eigenvalue-solver))
+
+EIGEN_SPECTRUM::Vector - external eigen spectrum used on the first pass if FIND_EIGEN is FALSE. This value is set to the sigma parameter of the eigs() solver and acts as an initial guess for the iterative solver. Currently, this is a vector that automatically stores the most unstable eigenvalues from the first pass, but it might be smart to save the eigenvalues for each mode and rework how eigs works in LS.jl
+
+EIGEN_SPECTRUM2::Vector - similar to above, but save the most unstable eigenvalues from the second pass, after the spectral shift since this shifts the eigenvalues
+
+SMALL::Float - value used to rewrite the eigenvalue problem as a system of linear equations like the Fortran does (default 1e-13)
+
+## Deleted Parameters
+
+I deleted the parameters in the InputTJLF struct that are old and not used. I left comments and deleted them in commit [b9a9c99](https://github.com/ProjectTorreyPines/TJLF.jl/commit/b9a9c99b40a3ba5fcbc683eb94df4ec8b6fd5671) and commit [18f810f](https://github.com/ProjectTorreyPines/TJLF.jl/commit/18f810fdf277a691b584f987781b976cccdcbb5b).
+
+Deleted parameters: USE_TRANSPORT_MODEL,GEOMETRY_FLAG,B_MODEL_SA,FT_MODEL_SA,VPAR_SHEAR_MODEL,WRITE_WAVEFUNCTION_FLAG,VTS_SHEAR,VNS_SHEAR,VEXB,RMIN_SA,RMAJ_SA,Q_SA,SHAT_SA,ALPHA_SA,XWELL_SA,THETA0_SA,NN_MAX_ERROR
 
 # Eigenvalue Solver
 
