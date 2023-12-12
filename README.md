@@ -19,8 +19,6 @@ FIND_EIGEN::Bool - this flag tells the code which solver to use when solving for
 
 EIGEN_SPECTRUM::Vector - external eigen spectrum used on the first pass if FIND_EIGEN is False. This value is set to the sigma parameter of the eigs() solver and acts as an initial guess for the iterative solver. Currently, this is a vector that automatically stores the most unstable eigenvalues from the first pass, but it might be smart to save the eigenvalues for each mode and rework how eigs works in LS.jl
 
-EIGEN_SPECTRUM2::Vector - similar to above, but save the most unstable eigenvalues from the second pass, after the spectral shift since this shifts the eigenvalues
-
 SMALL::Float - value used to rewrite the eigenvalue problem as a system of linear equations like the Fortran does (default 1e-13)
 
 ## Deleted Parameters
@@ -36,29 +34,24 @@ Currently, Arpack.jl's eigs(), can be used in tjlf_LINEAR_SOLUTION.jl and tjlf_e
 Table of the three different combinations of the solvers used in TJLF
 ```
 +--------------+-----------------------------------------------+
-|              |                  FirstPass()                  |
+|              |                      FirstPass()              |
 +--------------+---------+-----------------+-------------------+
 |              |         | ggev!()         | eigs()            |
 |              +---------+-----------------+-------------------+
-|              | ggev!() |      1.141s     |                   |
-|              | eigs()  |     robust,     |                   |
-|              |         | most "correct", |                   |
-|              |         |  thread scales? |                   |
-|              +---------+-----------------+-------------------+
-| SecondPass() | ggev!() |      1.091s     |                   |
-| (eigenvalue, | gsev!() |       TGLF      |                   |
-| eigenvector) |         |     robust,     |                   |
+|              | ggev!() |      1.141s     | 522.710 ms        |
+|              | eigs()  |     robust,     | robust?           |
+|              |         | most "correct", | thread scales??   |
+| SecondPass() |         |  thread scales? | best for 1 thread |
+| (eigenvalue, +---------+-----------------+-------------------+
+| eigenvector) | ggev!() |      1.091s     |                   |
+|              | gsev!() |       TGLF      |                   |
+|              |         |     robust,     |                   |
 |              |         |  thread scales! |                   |
-|              +---------+-----------------+-------------------+
-|              | eigs()  |                 |     522.710 ms    |
-|              |         |                 |      robust?      |
-|              |         |                 |  thread scales??  |
-|              |         |                 | best for 1 thread |
 +--------------+---------+-----------------+-------------------+
 ```
 To run top left, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = False<br>
 To run mid left, use the default InputTJLF SMALL parameter = 1e-13<br>
-To run bot right, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = True<br>
+To run top right, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = True<br>
 
 # Arpack.jl
 
