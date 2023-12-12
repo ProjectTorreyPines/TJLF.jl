@@ -5,7 +5,7 @@ Tglf in Julia Learned from Fortran (TJLF)
 
 The InputTJLF struct can be populated with an InputTGLF struct, the translation is done in the tjlf_modules.jl file, but there are parameters missing between the two (see [Deleted Parameters](#deleted-parameters)). The structure can also be populated with a input.tglf file (not .gen) if you pass the file directory to the readInput() function. 
 
-Currently, InputTJLF structs do NOT have any default values (maybe like one or two exceptions) and should throw an error if it is not properly populated, this is to ensure the user is fully aware of the parameters they are using.
+Currently, InputTJLF structs do **NOT** have any default values (maybe like one or two exceptions) and should throw an error if it is not properly populated, this is to ensure the user is fully aware of the parameters they are using.
 
 ## New Parameters
 
@@ -68,7 +68,7 @@ Error: XYAUPD_Exception: Maximum number of iterations taken. All possible eigenv
 │ IPARAM(5) returns the number of wanted converged Ritz values.<br>
 │   info = 1</pre>
 
-Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. Also, Arpack.jl's eigs() is NOT thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
+Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. Also, Arpack.jl's eigs() is **NOT** thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
 
 # Indices of Arrays
 
