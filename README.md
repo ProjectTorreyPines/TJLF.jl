@@ -13,11 +13,11 @@ InputTJLF mostly follows the input.tglf file variables, but there are a couple n
 
 FIND_WIDTH::Bool - this is in the input.tglf file, but is used different than in the Fortran, I have repurposed this variable to be a flag to tell the code whether or not we are providing an external width spectrum to avoid extra calls to tjlf_max.jl that solves for width (see [Eigenvalue Solver](#eigenvalue-solver))
 
-WIDTH_SPECTRUM::Vector - external width spectrum used if FIND_WIDTH is FALSE. If FIND_WIDTH is TRUE, this Vector will be populated with widths for each ky grid point. The idea is that you can run with FIND_WIDTH set as TRUE, it will automatically save the width spectrum, you can then change the gradients of that particular struct, and then change the FIND_WIDTH flag to FALSE. Or, you can easily save this value to other InputTJLF struct, not sure why you would necessarily, but the information is here.
+WIDTH_SPECTRUM::Vector - external width spectrum used if FIND_WIDTH is False. If FIND_WIDTH is True, this Vector will be populated with widths for each ky grid point. The idea is that you can run with FIND_WIDTH set as True, it will automatically save the width spectrum, you can then change the gradients of that particular struct, and then change the FIND_WIDTH flag to False. Or, you can easily save this value to other InputTJLF struct, not sure why you would necessarily, but the information is here.
 
-FIND_EIGEN::Bool - this flag tells the code which solver to use when solving for the eigenvalues, if unsure, FIND_EIGEN as TRUE is more robust (see [Eigenvalue Solver](#eigenvalue-solver))
+FIND_EIGEN::Bool - this flag tells the code which solver to use when solving for the eigenvalues, if unsure, FIND_EIGEN as True is more robust (see [Eigenvalue Solver](#eigenvalue-solver)). Should ONLY be False if FIND_EIGEN is also False because it would be suspicious if you are confident on the eigenvalues enough to use and not confident on the width values (it would also probably break tjlf_max.jl), there should be an assertion to check this.
 
-EIGEN_SPECTRUM::Vector - external eigen spectrum used on the first pass if FIND_EIGEN is FALSE. This value is set to the sigma parameter of the eigs() solver and acts as an initial guess for the iterative solver. Currently, this is a vector that automatically stores the most unstable eigenvalues from the first pass, but it might be smart to save the eigenvalues for each mode and rework how eigs works in LS.jl
+EIGEN_SPECTRUM::Vector - external eigen spectrum used on the first pass if FIND_EIGEN is False. This value is set to the sigma parameter of the eigs() solver and acts as an initial guess for the iterative solver. Currently, this is a vector that automatically stores the most unstable eigenvalues from the first pass, but it might be smart to save the eigenvalues for each mode and rework how eigs works in LS.jl
 
 EIGEN_SPECTRUM2::Vector - similar to above, but save the most unstable eigenvalues from the second pass, after the spectral shift since this shifts the eigenvalues
 
@@ -31,8 +31,9 @@ Deleted parameters: USE_TRANSPORT_MODEL,GEOMETRY_FLAG,B_MODEL_SA,FT_MODEL_SA,VPA
 
 # Eigenvalue Solver
 
-Currently, Arpack.jl's eigs(), used in tjlf_LINEAR_SOLUTION.jl and tjlf_eigensolver.jl, is a fast iterative solver. In tjlf_LINEAR_SOLUTION.jl, eigs() is used to solve for the eigenvector instead of rewriting the generalized eigenvalue problem as a system of linear equations like TGLF which is potentially a little troublesome. It is also used in tjlf_eigensolver.jl if you provide a EIGEN_SPECTRUM and set FIND_WIDTH to false. eigs() does a shift and inverse iteration to solve the generalized eigenvalue problem, specifying sigma tells the solver to look for eigenvalues near sigma, it works best if you set which=:LM telling eigs() the type of eigenvalue to compute. I have tried which=:LR (LM is largest magnitude and LR is largest real part), but sometimes the solver will find "fake" eigenvalues with very large real and imaginary parts. I have found using :LM and setting sigma as the most unstable mode from the first run usually works, but more testing would be good.
+Currently, Arpack.jl's eigs(), can be used in tjlf_LINEAR_SOLUTION.jl and tjlf_eigensolver.jl as a fast iterative solver. In tjlf_LS.jl, eigs() is used to solve for the eigenvector instead of rewriting the generalized eigenvalue problem as a system of linear equations like TGLF, which is potentially a little troublesome. It is also used in tjlf_eigensolver.jl if you provide a EIGEN_SPECTRUM and set FIND_EIGEN to False. eigs() does a shift and inverse iteration to solve the generalized eigenvalue problem, specifying sigma gives the shift, by setting which=:LM you tell eigs() to compute eigenvalues around sigma. I have tried which=:LR (LM is largest magnitude and LR is largest real part), but sometimes the solver will find "fake" eigenvalues with very large real and imaginary parts. I have found using :LM and setting sigma as the most unstable mode has worked, but more testing would be good.
 
+Table of the three different combinations of the solvers used in TJLF
 ```
 +--------------+-----------------------------------------------+
 |              |                  FirstPass()                  |
@@ -41,12 +42,12 @@ Currently, Arpack.jl's eigs(), used in tjlf_LINEAR_SOLUTION.jl and tjlf_eigensol
 |              +---------+-----------------+-------------------+
 |              | ggev!() |      1.141s     |                   |
 |              | eigs()  |     robust,     |                   |
-| SecondPass() |         | most "correct", |                   |
-| (eigenvalue, |         |  thread scales? |                   |
-| eigenvector) +---------+-----------------+-------------------+
-|              | ggev!() |      1.091s     |                   |
-|              | gsev!() |       TGLF      |                   |
-|              |         |     robust,     |                   |
+|              |         | most "correct", |                   |
+|              |         |  thread scales? |                   |
+|              +---------+-----------------+-------------------+
+| SecondPass() | ggev!() |      1.091s     |                   |
+| (eigenvalue, | gsev!() |       TGLF      |                   |
+| eigenvector) |         |     robust,     |                   |
 |              |         |  thread scales! |                   |
 |              +---------+-----------------+-------------------+
 |              | eigs()  |                 |     522.710 ms    |
@@ -55,6 +56,9 @@ Currently, Arpack.jl's eigs(), used in tjlf_LINEAR_SOLUTION.jl and tjlf_eigensol
 |              |         |                 | best for 1 thread |
 +--------------+---------+-----------------+-------------------+
 ```
+To run top left, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = False<br>
+To run mid left, use the default InputTJLF SMALL parameter = 1e-13<br>
+To run bot right, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = True<br>
 
 # Arpack.jl
 
@@ -75,4 +79,4 @@ There are some 3D and 5D arrays where the indices are not obvious. They are spec
     type: (gamma, frequency)</pre><br>
 <pre>QL_flux_out::Array{3} - [field, species, type]<br>
     type: (particle, energy, torodial stress, parallel stress, exchange)</pre><br>
-The order of the indices was to try and take advantage of Julia's column major memory usage
+The order of the indices try to take advantage of Julia's column major memory usage
