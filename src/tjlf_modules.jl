@@ -194,7 +194,7 @@ mutable struct InputTJLF{T<:Real}
     USE_MHD_RULE::Union{Bool,Missing}
     USE_BISECTION::Union{Bool,Missing}
     USE_INBOARD_DETRAPPED::Union{Bool,Missing}
-    USE_AVE_ION_GRID::Union{Bool,Missing} ## have not seen be used
+    USE_AVE_ION_GRID::Union{Bool,Missing}
     NEW_EIKONAL::Union{Bool,Missing} ## this seems useless, the flag has to be both true and false to do anything
     FIND_WIDTH::Union{Bool,Missing}
     IFLUX::Union{Bool,Missing}
@@ -226,7 +226,6 @@ mutable struct InputTJLF{T<:Real}
     WIDTH_SPECTRUM::Vector{T}
     KY_SPECTRUM::Vector{T}
     EIGEN_SPECTRUM::Vector{ComplexF64}
-    EIGEN_SPECTRUM2::Vector{ComplexF64}
     FIND_EIGEN::Union{Bool,Missing}
     # NOT IN TGLF
 
@@ -282,18 +281,19 @@ mutable struct InputTJLF{T<:Real}
     GRADB_FACTOR::T
     FILTER::T
     THETA_TRAPPED::T
+    SMALL::T
 
     function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
         new("",
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
         fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
-        fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN*im,(nky)),fill(NaN*im,(nky)),missing,
+        fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN*im,(nky)),missing,
         0,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,NaN,NaN,NaN,NaN,NaN,)
+        NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13)
     end
 
     # create InputTJLF struct given a InputTGLF struct
@@ -327,7 +327,7 @@ mutable struct InputTJLF{T<:Real}
                 @assert !ismissing(field_value) || !isnan(field_value) "Did not properly populate inputTJLF for $field_name"
             end
 
-            if typeof(field_value) <: Vector && field_name != :KY_SPECTRUM && field_name != :EIGEN_SPECTRUM && field_name != :EIGEN_SPECTRUM2
+            if typeof(field_value) <: Vector && field_name != :KY_SPECTRUM && field_name != :EIGEN_SPECTRUM
                 for val in field_value
                     @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name"
                 end
