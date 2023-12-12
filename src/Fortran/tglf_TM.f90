@@ -72,15 +72,6 @@
        jmax_out = 0         ! ID for first pass
        write(*,*) "this is a"
        CALL get_bilinear_spectrum
-       do is=ns0,ns
-        do j=1,3
-           do m=1,nmodes_in
-             do i=1,nky
-            !    write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
-             enddo  ! i
-          enddo ! m
-        enddo  ! j
-     enddo  ! is
     !  stop "STOP" !DSUN
        eigenvalue_first_pass(:,:,:) = eigenvalue_spectrum_out(:,:,:)
        vexb_shear_s = save_vexb_shear
@@ -93,15 +84,6 @@
 !  note ql weights are with vexb_shear
        eigenvalue_spectrum_out(:,:,:) = eigenvalue_first_pass(:,:,:)
        find_width_in = save_find_width
-       do is=ns0,ns
-        do j=1,3
-           do m=1,nmodes_in
-             do i=1,nky
-            !    write(*,*)(QL_flux_spectrum_out(k,is,j,i,m),k=1,5)
-             enddo  ! i
-          enddo ! m
-        enddo  ! j
-     enddo  ! is
       else
         jmax_out = 0
         write(*,*) "this is c"
