@@ -2691,6 +2691,10 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
     # calculate eigenvalues/eigenvectors
     if !inputs.FIND_EIGEN
+        if inputs.FIND_WIDTH
+            error("If FIND_EIGEN false, FIND_WIDTH should also be false")
+        end
+        
         sigma = 0.0
         if inputs.IFLUX && !isnan(inputs.EIGEN_SPECTRUM2[ky_index])
             sigma = inputs.EIGEN_SPECTRUM2[ky_index]
@@ -2703,7 +2707,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                 Threads.lock(l2)
                 λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LM,sigma=sigma,maxiter=50)
                 Threads.unlock(l2)
-                return λ, v
+                return λ, v, NaN, NaN
             catch
                 @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
             end
@@ -2719,7 +2723,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     else
         (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
     end
-    return alpha./beta, fill(NaN*im,(1,1))
+    return alpha./beta, fill(NaN*im,(1,1)), alpha, beta
 
     ### not supported
     # print("kyrlov: ")

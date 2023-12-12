@@ -333,6 +333,9 @@ mutable struct InputTJLF{T<:Real}
                 end
             end
         end
+        if !inputTJLF.FIND_EIGEN
+            @assert !inputTJLF.FIND_WIDTH "If FIND_EIGEN false, FIND_WIDTH should also be false"
+        end
 
         return inputTJLF
     end
