@@ -3,7 +3,7 @@ Tglf in Julia Learned from Fortran (TJLF)
 
 # InputTJLF
 
-The InputTJLF struct can be populated with an InputTGLF struct, the translation is done in the tjlf_modules.jl file, but there are parameters missing between the two. The structure can also be populated with a input.tglf file (not .gen) if you pass the file directory to the readInput() function. 
+The InputTJLF struct can be populated with an InputTGLF struct, the translation is done in the tjlf_modules.jl file, but there are parameters missing between the two (see [Deleted Parameters](#deleted-parameters)). The structure can also be populated with a input.tglf file (not .gen) if you pass the file directory to the readInput() function. 
 
 Currently, InputTJLF structs do NOT have any default values (maybe like one or two exceptions) and should throw an error if it is not properly populated, this is to ensure the user is fully aware of the parameters they are using.
 
