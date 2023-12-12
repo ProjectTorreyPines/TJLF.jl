@@ -99,7 +99,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index)
+    eigenvalues, v, alpha, beta = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index)
 
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
@@ -194,7 +194,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         for j1 = 1:nmodes_in
             gamma_out[j1] = get_gamma_net(inputs, vexb_shear_s, gamma_out[j1])
         end
-        # use spectral shift model for second pass
+    # use spectral shift model for second pass
     elseif (vexb_shear_s != 0.0)
         gamma_out .= gamma_reference_kx0
         freq_out .= freq_reference_kx0
@@ -236,29 +236,31 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         kx_bar_out = zeros(Float64, nmodes_out)
         kpar_bar_out = zeros(Float64, nmodes_out)
 
-        if nmodes_out > 1
-            inputs.EIGEN_SPECTRUM2[ky_index] = eigenvalues[jmax[1]]
-        else
-            inputs.EIGEN_SPECTRUM2[ky_index] = 0.0
+        # used for computing eigenvector
+        if inputs.SMALL != 0.0
+            zmat = similar(amat)
+            eigenvector = Vector{ComplexF64}(undef,iur)
         end
-
-        # # used for computing eigenvector
-        # zmat = similar(amat)
-        # small::ComplexF64 = 1.0e-13
         for imax = 1:nmodes_out
             if (jmax[imax] > 0)
-                # # calculate eigenvector
-                # v = fill(small,iur)
-                # # alpha and beta from eigensolver.jl
-                # zmat = beta[jmax[imax]].*amat .- (small.+alpha[jmax[imax]]).*bmat
-                # gesv!(zmat,v)
-                if inputs.FIND_EIGEN || isnan(v[1,1])
-                    Threads.lock(l)
-                    _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
-                    eigenvector = vec[:,1]
-                    Threads.unlock(l)
+                if inputs.SMALL != 0.0
+                    # calculate eigenvector
+                    eigenvector .= inputs.SMALL
+                    # alpha and beta from eigensolver.jl
+                    zmat = beta[jmax[imax]].*amat .- (inputs.SMALL.+alpha[jmax[imax]]).*bmat
+                    gesv!(zmat,eigenvector)
                 else
-                    eigenvector = v[:, jmax[imax]]
+                    if inputs.FIND_EIGEN || isnan(v[1,1])
+                        Threads.lock(l)
+                        try
+                            _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
+                            eigenvector = vec[:,1]
+                        finally
+                            Threads.unlock(l)
+                        end
+                    else
+                        eigenvector = v[:, jmax[imax]]
+                    end
                 end
 
                 Ns_Ts_phase,
