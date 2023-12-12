@@ -131,7 +131,7 @@ function readInput(filename::String)::InputTJLF
     field_names = fieldnames(InputTJLF)
     for field_name in field_names
         field_value = getfield(inputTJLF, field_name)
-        if typeof(field_value)<:Real
+        if typeof(field_value)<:Real || typeof(field_value)<:Missing
             @assert !isnan(field_value) && !ismissing(field_value) "Did not properly populate inputTJLF for $field_name"
         end
         if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:EIGEN_SPECTRUM

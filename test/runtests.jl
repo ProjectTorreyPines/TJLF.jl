@@ -128,7 +128,7 @@ for dir_name in tests
         # Read input.tglf
         #******************************************************************************#************************
         
-        inputTJLF = readInput(baseDirectory)
+        inputTJLF = readInput(baseDirectory*"input.tglf")
 
         #*******************************************************************************************************
         #   start running stuff
@@ -193,7 +193,7 @@ for dir_name in tests
         # Read input.tglf
         #******************************************************************************#************************
 
-        inputTJLF = readInput(baseDirectory)
+        inputTJLF = readInput(baseDirectory*"input.tglf")
 
         #*******************************************************************************************************
         #   start running stuff
@@ -268,8 +268,8 @@ for dir_name in tests
         # Read input.tglf
         #******************************************************************************************************
 
-        inputTJLF = readInput(baseDirectory)
-        inputTJLF2 = readInput(baseDirectory)
+        inputTJLF = readInput(baseDirectory*"input.tglf")
+        inputTJLF2 = readInput(baseDirectory*"input.tglf")
 
         #*******************************************************************************************************
         #   start running stuff
