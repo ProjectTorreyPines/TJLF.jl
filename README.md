@@ -98,7 +98,7 @@ There are some 3D and 5D arrays where the indices are not obvious. They are spec
 The order of the indices try to take advantage of Julia's column major memory usage
 
 
-# Other Notes from Danny
+# Other Notes from DSUN
 
 For SAT0, TM() does not return the value of QL_weights (aka "QL_flux_spectrum_out" in TGLF) and instead returns the value of what TGLF refers to as flux_spectrum_out. This is because the saturation rule calculation is done in a different place (LS.jl instead of multiscale_spectrum.jl), and otherwise, I would have to pass this extra Array through multiple functions just for SAT0 which is tedious and ugly. Plus SAT0 isn't really used apparently. So, if you are trying to compare the QL_weights for a SAT0 run, make sure you keep this in mind.
 
