@@ -35,8 +35,7 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
     # compute the flux spectrum and eigenvalues
     if alpha_quench_in!=0.0 || vexb_shear_s==0.0 # do not calculate spectral shift
 
-        #Threads.@threads
-        for ky_index = eachindex(ky_spect)
+        Threads.@threads for ky_index = eachindex(ky_spect)
             # print("this is c")
             onePass!(inputs, satParams, outputHermite, vexb_shear_s, firstPass_eigenvalue, QL_weights, ky_index)
         end
@@ -45,15 +44,13 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
 
         # get the gammas to calculate the spectral shift on second pass
         inputs.IFLUX = false # do not compute QL on first pass
-        #Threads.@threads 
-        for ky_index = eachindex(ky_spect)
+        Threads.@threads for ky_index = eachindex(ky_spect)
             widthPass!(inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
         end
         kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1]) # spectral shift
         
         inputs.IFLUX = true # do not compute QL on first pass
-        #Threads.@threads 
-        for ky_index = eachindex(ky_spect)
+        Threads.@threads for ky_index = eachindex(ky_spect)
             secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index)
         end
 
@@ -61,24 +58,25 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
         # initial guess if finding width
         inputs.WIDTH_SPECTRUM .= inputs.WIDTH
         inputs.IFLUX = false # do not compute QL on first pass
-        #Threads.@threads 
-        for ky_index = eachindex(ky_spect)
+        Threads.@threads for ky_index = eachindex(ky_spect)
             # println("this is a")
             firstPass!(inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index) #  spectral shift model double pass
         end
         kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1]) # spectral shift
 
         inputs.IFLUX = true # do not compute QL on first pass
-        #Threads.@threads 
-        for ky_index = eachindex(ky_spect)
+        Threads.@threads for ky_index = eachindex(ky_spect)
             # println("this is b")
             secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index)
         end
 
     end
     inputs.IFLUX = original_iflux
-    
+
     inputs.EIGEN_SPECTRUM .= firstPass_eigenvalue[1,:,1].+firstPass_eigenvalue[1,:,2].*im
+    if inputs.SAT_RULE == 0
+        @warn "Using SAT0 means the return value of TM is not the QL weights, but actually flux_spectrum_out = QL_weights * phi_bar_out. notice difference near LS return statement"
+    end
 
     return QL_weights, firstPass_eigenvalue
 
