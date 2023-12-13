@@ -31,7 +31,7 @@ function readInput(filename::String)::InputTJLF
         end
     end
     # make sure ns is defined
-    @assert ns!=-1 "did not find NS"
+    @assert ns!=-1 "did not find NS in $filename (make sure this is an input.tglf file)"
     @assert nky!=-1 "did not find NKY"
     @assert kygrid_model!=-1 "did not find KYGRID_MODEL"
     @assert kygrid_model>=0 && kygrid_model <=5 "KYGRID_MODEL must be Int between 0 and 5"
