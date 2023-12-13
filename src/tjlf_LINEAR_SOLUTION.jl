@@ -34,7 +34,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             kx0_e::T = NaN,
             gamma_reference_kx0::Vector{T} = T[],
             freq_reference_kx0::Vector{T} = T[],
-            outputGeo::Union{OutputGeometry{T},Missing} = missing) where T <: Real
+            outputGeo::Union{OutputGeometry{T},Missing} = missing,
+            find_eigenvector::Bool = false) where T <: Real
 
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
@@ -99,7 +100,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v, alpha, beta = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index)
+    eigenvalues, v, alpha, beta = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector)
 
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
@@ -201,7 +202,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     end
 
     # get the fluxes for the most unstable modes
-    if (inputs.IFLUX)
+    if (inputs.IFLUX || find_eigenvector)
         #  initalize output to zero
         phi_bar_out = zeros(Float64, nmodes_out)
         a_par_bar_out = zeros(Float64, nmodes_out)
@@ -342,6 +343,20 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         end
         modB_min = abs(minimum(satParams.B_geo))
         ft_test = ft_test / modB_min
+
+        reduce = 1.0
+        if false # && inputs.SAT_RULE==0 && inputs.NBASIS_MAX!=inputs.NBASIS_MIN && gamma_nb_min_out<gamma_out[1] && gamma_nb_min_out<gamma_cutoff
+            error("This is in the Fortran, but gamma_nb_min_out should always equal gamma_out[1] so the condition should never be true")
+        end
+        phi_bar_out .*= reduce # this does nothing for the reason above ^^^
+
+        if inputs.SAT_RULE==0 && nmodes_out > 0
+            particle_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+            energy_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+            stress_tor_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+            stress_par_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+            exchange_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        end
 
         return nmodes_out, gamma_out, freq_out,
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
@@ -549,7 +564,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
             if (i > j * nbasis * nroot)
                 j = j + 1
             end
-            vnorm = vnorm + real((adjoint(v) * v)) * abs(inputs.AS[j] * inputs.ZS[j])
+            vnorm = vnorm + real(v[i]*conj(v[i])) * abs(inputs.AS[j] * inputs.ZS[j])
         end
         vnorm = vnorm / abs(inputs.AS[1] * inputs.ZS[1])   #normalize to electron charge density
     end

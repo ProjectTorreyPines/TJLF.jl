@@ -283,13 +283,14 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             inputs.USE_BPER = original_bper
             inputs.USE_BPAR = original_bpar
         end
+        find_eigenvector = false
         if inputs.ALPHA_QUENCH!=0.0 || inputs.VEXB_SHEAR*inputs.SIGN_IT==0.0
-            inputs.IFLUX = true # only calculate fluxes for onePass!
+            find_eigenvector = true # only calculate fluxes for onePass!
         end
         # println("this is XII")
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-        ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
+        ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;find_eigenvector)
 
         if(inputs.IBRANCH==-1) # check for inward ballooning modes
             if(inputs.USE_INBOARD_DETRAPPED)
@@ -305,13 +306,12 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                     # println("this is XIII")
                     nmodes_out, gamma_out, freq_out,
                     particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-                    _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                    _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo,find_eigenvector)
                 end
             end
         end
 
         gamma_max = findmax(gamma_out)[1]  # works for both ibranch_in cases
-        inputs.IFLUX = false # return IFLUX to false in case was switched for onePass!
 
     end
 

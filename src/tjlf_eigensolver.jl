@@ -22,7 +22,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         aveGrad::AveGrad{T},aveGradB::AveGradB{T},
                         nbasis::Int, ky::T,
                         amat::Matrix{K},bmat::Matrix{K},
-                        ky_index::Int) where T<:Real where K<:Complex
+                        ky_index::Int,
+                        find_eigenvector::Bool) where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2718,7 +2719,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
     end
 
-    if inputs.IFLUX
+    if inputs.IFLUX || find_eigenvector
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
         (alpha, beta, _, _) = ggev!('N','N',amat_copy,bmat_copy)
