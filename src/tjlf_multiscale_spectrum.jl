@@ -796,25 +796,26 @@ function sum_ky_spectrum(
     ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
 
+    flux_spectrum = similar(QL_weights)
+
     # Multiply QL weights with desired intensity
-    if sat_rule_in in [1.0, 1, "SAT1", 2.0, 2, "SAT2", 3.0, 3, "SAT3"]
+    if sat_rule_in >= 1 && sat_rule_in <= 3
         intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL_weights)
-    elseif sat_rule_in == 0 #################### TEMPORARY FIX -DSUN ####################
-        println("SAT0 not implemented for sum_ky_spectrum")
-        return NaN, NaN
+        # Ql size (nf,ns,nm,nky,ntype)
+        # QLA_P and QLA_E are vectors of size (nm)
+        # intensity factor size (nky, nm)
+        flux_spectrum[:,:,:,:,1] = QL_weights[:,:,:,:,1] .* reshape((QLA_P .* intensity_factor'),(1,1,nm,nky)) # particle
+        flux_spectrum[:,:,:,:,2] = QL_weights[:,:,:,:,2] .* reshape((QLA_E .* intensity_factor'),(1,1,nm,nky)) # energy
+        flux_spectrum[:,:,:,:,3] = QL_weights[:,:,:,:,3] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # toroidal stress
+        flux_spectrum[:,:,:,:,4] = QL_weights[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
+        flux_spectrum[:,:,:,:,5] = QL_weights[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
+    elseif sat_rule_in == 0
+        flux_spectrum .= QL_weights
     else
-        throw(error("sat_rule_in must be [1.0, 1, 'SAT1', 2.0, 2, 'SAT2', 3.0, 3, 'SAT3], not $sat_rule_in"))
+        throw(error("sat_rule_in must be 0,1,2,or 3, not $sat_rule_in"))
     end
 
-    flux_spectrum = similar(QL_weights)
-    # Ql size (nf,ns,nm,nky,ntype)
-    # QLA_P and QLA_E are potentially vectors of size nm
-    # intensity factor size (nky, nm)
-    flux_spectrum[:,:,:,:,1] = QL_weights[:,:,:,:,1] .* reshape((QLA_P .* intensity_factor'),(1,1,nm,nky)) # particle
-    flux_spectrum[:,:,:,:,2] = QL_weights[:,:,:,:,2] .* reshape((QLA_E .* intensity_factor'),(1,1,nm,nky)) # energy
-    flux_spectrum[:,:,:,:,3] = QL_weights[:,:,:,:,3] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # toroidal stress
-    flux_spectrum[:,:,:,:,4] = QL_weights[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
-    flux_spectrum[:,:,:,:,5] = QL_weights[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
+    
 
     # outputs
     q_low_out = zeros((ns, nm))
