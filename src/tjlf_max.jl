@@ -46,7 +46,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     original_ibranch = inputs.IBRANCH
     original_bper = inputs.USE_BPER
     original_bpar = inputs.USE_BPAR
-    original_width = inputs.WIDTH_SPECTRUM[ky_index]
+    original_width = inputs.WIDTH
     ### change input values
     inputs.IBRANCH = -1
     
