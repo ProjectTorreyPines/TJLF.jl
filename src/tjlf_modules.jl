@@ -283,6 +283,9 @@ mutable struct InputTJLF{T<:Real}
     THETA_TRAPPED::Union{T,Missing}
     SMALL::Union{T,Missing}
 
+    function InputTJLF()
+        return InputTJLF{Float64}()
+    end
     function InputTJLF{T}() where {T<:Real}
         new(
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
