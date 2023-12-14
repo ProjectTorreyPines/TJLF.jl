@@ -1,6 +1,25 @@
 # TJLF
 Tglf in Julia Learned from Fortran (TJLF)
 
+# How to Run
+
+First you must create a InputTJLF struct or Vector of InputTJLF structs. The best way to do this is to call readInput(directory) where directory points at an input.tglf (not .gen) file. Then, you can call either run(InputTJLF) or run_tjlf(InputTJLF)/run_tjlf(Vector{InputTJLF}).
+
+run() will return you QL_weights, eigenvalue, QL_flux_out, flux_spectrum
+
+run_tjlf() will return you the summed fluxes aka the array of actual values you care about with like flux matching<br>
+(see [Indices of Arrays](#indices-of-arrays) for how these arrays are structured)
+
+Internal to these run() calls, there is a beginning, middle, end like I referred to in my presentation:<br>
+Beginning: 
+<pre>outputHermite = gauss_hermite(inputTJLF)
+satParams = get_sat_params(inputTJLF)
+inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)</pre><br>
+Middle:
+<pre>QL_weights, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)</pre><br>
+End:
+<pre>QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weights)</pre>
+
 # InputTJLF
 
 The InputTJLF struct can be populated with an InputTGLF struct, the translation is done in the tjlf_modules.jl file, but there are parameters missing between the two (see [Deleted Parameters](#deleted-parameters)). The structure can also be populated with a input.tglf file (not .gen) if you pass the file directory to the readInput() function. 
@@ -61,15 +80,35 @@ Error: XYAUPD_Exception: Maximum number of iterations taken. All possible eigenv
 │ IPARAM(5) returns the number of wanted converged Ritz values.<br>
 │   info = 1</pre>
 
-Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. Also, Arpack.jl's eigs() is **NOT** thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
+Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. You might have to restart your Julia enviroment, activate TJLF, and **build**.
+
+Also, Arpack.jl's eigs() is **NOT** thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
 
 # Indices of Arrays
 
 There are some 3D and 5D arrays where the indices are not obvious. They are specified in the function comments where they appear, but I will repeat them here:<br>
 <pre>QL_weights::Array{5} - [field, species, mode, ky, type]<br>
     type: (particle, energy, torodial stress, parallel stress, exchange)</pre><br>
-<pre>firstPass_eigenvalue::Array{3} - [mode, ky, type]<br>
+<pre>flux_spectrum::Array{5} - [field, species, mode, ky, type]<br>
+    type: (particle, energy, torodial stress, parallel stress, exchange)</pre><br>
+<pre>eigenvalue::Array{3} - [mode, ky, type]<br>
     type: (gamma, frequency)</pre><br>
 <pre>QL_flux_out::Array{3} - [field, species, type]<br>
     type: (particle, energy, torodial stress, parallel stress, exchange)</pre><br>
+<pre>"Output of run_tjlf()"::Array{2} - [species, type]<br>
+    type: (particle, energy, torodial stress, parallel stress, exchange)</pre><br>
+<pre>species: 1 = electron, 2+ = ions</pre><br>
+<pre>modes: 1 = most unstable</pre>
 The order of the indices try to take advantage of Julia's column major memory usage
+
+# Bash Folder
+
+Wrote a Bash script for testing how number of threads affects speed. Currently it is testing on the seven radial points Tim gave me found in outputs/TIM_test/. You call the executable followed by command line arguements. If you give one number, it gives you the @btime with that number of threads. If you give two numbers, it gives you the @btime looping through those two numbers. If you give three or more numbers, it gives you the @btime for each number in the arguments. I currently don't have any implementation to test the threading speed on other test cases, but you can pretty easily copy my Julia script to meet whatever you need.
+
+# Other Notes from DSUN
+
+For SAT0, TM() does not return the value of QL_weights (aka "QL_flux_spectrum_out" in TGLF) and instead returns the value of what TGLF refers to as flux_spectrum_out. This is because the saturation rule calculation is done in a different place (LS.jl instead of multiscale_spectrum.jl), and otherwise, I would have to pass this extra Array through multiple functions just for SAT0 which is tedious and ugly. Plus SAT0 isn't really used apparently. So, if you are trying to compare the QL_weights for a SAT0 run, make sure you keep this in mind.
+
+The name of the SaturationParameters struct is probably not a great struct name since it doesn't really relate to the saturation rules at all and instead are more related to the Miller Geometry, not sure what a better name would be since OutputGeometry is already used.
+
+Currently, InputTJLF's IFLUX parameter tells the code whether it is going to calculate eigenvectors. This is bad and I should probably change it into a local variable instead of a struct parameter. Ran into an issue multithreading with onePass() since it changes IFLUX in the middle of its function. The code is currently fixed with an extra "find_eigenvector" variable, but this should just be the standard IMO. I will try and implement this before I leave and delete the IFLUX parameter, but if this is still in the README I have not done it yet.
