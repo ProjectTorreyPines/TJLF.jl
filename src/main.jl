@@ -1,38 +1,69 @@
-# calls the fortran code as a shared library
-# ccall((:main, "./src/Fortran/tglf.so"), Cvoid, () ,)
 # calls the fortran code as an executable
-# path = "./Fortran/tglf"
-# run(`$(path) $baseDirectory`)
+path = "./Fortran/tglf"
+run(`$(path) $baseDirectory`)
+
 using Revise
 include("../src/TJLF.jl")
 using .TJLF
 using Plots
+using Base.Threads
+Threads.nthreads()
+using LinearAlgebra
+BLAS.set_num_threads(1)
+
 
 #******************************************************************************************************
 # Read input.tglf
 #******************************************************************************************************
 # location for the input.tglf file
-baseDirectory = "../outputs/test_TM/simple_test/"
-# baseDirectory = "../outputs/test_TM/nmodes2/"
+inputTJLFVector = Vector{Main.TJLF.InputTJLF}(undef, 7)
+begin
+baseDirectory = "../outputs/TIM_case/case2/"
+inputTJLFVector[1] = readInput(baseDirectory*"input.tglf")
+baseDirectory = "../outputs/TIM_case/case3/"
+inputTJLFVector[2] = readInput(baseDirectory*"input.tglf")
+baseDirectory = "../outputs/TIM_case/case4/"
+inputTJLFVector[3] = readInput(baseDirectory*"input.tglf")
+baseDirectory = "../outputs/TIM_case/case5/"
+inputTJLFVector[4] = readInput(baseDirectory*"input.tglf")
+baseDirectory = "../outputs/TIM_case/case6/"
+inputTJLFVector[5] = readInput(baseDirectory*"input.tglf")
+baseDirectory = "../outputs/TIM_case/case7/"
+inputTJLFVector[6] = readInput(baseDirectory*"input.tglf")
+baseDirectory = "../outputs/TIM_case/case8/"
+inputTJLFVector[7] = readInput(baseDirectory*"input.tglf")
+end
 
-inputTJLF = readInput(baseDirectory)
-inputTJLF2 = readInput(baseDirectory)
+
+baseDirectory = "../outputs/TIM_case2/case12/"
+baseDirectory = "../outputs/tglf_regression/tglf01/"
+inputTJLF = readInput(baseDirectory*"input.tglf")
+inputTJLF2 = readInput(baseDirectory*"input.tglf")
+
 
 #*******************************************************************************************************
 #   start running stuff
 #*******************************************************************************************************
-outputHermite = gauss_hermite(inputTJLF)
-satParams = get_sat_params(inputTJLF)
-inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
-QL_weight, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+begin
+    outputHermite = gauss_hermite(inputTJLF)
+    satParams = get_sat_params(inputTJLF)
+    inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
+    QL_weight, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+end
+
 QL_flux_out, flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weight)
+final_flux = sum(QL_flux_out,dims=1)[1,:,:]
 
 inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
 inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
-inputTJLF2.GAMMA_SPECTRUM .= eigenvalue[inputTJLF.NMODES,:,1]
 inputTJLF2.FIND_WIDTH = false
 
 QL_weight2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
+
+begin
+    plot(inputTJLF.KY_SPECTRUM, eigenvalue[1,:,1]; label="correct")
+    display(plot!(inputTJLF2.KY_SPECTRUM, eigenvalue2[1,:,1]; label="fast", title="gamma"))
+end
 
 for i in eachindex(QL_weight)
     if(!isapprox(QL_weight[i],QL_weight2[i],rtol=1e-6))
@@ -44,11 +75,10 @@ end
 #   profiling
 #*******************************************************************************************************
 
-@profview tjlf_TM(inputTJLF2, satParams, outputHermite)
+@profview tjlf_TM(inputTJLF, satParams, outputHermite)
 # @profview_allocs tjlf_TM(inputTJLF, satParams, outputHermite)
 # using Profile
 # @profile tjlf_TM(inputTJLF, satParams, outputHermite)
-# @codewarning
 using BenchmarkTools
 @btime tjlf_TM(inputTJLF2, satParams, outputHermite)
 
@@ -75,7 +105,7 @@ for val in 3.0:0.1:6.0
     push!(energyFlux,QL_weight[1,2,1,:,2])
 
     QL_weight2, eigenvalue2, _, _ = TJLF.run(inputTJLF2)
-    inputTJLF2.GAMMA_SPECTRUM .= eigenvalue2[:,:,1]
+    inputTJLF2.EIGEN_SPECTRUM .= eigenvalue2[:,:,1]
     push!(xGrid2,inputTJLF2.KY_SPECTRUM)
     # push!(particleFlux2,flux2[1,1,1,:,1])
     push!(energyFlux2,QL_weight2[1,2,1,:,2])
@@ -179,6 +209,7 @@ vline!([3], linestyle=:dash, color=:black, label = "width value")
 #   compare weights/eigenvalues to Fortran
 #*******************************************************************************************************
 
+begin
 fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"
 lines = readlines(fileDirectory)
 (ntype, nspecies, nfield, nky, nmodes) = parse.(Int32, split(lines[4]))
@@ -196,7 +227,6 @@ QLw = reshape(ql, (ntype, nky, nmodes, nfield, nspecies))
 QL_data = permutedims(QLw,(4,5,3,2,1)) # (nf,ns,nm,nky,ntype)
 
 # (nf,ns,nm,nky,ntype)
-begin
 plot(inputTJLF.KY_SPECTRUM, QL_data[1,1,1,:,1]; label="Fortran")
 display(plot!(inputTJLF.KY_SPECTRUM, QL_weight[1,1,1,:,1]; label="Julia", title="particle flux"))
 
@@ -227,12 +257,12 @@ for k in 1:nmodes
     push!(gamma, lines[2k-1:2*nmodes:end])
     push!(freq, lines[2k:2*nmodes:end])
 end
-gammaJulia = eigenvalue[:,:,1]
-freqJulia = eigenvalue[:,:,2]
+gammaJulia = eigenvalue2[:,:,1]
+freqJulia = eigenvalue2[:,:,2]
 
-plot(inputTJLF.KY_SPECTRUM, freq; label="Fortran")
+plot(inputTJLF.KY_SPECTRUM, freq[1]; label="Fortran")
 display(plot!(inputTJLF.KY_SPECTRUM, freqJulia[1,:]; label="Julia", title="Frequency",linestyle=:dash))
 # display(plot!(inputTJLF.KY_SPECTRUM, freqJulia[2,:], label="Julia", title="Frequency",linestyle=:dash))
-plot(inputTJLF.KY_SPECTRUM, gamma; label="Fortran")
+plot(inputTJLF.KY_SPECTRUM, gamma[1]; label="Fortran")
 display(plot!(inputTJLF.KY_SPECTRUM, gammaJulia[1,:]; label="Julia", title="Growth Rate",linestyle=:dash))
 end
