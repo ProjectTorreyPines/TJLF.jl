@@ -183,11 +183,9 @@ end
 
 
 
-
-
 mutable struct InputTJLF{T<:Real}
 
-    UNITS::Union{Missing,Missing}
+    UNITS::Union{String,Missing}
 
     USE_BPER::Union{Bool,Missing}
     USE_BPAR::Union{Bool,Missing}
