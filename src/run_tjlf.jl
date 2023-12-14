@@ -1,4 +1,5 @@
 function run(inputTJLF::InputTJLF)
+    checkInput(inputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
@@ -11,6 +12,7 @@ function run(inputTJLF::InputTJLF)
 end
 function run(inputTGLF::InputTGLF)
     inputTJLF = InputTJLF{Float64}(inputTGLF)
+    checkInput(inputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
@@ -31,6 +33,7 @@ description:
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
 function run_tjlf(inputTJLF::InputTJLF)
+    checkInput(inputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
@@ -51,6 +54,7 @@ description:
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
 function run_tjlf(input_tjlfs::Vector{InputTJLF})
+    checkInput(input_tjlfs)
     outputs = Vector{Array{Float64, 3}}(undef,length(input_tjlfs))
     Threads.@threads for idx in eachindex(input_tjlfs)
         outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
