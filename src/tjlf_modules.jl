@@ -187,7 +187,7 @@ end
 
 mutable struct InputTJLF{T<:Real}
 
-    UNITS::String
+    UNITS::Union{Missing,Missing}
 
     USE_BPER::Union{Bool,Missing}
     USE_BPAR::Union{Bool,Missing}
@@ -213,75 +213,88 @@ mutable struct InputTJLF{T<:Real}
     VPAR_MODEL::Union{Int,Missing}
     IBRANCH::Union{Int,Missing}
 
-    ZS::Vector{T}
-    MASS::Vector{T}
-    RLNS::Vector{T}
-    RLTS::Vector{T}
-    TAUS::Vector{T}
-    AS::Vector{T}
-    VPAR::Vector{T}
-    VPAR_SHEAR::Vector{T}
+    ZS::Union{Vector{T},Missing}
+    MASS::Union{Vector{T},Missing}
+    RLNS::Union{Vector{T},Missing}
+    RLTS::Union{Vector{T},Missing}
+    TAUS::Union{Vector{T},Missing}
+    AS::Union{Vector{T},Missing}
+    VPAR::Union{Vector{T},Missing}
+    VPAR_SHEAR::Union{Vector{T},Missing}
 
     # NOT IN TGLF
-    WIDTH_SPECTRUM::Vector{T}
-    KY_SPECTRUM::Vector{T}
-    EIGEN_SPECTRUM::Vector{ComplexF64}
+    WIDTH_SPECTRUM::Union{Vector{T},Missing}
+    KY_SPECTRUM::Union{Vector{T},Missing}
+    EIGEN_SPECTRUM::Union{Vector{ComplexF64},Missing}
     FIND_EIGEN::Union{Bool,Missing}
     # NOT IN TGLF
 
-    SIGN_BT::Int
-    SIGN_IT::Int
-    KY::T
+    SIGN_BT::Union{Int,Missing}
+    SIGN_IT::Union{Int,Missing}
+    KY::Union{T,Missing}
 
-    VEXB_SHEAR::T
-    BETAE::T
-    XNUE::T
-    ZEFF::T
-    DEBYE::T
+    VEXB_SHEAR::Union{T,Missing}
+    BETAE::Union{T,Missing}
+    XNUE::Union{T,Missing}
+    ZEFF::Union{T,Missing}
+    DEBYE::Union{T,Missing}
 
-    ALPHA_MACH::T
-    ALPHA_E::T
-    ALPHA_P::T
-    ALPHA_QUENCH::Int
-    ALPHA_ZF::T
-    XNU_FACTOR::T
-    DEBYE_FACTOR::T
-    ETG_FACTOR::T
-    RLNP_CUTOFF::T
+    ALPHA_MACH::Union{T,Missing}
+    ALPHA_E::Union{T,Missing}
+    ALPHA_P::Union{T,Missing}
+    ALPHA_QUENCH::Union{Int,Missing}
+    ALPHA_ZF::Union{T,Missing}
+    XNU_FACTOR::Union{T,Missing}
+    DEBYE_FACTOR::Union{T,Missing}
+    ETG_FACTOR::Union{T,Missing}
+    RLNP_CUTOFF::Union{T,Missing}
 
-    WIDTH::T
-    WIDTH_MIN::T
+    WIDTH::Union{T,Missing}
+    WIDTH_MIN::Union{T,Missing}
 
-    RMIN_LOC::T
-    RMAJ_LOC::T
-    ZMAJ_LOC::T
-    DRMINDX_LOC::T
-    DRMAJDX_LOC::T
-    DZMAJDX_LOC::T
-    Q_LOC::T
-    KAPPA_LOC::T
-    S_KAPPA_LOC::T
-    DELTA_LOC::T
-    S_DELTA_LOC::T
-    ZETA_LOC::T
-    S_ZETA_LOC::T
-    P_PRIME_LOC::T
-    Q_PRIME_LOC::T
-    BETA_LOC::T
-    KX0_LOC::T
+    RMIN_LOC::Union{T,Missing}
+    RMAJ_LOC::Union{T,Missing}
+    ZMAJ_LOC::Union{T,Missing}
+    DRMINDX_LOC::Union{T,Missing}
+    DRMAJDX_LOC::Union{T,Missing}
+    DZMAJDX_LOC::Union{T,Missing}
+    Q_LOC::Union{T,Missing}
+    KAPPA_LOC::Union{T,Missing}
+    S_KAPPA_LOC::Union{T,Missing}
+    DELTA_LOC::Union{T,Missing}
+    S_DELTA_LOC::Union{T,Missing}
+    ZETA_LOC::Union{T,Missing}
+    S_ZETA_LOC::Union{T,Missing}
+    P_PRIME_LOC::Union{T,Missing}
+    Q_PRIME_LOC::Union{T,Missing}
+    BETA_LOC::Union{T,Missing}
+    KX0_LOC::Union{T,Missing}
 
-    DAMP_PSI::T
-    DAMP_SIG::T
-    WDIA_TRAPPED::T
-    PARK::T
-    GHAT::T
-    GCHAT::T
-    WD_ZERO::T
-    LINSKER_FACTOR::T
-    GRADB_FACTOR::T
-    FILTER::T
-    THETA_TRAPPED::T
-    SMALL::T
+    DAMP_PSI::Union{T,Missing}
+    DAMP_SIG::Union{T,Missing}
+    WDIA_TRAPPED::Union{T,Missing}
+    PARK::Union{T,Missing}
+    GHAT::Union{T,Missing}
+    GCHAT::Union{T,Missing}
+    WD_ZERO::Union{T,Missing}
+    LINSKER_FACTOR::Union{T,Missing}
+    GRADB_FACTOR::Union{T,Missing}
+    FILTER::Union{T,Missing}
+    THETA_TRAPPED::Union{T,Missing}
+    SMALL::Union{T,Missing}
+
+    function InputTJLF{T}() where {T<:Real}
+        new(
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing)
+    end
 
     function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
         new("",
