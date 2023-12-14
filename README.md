@@ -105,6 +105,10 @@ The order of the indices try to take advantage of Julia's column major memory us
 
 Wrote a Bash script for testing how number of threads affects speed. Currently it is testing on the seven radial points Tim gave me found in outputs/TIM_test/. You call the executable followed by command line arguements. If you give one number, it gives you the @btime with that number of threads. If you give two numbers, it gives you the @btime looping through those two numbers. If you give three or more numbers, it gives you the @btime for each number in the arguments. I currently don't have any implementation to test the threading speed on other test cases, but you can pretty easily copy my Julia script to meet whatever you need.
 
+# Multithreading
+
+If you are multithreading, make sure BLAS.set_num_threads(1) is set at some point.
+
 # Other Notes from DSUN
 
 For SAT0, TM() does not return the value of QL_weights (aka "QL_flux_spectrum_out" in TGLF) and instead returns the value of what TGLF refers to as flux_spectrum_out. This is because the saturation rule calculation is done in a different place (LS.jl instead of multiscale_spectrum.jl), and otherwise, I would have to pass this extra Array through multiple functions just for SAT0 which is tedious and ugly. Plus SAT0 isn't really used apparently. So, if you are trying to compare the QL_weights for a SAT0 run, make sure you keep this in mind.
