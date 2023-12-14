@@ -97,6 +97,8 @@ There are some 3D and 5D arrays where the indices are not obvious. They are spec
     type: (particle, energy, torodial stress, parallel stress, exchange)</pre><br>
 <pre>"Output of run_tjlf()"::Array{2} - [species, type]<br>
     type: (particle, energy, torodial stress, parallel stress, exchange)</pre><br>
+<pre>species: 1 = electron, 2+ = ions</pre><br>
+<pre>modes: 1 = most unstable</pre>
 The order of the indices try to take advantage of Julia's column major memory usage
 
 # Bash Folder
