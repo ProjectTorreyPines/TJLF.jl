@@ -101,6 +101,10 @@ There are some 3D and 5D arrays where the indices are not obvious. They are spec
 <pre>modes: 1 = most unstable</pre>
 The order of the indices try to take advantage of Julia's column major memory usage
 
+# Multithreading
+
+If you are multithreading, make sure BLAS.set_num_threads(1) is set at some point.
+
 # Bash Folder
 
 Wrote a Bash script for testing how number of threads affects speed. Currently it is testing on the seven radial points Tim gave me found in outputs/TIM_test/. You call the executable followed by command line arguements. If you give one number, it gives you the @btime with that number of threads. If you give two numbers, it gives you the @btime looping through those two numbers. If you give three or more numbers, it gives you the @btime for each number in the arguments. I currently don't have any implementation to test the threading speed on other test cases, but you can pretty easily copy my Julia script to meet whatever you need.
