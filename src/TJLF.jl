@@ -1,6 +1,6 @@
 module TJLF
 
-using MKL
+#using MKL
 using Base.Threads
 using LinearAlgebra
 import LinearAlgebra.LAPACK.ggev!
