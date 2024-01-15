@@ -306,7 +306,7 @@ function intensity_sat(
         end
 
         if dlnpdr > rlnp_cutoff
-            dlnpdr = inputs.RLNP_CUTOFF
+            dlnpdr = rlnp_cutoff
         end
         if dlnpdr < 4.0
             dlnpdr = 4.0
