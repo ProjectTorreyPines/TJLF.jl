@@ -289,8 +289,8 @@ function intensity_sat(
 
     # model fit parameters
     # Miller geometry values igeo=1
-    if(rlnp_cutoff > 0.0)
-        if(beta_loc == 0.0)
+    if rlnp_cutoff > 0.0
+        if beta_loc == 0.0
             dlnpdr = 0.0
             ptot = 0.0
             for i in 1:ns
@@ -305,8 +305,12 @@ function intensity_sat(
                 (inputs.RMIN_LOC/inputs.Q_LOC)*inputs.RMAJ_LOC)
         end
 
-        if(dlnpdr > rlnp_cutoff) dlnpdr = rlnp_cutoff_in end
-        if(dlnpdr < 4.0) dlnpdr = 4.0 end
+        if dlnpdr > rlnp_cutoff
+            dlnpdr = rlnp_cutoff
+        end
+        if dlnpdr < 4.0
+            dlnpdr = 4.0
+        end
 
     else
         dlnpdr = 12.0
