@@ -180,16 +180,16 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
         dky_spectrum = Vector{Float64}(undef,nky + nky_in)
 
         ky_min = 0.05*ky_factor/rho_ion
-        for i = 1:nky1
+        for i = 1:6      # Hard-coding for now :: nky1
             ky_spectrum[i] = i*ky_min
             dky_spectrum[i] = ky_min
         end
-        ky_min = ky_spectrum[nky1]
+        ky_min = ky_spectrum[6] # Hard-coding for now :: nyk1
         ky_max = 1.0*ky_factor/rho_ion
 
         dky0 = 0.1*ky_factor/rho_ion
-        for i = nky1+1:nky
-            ky_spectrum[i] = ky_min + (i-4)*dky0
+        for i = nky1+2:nky
+            ky_spectrum[i] = ky_min + (i-6)*dky0
             dky_spectrum[i] = dky0
         end
 

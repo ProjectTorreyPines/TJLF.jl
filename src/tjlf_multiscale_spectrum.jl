@@ -289,8 +289,8 @@ function intensity_sat(
 
     # model fit parameters
     # Miller geometry values igeo=1
-    if(rlnp_cutoff > 0.0)
-        if(beta_loc == 0.0)
+    if rlnp_cutoff > 0.0
+        if beta_loc == 0.0
             dlnpdr = 0.0
             ptot = 0.0
             for i in 1:ns
@@ -305,8 +305,12 @@ function intensity_sat(
                 (inputs.RMIN_LOC/inputs.Q_LOC)*inputs.RMAJ_LOC)
         end
 
-        if(dlnpdr > rlnp_cutoff) dlnpdr = rlnp_cutoff_in end
-        if(dlnpdr < 4.0) dlnpdr = 4.0 end
+        if dlnpdr > rlnp_cutoff
+            dlnpdr = rlnp_cutoff
+        end
+        if dlnpdr < 4.0
+            dlnpdr = 4.0
+        end
 
     else
         dlnpdr = 12.0
@@ -382,17 +386,20 @@ function intensity_sat(
             sum_W_i = sum(QL_weights[1,2:end,k,:,2], dims=1) # sum over ion species, requires electrons to be species 1
 
             # check for singularities in weight ratio near kmax
-            i = 1
-            while (ky_spect[i] < kmax)
-	            i += 1
-	        end
-
-            ### why is sum_W_i an array now???
-            if(sum_W_i[i]==0.0 || sum_W_i[i-1]==0.0)
+            if(kmax<=ky_spect[1])
                 x = 0.5
             else
-                abs_W_ratio = abs.(QL_weights[1,1,k,:,2]./sum_W_i)
-                x = linear_interpolation(ky_spect, abs_W_ratio, kmax)
+            ### why is sum_W_i an array now???
+                i = 1
+                while(ky_spect[i] < kmax)
+                    i += 1
+                end
+                if(sum_W_i[i]==0.0 || sum_W_i[i-1]==0.0)
+                    x = 0.5
+                else
+                    abs_W_ratio = abs.(QL_weights[1,1,k,:,2]./sum_W_i)
+                    x = linear_interpolation(ky_spect, abs_W_ratio, kmax)
+                end
             end
             Y = mode_transition_function(x, Y_ITG, Y_TEM, x_ITG, x_TEM)
 
@@ -648,17 +655,14 @@ function intensity_sat(
             for i in 1:nmodes
                 field_spectrum_out[j,i] = 0.0
                 gammaeff = 0.0
-                if(gamma0 > small)
-                    if (ky0 <= kP) # initial quadratic
-
-			            sig_ratio = (aoverb * (ky0^2) + ky0 + coverb) / (aoverb * (k0^2) + k0 + coverb)
-			            field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky * (gamma_matrix[i,j]/gamma0)^(2 * expsub)
-
-                    elseif (ky0 <= kT) # connecting quadratic
-
-		                if(YTs[i]==0.0 || kP==kT)
+                if(gamma0 > small) # B: Based on the reduction of the matrices field_spectrum_out and gamma_matrix, I'm going to presume that they are in Fortran's [2, :, :] and [1, :, :] space respectively.
+                    if (ky0 <= kT)
+		                if(YTs[i]==0.0 || kP>=kT)
                             field_spectrum_out[j,i] = 0.0
-		                else
+                        elseif(ky0 <= kP) # initial quadratic
+                            sig_ratio = (aoverb * (ky0^2) + ky0 + coverb) / (aoverb * (k0^2) + k0 + coverb)
+                            field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky * (gamma_matrix[i,j]/gamma0)^(2 * expsub)
+                        else # connecting quadratic
                             doversig0 = ( (Ys[i] / YTs[i]) ^ (1.0/abs(c_1))
                                         - (aoverb*kP^2 + kP + coverb - (kP-kT)*(2*aoverb*kP + 1))
                                         /(aoverb*k0^2 + k0 + coverb))
