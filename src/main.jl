@@ -1,6 +1,7 @@
 # calls the fortran code as an executable
-path = "./Fortran/tglf"
-run(`$(path) $baseDirectory`)
+path = "/Users/benagnew/TJLF.jl/src/Fortran/tglf"
+baseDirectory = "/Users/benagnew/TJLF.jl/outputs/testB/tglf01"
+run(`$(path) $(baseDirectory)`) 
 
 using Revise
 include("../src/TJLF.jl")
@@ -35,11 +36,43 @@ inputTJLFVector[7] = readInput(baseDirectory*"input.tglf")
 end
 
 
-baseDirectory = "../outputs/TIM_case2/case12/"
-baseDirectory = "../outputs/tglf_regression/tglf01/"
+baseDirectory = "/Users/benagnew/TJLF.jl/outputs/testB/tglf01/"
 inputTJLF = readInput(baseDirectory*"input.tglf")
-inputTJLF2 = readInput(baseDirectory*"input.tglf")
+baseDirectory = "/Users/benagnew/TJLF.jl/outputs/tglf_regression/tglf01/"
+inputTJLF = readInput(baseDirectory*"input.tglf")
+inputTJLF2 = inputTJLF
 
+
+
+inputTJLF.ALPHA_ZF = 1.0
+inputTJLF.AS_1
+inputTJLF.AS_2
+inputTJLF.AS_3
+inputTJLF.MASS_1
+inputTJLF.MASS_2
+inputTJLF.MASS_3
+inputTJLF.RLNS_1
+inputTJLF.RLNS_2
+inputTJLF.RLNS_3
+inputTJLF.RLTS_1
+inputTJLF.RLTS_2
+inputTJLF.RLTS_3
+inputTJLF.TAUS_1
+inputTJLF.TAUS_2
+inputTJLF.TAUS_3
+inputTJLF.USE_BPER = true
+inputTJLF.VPAR_1
+inputTJLF.VPAR_2
+inputTJLF.VPAR_3
+inputTJLF.VPAR_SHEAR_1
+inputTJLF.VPAR_SHEAR_2
+inputTJLF.VPAR_SHEAR_3
+inputTJLF.ZS_1
+inputTJLF.ZS_2
+inputTJLF.ZS_3
+inputTJLF.SMALL = 1.0e-13
+tDirectory = "/Users/benagnew/TJLF.jl/outputs/testB/tglf01/"
+#CHECK TJLF_READ_INPUT.jl FOR inP status.
 
 #*******************************************************************************************************
 #   start running stuff
@@ -54,16 +87,27 @@ end
 QL_flux_out, flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weight)
 final_flux = sum(QL_flux_out,dims=1)[1,:,:]
 
+#The spectra don't necessarily need to be set identically because it is very likely that rho_i or rho_e, which are used to define ky grid points of equidistance and logarithmic spacing.
 inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
 inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
 inputTJLF2.FIND_WIDTH = false
 
-QL_weight2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams, outputHermite)
+#Testing purposes:
+begin
+satParams2 = get_sat_params(inputTJLF2) #--
+outputHermite2 = gauss_hermite(inputTJLF2) #--
+inputTJLF2.KY_SPECTRUM .= get_ky_spectrum(inputTJLF2, satParams2.grad_r0) #--
+QL_weight2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams2, outputHermite2) #Prev. def. w/ (inputTJLF2, satParams, outputHermite)
+end
+#Why would satParams be used here? We just defined it as being derived from only inputTJLF but we apply it
+#to inputTJLF2 which right now is /TIM_case2/case2. Are we defining these two to have exactly the same satParams?
+#and outputHermite? -- This is because the ky spectrum is defined already for each of the cases: check out get_ky_spectrum function 
 
 begin
     plot(inputTJLF.KY_SPECTRUM, eigenvalue[1,:,1]; label="correct")
-    display(plot!(inputTJLF2.KY_SPECTRUM, eigenvalue2[1,:,1]; label="fast", title="gamma"))
+    #display(plot!(inputTJLF2.KY_SPECTRUM, eigenvalue2[1,:,1]; label="fast", title="gamma"))
 end
+#This plot is showing the ky-spectrum vs. the eigenvalue growth rate gamma. There may be some scaling things to consider for gamma.
 
 for i in eachindex(QL_weight)
     if(!isapprox(QL_weight[i],QL_weight2[i],rtol=1e-6))
@@ -85,7 +129,7 @@ using BenchmarkTools
 #*******************************************************************************************************
 #   plot QL weights with varied RLTS2
 #*******************************************************************************************************
-
+begin
 rlts = []
 xGrid = []
 particleFlux = []
@@ -94,6 +138,7 @@ xGrid2 = []
 particleFlux2 = []
 energyFlux2 = []
 
+#This does involve KY_SPECTRUM which we would have just set to be equal to the first input.
 for val in 3.0:0.1:6.0
     inputTJLF.RLTS[2] = val
     inputTJLF2.RLTS[2] = val
@@ -105,12 +150,23 @@ for val in 3.0:0.1:6.0
     push!(energyFlux,QL_weight[1,2,1,:,2])
 
     QL_weight2, eigenvalue2, _, _ = TJLF.run(inputTJLF2)
-    inputTJLF2.EIGEN_SPECTRUM .= eigenvalue2[:,:,1]
+    #inputTJLF2.EIGEN_SPECTRUM .= eigenvalue2[:,:,1]
+    #What is the above line accomplishing?
     push!(xGrid2,inputTJLF2.KY_SPECTRUM)
     # push!(particleFlux2,flux2[1,1,1,:,1])
     push!(energyFlux2,QL_weight2[1,2,1,:,2])
 
 end
+end
+
+#But the eigenvalue2 is reset here so what exactly was the point of the beginning needing
+#eigenvalue2 to be set with inputTJLF's satParams and outputHermite?
+
+#inputTJLF2.EIGEN_SPECTRUM and
+#eigenvalue2[1,:,1] are identical except evalue2 has an imaginary part. Is the point to 
+#just take the real part of the eigenvalue of TJLF2 here?
+
+#I added an encompassing begin-end statement so as to not create any issues with xGrid length
 
 for i in 1:2
     plot()
@@ -132,6 +188,7 @@ end
 #   plot fluxes with varied RLTS2
 #*******************************************************************************************************
 
+begin
 rlts = []
 xGrid = []
 particleFlux = []
@@ -146,6 +203,7 @@ for val in 0.1:0.1:3.0
     _, _, _, flux_spect = TJLF.run(inputTJLF)
     push!(xGrid,inputTJLF.KY_SPECTRUM)
     push!(energyFlux,flux_spect[1,1,1,:,2])
+end
 end
 
 plot()
@@ -245,7 +303,7 @@ end
 
 # Get eigenvalue spectrum
 nmodes = inputTJLF.NMODES
-fileDirectory = baseDirectory * "out.tglf.eigenvalue_spectrum"
+fileDirectory = tDirectory * "out.tglf.eigenvalue_spectrum" #baseDirectory * "out.tglf.eigenvalue_spectrum"
 lines = readlines(fileDirectory)
 lines = split(join(lines[3:length(lines)]))
 lines = [parse(Float64, l) for l in lines]
@@ -257,8 +315,8 @@ for k in 1:nmodes
     push!(gamma, lines[2k-1:2*nmodes:end])
     push!(freq, lines[2k:2*nmodes:end])
 end
-gammaJulia = eigenvalue2[:,:,1]
-freqJulia = eigenvalue2[:,:,2]
+gammaJulia = eigenvalue[:,:,1] #Was listed as eigenvalue2 for this and below line
+freqJulia = eigenvalue[:,:,2]
 
 plot(inputTJLF.KY_SPECTRUM, freq[1]; label="Fortran")
 display(plot!(inputTJLF.KY_SPECTRUM, freqJulia[1,:]; label="Julia", title="Frequency",linestyle=:dash))

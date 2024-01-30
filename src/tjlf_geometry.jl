@@ -11,6 +11,9 @@ outputs:
 
 description:
     calculate kx0_e (spectral shift) given the growthrate used for the second pass of TM
+
+location:
+    tjlf_geometry.jl    
 """
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};
     small::T=0.00000001) where T<:Real
@@ -89,6 +92,9 @@ outputs:
 
 description:
     create the OutputGeometry struct for the specific WIDTHS value used to calculate Ave structs (tjlf_matrix.jl) used in eigenmatrix population
+
+location:
+    tjlf_geometry.jl
 """
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T},
     ky::T, ky_index::Int;
@@ -370,6 +376,9 @@ outputs:
 
 description:
     compute the geometric coefficients on the x-grid
+
+location:
+    tjlf_geometry.jl
 """
 #### LINES 220-326, 478 in tglf_geometry.f90
 function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
@@ -377,10 +386,10 @@ function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
     rmin_s = inputs.RMIN_LOC
-    q_s = inputs.Q_LOC
+    q_s = inputs.Q_LOC #Safety factor abs.v
 
 
-    sat_rule_in = inputs.SAT_RULE
+    sat_rule_in = inputs.SAT_RULE #see gacode.io for 0-3 descr.
     units_in = inputs.UNITS
     sign_Bt_in = inputs.SIGN_BT
     ns = inputs.NS
@@ -517,7 +526,7 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
     R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, ds, t_s = miller_geo(inputs)
 
 
-    psi_x = R.*Bp
+    psi_x = R.*Bp # Poloidal flux
     delta_s = 12.0*ds
     ds2 = 12.0*ds^2
 
@@ -532,7 +541,7 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
         m3 = (m % (ms+1)) + 1
         m4 = ((m + 1) % (ms+1)) + 1
         ### had to do this weird short-circuiting bc of weird indexing
-        m1 < ms || (m1 = ((ms + m - 3) % (ms+1)) + 1)
+        m1 < ms || (m1 = ((ms + m - 3) % (ms+1)) + 1) 
         m2 < ms+1 || (m2 = ((ms + m - 2) % (ms+1)) + 1)
         m3 > 1 || (m3 = ((m + 1) % (ms+1)) + 1)
         m4 > 2 || (m4 = ((m + 2) % (ms+1)) + 1)
@@ -723,24 +732,26 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     rmin_loc = inputs.RMIN_LOC
     rmaj_loc = inputs.RMAJ_LOC
 
-    delta_loc = inputs.DELTA_LOC
-    kappa_loc = inputs.KAPPA_LOC
-    zeta_loc = inputs.ZETA_LOC
-    q_loc = inputs.Q_LOC
+    delta_loc = inputs.DELTA_LOC #gacode.io doesn't def this, but del is usually for triangularity, so a default value of 0 doesn't make much sense...
+    kappa_loc = inputs.KAPPA_LOC #elongation
+    zeta_loc = inputs.ZETA_LOC #squareness of flux surface
+    q_loc = inputs.Q_LOC #safety factor
     #### these might be global variables
-    p_prime_s = inputs.P_PRIME_LOC
-    q_prime_s = inputs.Q_PRIME_LOC
+    p_prime_s = inputs.P_PRIME_LOC # (qa^2)/(rB^2)*dp/dr -> regression test has 0, TIMcase doesn't
+    q_prime_s = inputs.Q_PRIME_LOC # (q^2*a^2)/(r^2)*s
 
-    drmajdx_loc = inputs.DRMAJDX_LOC
+    drmajdx_loc = inputs.DRMAJDX_LOC #These two I might want to ask about
     drmindx_loc = inputs.DRMINDX_LOC
 
 
     ### these are set to 0.0 despite having definitions in the inputs
     zmaj_loc = 0.0
     dzmajdx_loc = 0.0
+
+    #Extraction of shears in geometry:
     s_zeta_loc = inputs.S_ZETA_LOC
     s_delta_loc = inputs.S_DELTA_LOC
-    s_kappa_loc = inputs.S_KAPPA_LOC
+    s_kappa_loc = inputs.S_KAPPA_LOC #Why is elongation shear defined differently than for triangularity and squareness?
 
     R = zeros(T,ms+1)
     Z = zeros(T,ms+1)

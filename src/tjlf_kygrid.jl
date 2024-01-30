@@ -17,11 +17,11 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
     units_in = inputs.UNITS
     nky_in = inputs.NKY
     spectrum_type = inputs.KYGRID_MODEL
-    rho_e = √(inputs.TAUS[1]*inputs.MASS[1])/ abs(inputs.ZS[1])
+    rho_e = √(inputs.TAUS[1]*inputs.MASS[1])/ abs(inputs.ZS[1]) #((Ts/Te)*m)^0.5/|1| -> abs(charge #) as denom. TAUS[1] is electrons, aka 1.
 
     rho_ion = 0.0
     charge = 0.0
-    for is in 2:inputs.NS
+    for is in 2:inputs.NS #NS stands for Number of Species, so this just runs once for most considerations
         if !inputs.USE_AVE_ION_GRID
             rho_ion = √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
             break
@@ -63,28 +63,29 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
         end
 
     elseif(spectrum_type == 1)   # APS07 spectrum
-        nky = 9
+        nky = 9 #Initialize low ky steps.
         ky_spectrum = Vector{Float64}(undef,nky + nky_in)
         dky_spectrum = Vector{Float64}(undef,nky + nky_in)
 
-        ky_max = 0.9*ky_factor/rho_ion
+        ky_max = 0.9*ky_factor/rho_ion # Not exactly sure on this definition. It is a maximum ky for low ky presumably. In GYRO units (which most cases seem to use), factor is just 1 as grad r0 is normalized.
         dky0 = ky_max/nky
         for i = 1:nky
             ky_spectrum[i] = i*dky0
             dky_spectrum[i] = dky0
         end
 
+        #Establish high ky (ETG dominant) positions:
         ky0 = ky_max + dky0
         ky1 = 0.4*ky_factor/rho_e
 
 
         ### will this if ever fail?
-        if(nky_in > 0)
+        if(nky_in > 0) # B: nky_in = inputs.NKY which decidedly will not be 0 (see gacode.io) as we want to cover higher ky, so this should never fail (?).
             ##### divide by zero?
-            dky0 = log(ky1/ky0)/(nky_in-1)
+            dky0 = log(ky1/ky0)/(nky_in-1) # = (log(ky1)-log(ky0))/(nky_in-1). This is pretty straight-forward spacing.
             lnky = log(ky0)
             for i = nky+1:nky+nky_in
-                ky_spectrum[i] = exp(lnky)
+                ky_spectrum[i] = exp(lnky) #This is just ky0... but this form needs to be used for spacing.
                 dky_spectrum[i] = ky_spectrum[i]*dky0
                 lnky = lnky + dky0
             end
@@ -185,7 +186,7 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
             dky_spectrum[i] = ky_min
         end
         ky_min = ky_spectrum[6] # Hard-coding for now :: nyk1
-        ky_max = 1.0*ky_factor/rho_ion
+        ky_max = 1.0*ky_factor/rho_ion 
 
         dky0 = 0.1*ky_factor/rho_ion
         for i = nky1+2:nky

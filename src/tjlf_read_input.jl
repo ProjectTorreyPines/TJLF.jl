@@ -128,6 +128,16 @@ function readInput(filename::String)::InputTJLF
     inputTJLF.EIGEN_SPECTRUM .= NaN
 
     # double check struct is properly populated
+
+    #If you want to test a long-format example (see tjlf_modules.jl), inP = true, otherwise, inP = false.
+    #This is overly simplistic but I didn't want to mess anything else up.
+    inP = true
+    if inP
+        inputTJLF = InputTJLF{Float64}(inP)
+    end
+    
+    #Maybe checkInput could be altered for inputting default values, or the struct in modules could be
+    #Redefined as having 
     checkInput(inputTJLF)
 
     return inputTJLF

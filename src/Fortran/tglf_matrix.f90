@@ -1567,7 +1567,7 @@
         ave_kparhp3bp(is,ib,jb) = kp_hp3bp
         ave_kparhp1bp(is,ib,jb) = kp_hp1bp
         ave_kparhr11bp(is,ib,jb) = kp_hr11bp
-        ave_kparhr13bp(is,ib,jb) = kp_hr13b0
+        ave_kparhr13bp(is,ib,jb) = kp_hr13bp
         ave_kparhu1(is,ib,jb) = kp_hu1
         ave_kparhu3(is,ib,jb) = kp_hu3
         ave_kparht1(is,ib,jb) = kp_ht1

@@ -981,7 +981,7 @@
           kpar_gp1p0 = k_par0*ave_kpargp1p0(is,ib,jb)
           kpar_gp3p0 = k_par0*ave_kpargp3p0(is,ib,jb)
           if(use_bper_in)then
-            kpar_gp1b0 = k_par0*ave_kpargp1p0(is,ib,jb)
+            kpar_gp1b0 = k_par0*ave_kpargp1b0(is,ib,jb)
             kpar_gr11b0 = k_par0*ave_kpargr11b0(is,ib,jb)
             kpar_gr13b0 = k_par0*ave_kpargr13b0(is,ib,jb)
             if(vpar_model_in.eq.0)then
