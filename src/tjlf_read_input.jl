@@ -131,7 +131,7 @@ function readInput(filename::String)::InputTJLF
 
     #If you want to test a long-format example (see tjlf_modules.jl), inP = true, otherwise, inP = false.
     #This is overly simplistic but I didn't want to mess anything else up.
-    inP = true
+    inP = false
     if inP
         inputTJLF = InputTJLF{Float64}(inP)
     end
@@ -143,7 +143,6 @@ function readInput(filename::String)::InputTJLF
     return inputTJLF
 
 end
-
 
 """
     function checkInput(inputTJLF::InputTJLF)

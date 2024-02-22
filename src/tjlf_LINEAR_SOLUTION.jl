@@ -129,8 +129,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         gamma_out = similar(gamma_reference_kx0)
         freq_out = similar(freq_reference_kx0)
     end
-
-    if (inputs.IBRANCH == 0)
+    # Process for finding two most unstable modes for each sign of frequency: electron drift direction (1) and ion drift direction (2) w/ IBRANCH == 0:
+    if (inputs.IBRANCH == 0) # See below for -1 default case
         di = zeros(Int, size(rr))
         de = zeros(Int, size(rr))
         nmodes_out = nmodes_in
@@ -139,7 +139,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         me = 0
         for j1 = eachindex(rr)
             if (rr[j1] > epsilon1)
-                if (ri[j1] > 0.0)
+                if (ri[j1] > 0.0) # positive imaginary components represent that for ions, and v.v.
                     # note that ri = -freq, rr = gamma
                     mi = mi + 1
                     di[mi] = j1
@@ -149,7 +149,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 end
             end
         end
-
+        # di and de now store the unstable modes of ion and electron frequencies
         # find the most unstable mode for each branch
         if (me > 0)
             zgamax = 0.0
@@ -360,7 +360,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
         return nmodes_out, gamma_out, freq_out,
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
-        ft_test
+        ft_test, field_weight_out
     end
 
     particle_QL_out = fill(NaN, (3, ns, nmodes_in))
@@ -371,7 +371,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     return nmodes_out, gamma_out, freq_out,
     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
-    NaN
+    NaN, field_weight_out
     # return  gamma_out,
     #         freq_out,
     #         v_QL_out,
@@ -735,4 +735,78 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     wd_bar, b0_bar, modB_bar, v_weight, a_par_weight, b_par_weight, kx_bar, kpar_bar,
     field_weight_QL_out, particle_weight, energy_weight, stress_par_weight, stress_tor_weight, exchange_weight
 
+end
+
+function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, field_weight_out::Array{ComplexF64, 3}) where T<:Real 
+    # The tglf version of this function depends on tglf_dimensions, tglf_global, and tglf_sgrid. The wavefunction writing process is 
+    # entirely removed from TJLF. It was omitted (see deletedFields in the readInput function). I could either try to complete this
+    # without consideration for the wavefunction writing as is done in TJLFEP, or I could take a long detour and write the wavefunction
+    # details for TJLF. I think first, I want to get the actual process completed, so if I can avoid it, I want to not write the wavefunction
+    # in TJLF. My concern is that I might not be able to do this.
+    #ms = 128
+    # Variables that fortran says aren't from the modules:
+    # n, i, j, k, np, npi, j0, imax, dx, hp0, hp(nb,max_plot), xp(max_plot)
+    ms = 128
+    npi = 9
+    np = Int(ms/8)
+    nb = inputs.NBASIS_MAX
+    igeo = 1 # Hard-Coded for now as with the previous LS functions:
+    max_plot = Int(18*ms/8+1) # 289 length vector
+    maxmodes = inputs.NMODES
+    xp = fill(NaN, max_plot)
+    plot_angle_out = fill(NaN, max_plot)
+    plot_field_out = zeros(ComplexF64, maxmodes, 3, max_plot)
+    hp = fill(NaN, (nb, max_plot))
+    nbasis = inputs.NBASIS_MAX
+    nmodes_out = inputs.NMODES
+    if (igeo == 0)
+        dx = npi*2.0*pi/(max_plot-1) # /(max_plot-1)
+        for i = 1:max_plot
+            xp[i] = -npi*pi+(i-1)*dx
+            plot_angle_out[i] = xp[i]
+        end
+    else
+        dx = 2.0*pi/(satParams.y[ms]*inputs.WIDTH) # y comes from s_grid. width_in is not a tjlf struct thing; they mean width.
+        j0 = npi*np+1
+        xp[j0] = 0.0 
+        plot_angle_out[j0] = 0.0
+        j = 0
+        k = 0
+        imax = np*npi
+        for i = 1:imax
+            j += 1
+            if (j > 2*np)
+                j -= 2*np
+                k += 1
+            end # I needed to change the ms to ms+1 as the max dimension of y is ms+1 (see tjlf_geometry.jl)
+            xp[j0+i] = dx*(k*satParams.y[ms+1] + satParams.y[4*j])
+            println(j0-i, ", ", ms-4*j, ", ", i, ", ",  j, ", ", length(satParams.theta))
+            xp[j0-i] = -dx*((k+1)*satParams.y[ms+1] - satParams.y[ms+1-4*j])
+            plot_angle_out[j0+i] = -(k*satParams.theta[ms+1] + satParams.theta[4*j]) #t_s comes from sgrid module. t_s is theta in satParams
+            plot_angle_out[j0-i] = (k+1)*satParams.theta[ms+1] - satParams.theta[ms+1-4*j]
+        end
+    end
+    hp0 = sqrt(2)/pi^0.25
+    for i = 1:max_plot
+        hp[1, i] = hp0*exp(-xp[i]*xp[i]/2.0)
+        hp[2, i] = xp[i]*sqrt(2)*hp0*exp(-xp[i]*xp[i]/2.0)
+        if (nbasis > 2) # This needs some revision most likely. 
+            for j = 3:nbasis
+                hp[j, i] = xp[i]*sqrt(2.0/(j-1))*hp[j-1, i] - sqrt((j-2)/(j-1))*hp[j-2, i]
+            end # end of j
+        end # end of if nbasis > 2
+    end # end of i 
+    # compute the fields of the theta-grid
+    for n = 1:nmodes_out
+        for k = 1:3
+            for i = 1:max_plot
+                if ((k == 1) || (k == 2 && inputs.USE_BPER) || (k == 3 && inputs.USE_BPAR))
+                    for j = 1:nbasis
+                        plot_field_out[n, k, i] = plot_field_out[n, k, i] + field_weight_out[k, j, n]*hp[j, i]
+                    end
+                end
+            end # end of i
+        end # end of k
+    end # end of n
+    return plot_field_out, plot_angle_out, max_plot, nmodes_out #nfields_out?
 end

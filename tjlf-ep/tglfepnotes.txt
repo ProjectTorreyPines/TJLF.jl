@@ -1,0 +1,60 @@
+This file exists just for creating an understanding of the parallels between the functions that TGLF-EP is calling from the Fortran TGLF. 
+In the same way, we will be implementing certain functions in TJLF for use in the TJLF-EP code (some will not be translated, e.g. 
+nfreya_driver.f90 etc.). There are a few trees that have already been created by Dr. Neiser that depict the branches of certain 
+TGLFEP_example.f90 files which I will start with in order to better understand what TGLF-EP is both doing and how to better translate 
+it into Julia.
+
+TGLFEP_ky.f90:
+    Uses:
+        get_QL_energy_flux
+        get_QL_particle_flux
+        get_frequency
+        get_growthrate
+        get_wavefunction_out
+        tglf_as_in
+        tglf_rlns_in
+        tglf_rlts_in
+        tglf_run
+        tglf_taus_in
+        TGLFEP_tglf_map.f90
+    Used by:
+        TGLFEF_scalefactor.f90
+        TGLFEP_ky_widthscan.f90
+        TGLFEP_ky_nEPscan.f90
+        TGLFEP_kwscale_scan.f90
+        TGLFEP_mainsub.f90
+        TGLFEP_driver.f90
+
+    - All of the get_ex... functions are relatively straightforward and are all results of the TGLF
+    run, hence why this function calls TGLF_run. It also calls TGLFEP_tglf_map beforehand, which is not
+    indicated in the tree as a dependency but a called function. This TGLFEP_tglf_map will also need to be 
+    mapped and translated.
+    
+The module TGLFEP_interface contains the definition of the module for the input.TGLFEP file. There are a few extra listed variables to 
+consider that aren't in the input.TGLFEP file, possibly due to being defined in the map or other files. Similar to TJLF alone, I think it 
+will be best if I can directly extract the material from the input files (TGLFEP and gacode) rather than mess with creating a Julia 
+interface or calling TGLF methods, e.g.. My mapping subroutine will follow the same fashion as TGLFEP with mapping parameters to TGLF. 
+As TJLF already has a way to translate TGLF to TJLF, I don't see any reason to make a new mapping from TJLFEP to TJLF instead.
+
+Essentially, in Julia, I need to create an equivalent function that takes the input.gacode and input.TGLFEP files and map what is needed 
+to an inputTGLF struct. This can then be used in the process defined by TJLF_read_input.jl. 
+
+I need to better understand how the .TGLFEP and .profile inputs are being mapped to TGLF so as to organize this code. Are .profile 
+generated from .gacode? .TGLFEP is developed in the driver of TGLFEP. .profile is explicitly developed in the tglf_map, so the profile 
+is clearly more important (it certainly must develop from gacode as TGLFEP input will just be used for the purposes of TGLFEP). 
+In that case, I will need to define an inputTGLF struct for mapping purposes and some kind of struct for TGLFEP inputs. input.profile will 
+be mapped into TGLF as in fortran but any important variables will be stored in a TGLFEP struct. The inputTGLF may then be translated 
+and ran in TJLF, the results of which will be used for the rest of TJLFEP. This may be a little too simplistic or missing something that 
+I must consider, but that is my understanding as of now from reading driver.f90, interface.f90, tglf_map.f90.... This is one of the more 
+important things to get right at the beginning, the structure of the data I will be using so as to effectively use Julia. This also follows 
+in the footsteps of the previous TJLF development.
+
+2/6:
+
+    So the mapping will go as follows: the input.TGLFEP file will be dissected (I've already written most of this code but
+    I need to figure out if there's any componenets to the InputTJLFEP struct I've made) and then theh input.gacode will be dissected into
+    an InputTJLF struct with the function meant for such mapping. TGFLEP itself has a subroutine for EXPRO and direct reading (EXPRO I cannot seem to 
+    find much info on. Is it related to Alpha?)
+
+    The mapping of the gacode input is what is confusing me the most at this point. When you have a .profile file to work with, this makes the
+    whole process so straightforward from the perspective of the fortran code. 
