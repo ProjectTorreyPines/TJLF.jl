@@ -1,6 +1,6 @@
 # calls the fortran code as an executable
 path = "/Users/benagnew/TJLF.jl/src/Fortran/tglf"
-baseDirectory = "/Users/benagnew/TJLF.jl/outputs/testB/tglf01"
+baseDirectory = "-e /Users/benagnew/TJLF.jl/outputs/testB/tglf01"
 run(`$(path) $(baseDirectory)`) 
 
 using Revise
@@ -35,8 +35,7 @@ baseDirectory = "../outputs/TIM_case/case8/"
 inputTJLFVector[7] = readInput(baseDirectory*"input.tglf")
 end
 
-
-baseDirectory = "/Users/benagnew/TJLF.jl/outputs/testB/tglf01/"
+baseDirectory = "/Users/benagnew/TJLF.jl/outputs/TIM_case/case2/" 
 inputTJLF = readInput(baseDirectory*"input.tglf")
 baseDirectory = "/Users/benagnew/TJLF.jl/outputs/tglf_regression/tglf01/"
 inputTJLF = readInput(baseDirectory*"input.tglf")
@@ -84,24 +83,15 @@ begin
     QL_weight, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
 end
 
+# eigenvalue
+# length(inputTJLF.KY_SPECTRUM)
+
 QL_flux_out, flux_out = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weight)
 final_flux = sum(QL_flux_out,dims=1)[1,:,:]
 
-#The spectra don't necessarily need to be set identically because it is very likely that rho_i or rho_e, which are used to define ky grid points of equidistance and logarithmic spacing.
 inputTJLF2.KY_SPECTRUM .= inputTJLF.KY_SPECTRUM
 inputTJLF2.WIDTH_SPECTRUM .= inputTJLF.WIDTH_SPECTRUM
 inputTJLF2.FIND_WIDTH = false
-
-#Testing purposes:
-begin
-satParams2 = get_sat_params(inputTJLF2) #--
-outputHermite2 = gauss_hermite(inputTJLF2) #--
-inputTJLF2.KY_SPECTRUM .= get_ky_spectrum(inputTJLF2, satParams2.grad_r0) #--
-QL_weight2, eigenvalue2 = tjlf_TM(inputTJLF2, satParams2, outputHermite2) #Prev. def. w/ (inputTJLF2, satParams, outputHermite)
-end
-#Why would satParams be used here? We just defined it as being derived from only inputTJLF but we apply it
-#to inputTJLF2 which right now is /TIM_case2/case2. Are we defining these two to have exactly the same satParams?
-#and outputHermite? -- This is because the ky spectrum is defined already for each of the cases: check out get_ky_spectrum function 
 
 begin
     plot(inputTJLF.KY_SPECTRUM, eigenvalue[1,:,1]; label="correct")
@@ -124,7 +114,7 @@ end
 # using Profile
 # @profile tjlf_TM(inputTJLF, satParams, outputHermite)
 using BenchmarkTools
-@btime tjlf_TM(inputTJLF2, satParams, outputHermite)
+@btime tjlf_TM(inputTJLF, satParams, outputHermite)
 
 #*******************************************************************************************************
 #   plot QL weights with varied RLTS2

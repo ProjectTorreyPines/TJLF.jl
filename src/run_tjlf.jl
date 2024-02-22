@@ -1,16 +1,16 @@
-function run(inputTJLF::InputTJLF)
+function run_TJLF(inputTJLF::InputTJLF{Float64})
     checkInput(inputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
-    QL_weights, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+    QL_weights, eigenvalue, field_weight_out = tjlf_TM(inputTJLF, satParams, outputHermite)
     # for i in 1:size(eigenvalue,1)
     #     eigenvalue[i,1,1] = min(eigenvalue[i,1,1]/inputTJLF.KY_SPECTRUM[1], eigenvalue[i,2,1]/inputTJLF.KY_SPECTRUM[2]*.99)*inputTJLF.KY_SPECTRUM[1]
     # end -ORSO hack
     QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weights)
-    return QL_weights, eigenvalue, QL_flux_out, flux_spectrum
+    return QL_weights, eigenvalue, QL_flux_out, flux_spectrum, field_weight_out, satParams
 end
-function run(inputTGLF::InputTGLF)
+#=function run_TGLF(inputTGLF::InputTGLF)
     inputTJLF = InputTJLF{Float64}(inputTGLF)
     checkInput(inputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
@@ -19,7 +19,7 @@ function run(inputTGLF::InputTGLF)
     QL_weights, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
     QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:,:,1], QL_weights)
     return QL_weights, eigenvalue, QL_flux_out, flux_spectrum
-end
+end=#
 
 
 """
@@ -32,7 +32,7 @@ description:
     Runs TJLF on a single InputTJLF struct, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
-function run_tjlf(inputTJLF::InputTJLF)
+function run_tjlf_vec(inputTJLF::InputTJLF)
     checkInput(inputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
@@ -53,7 +53,7 @@ description:
     Runs TJLF on a vector of InputTJLF structs, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
-function run_tjlf(input_tjlfs::Vector{InputTJLF})
+function run_tjlf_vec(input_tjlfs::Vector{InputTJLF})
     checkInput(input_tjlfs)
     outputs = Vector{Array{Float64, 3}}(undef,length(input_tjlfs))
     Threads.@threads for idx in eachindex(input_tjlfs)
