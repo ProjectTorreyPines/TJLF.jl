@@ -1,11 +1,14 @@
-using Revise
-include("../src/TJLF.jl")
-using .TJLF
-using Plots
-using Base.Threads
-Threads.nthreads()
-using LinearAlgebra
-BLAS.set_num_threads(1)
+#= run_TJLF isolated:
+begin
+    using Revise
+    include("../src/TJLF.jl")
+    using .TJLF
+    using Plots
+    using Base.Threads
+    Threads.nthreads()
+    using LinearAlgebra
+    BLAS.set_num_threads(1)
+end
 
 include("../tjlf-ep/TJLFEP.jl")
 using .TJLFEP
@@ -46,12 +49,19 @@ display(plot!(inputTJLF.KY_SPECTRUM, freqJulia[1,:]; label="Julia", title="Frequ
 
 plot(inputTJLF.KY_SPECTRUM, gamma[1]; label="Fortran")
 display(plot!(inputTJLF.KY_SPECTRUM, gammaJulia[1,:]; label="Julia", title="Gamma vs ky for F and J", linestyle=:dash))
+=#
 
 # The driver.jl file is not really needed and I will be deleting it soon. For now, I will be making the driver in this portion
 # of the main.jl. It should help get everything in order for the most part. There are a few things the driver does that I need
 # to perform (especially MPI processes), and making a separate function doesn't make too much sense to be honest.
 
 #=============================================================================================================================#
+
+# In order to run TJLF-EP, MPI is used for parallel computing. Eventually I will
+# create a batch method for running it, but until then, you can run it by running
+# mpiexec -n # julia --project /Path/To/main.jl
+# where the # is replaced by the number of processes desired 
+# (generally should be >= SCAN_N)
 
 begin
     using MPI
@@ -63,80 +73,136 @@ begin
 
     # EXPRO definitions:
 
-    begin
+    #begin
     ni = TJLFEP.exproConst.ni
     Ti = TJLFEP.exproConst.Ti
     dlnnidr = TJLFEP.exproConst.dlnnidr
     dlntidr = TJLFEP.exproConst.dlntidr
-    end
+    cs = TJLFEP.exproConst.cs
+    rmin_ex = TJLFEP.exproConst.rmin_ex
+    #end
 
     MPI.Init()
-    TGLFEP_COMM_WORLD = MPI.COMM_WORLD # This is part of one of the modules in TGLFEP. Not sure what to do about that
+    TJLFEP_COMM_WORLD = MPI.COMM_WORLD
 
-    id = MPI.Comm_rank(MPI.COMM_WORLD)
-    np = MPI.Comm_size(MPI.COMM_WORLD)
+    id = MPI.Comm_rank(TJLFEP_COMM_WORLD)
+    np = MPI.Comm_size(TJLFEP_COMM_WORLD)
 
     l_print = false
     if (id == 0) 
         l_print = true 
     end
 
+    # These should be set from the working directory, but these test cases are good for now:
     inputEPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.TGLFEP"
     inputMPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.MTGLF"
+
 
     prof = TJLFEP.readMTGLF(inputMPfile)
     inputMTGLF = prof[1]
     ir_exp = prof[2]
 
-    begin
+    #begin
     inputTGLFEP = TJLFEP.readTGLFEP(inputEPfile, ir_exp)
-
+    #inputTGLFEP.F_REAL
     dpdr_EP = fill(NaN, inputMTGLF.NR)
     if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
-        # Got EXPRO! yay. Well the constants for IS_EP == 2 and 3 not the others though,
+        @assert inputTGLFEP.IS_EP != 2 || inputTGLFEP.IS_EP != 3 "IS_EP value not supported in EXPRO. See EXPROconst.jl"
         for i in eachindex(dpdr_EP)
             dpdr_EP[i] = ni[inputTGLFEP.IS_EP][i]*Ti[inputTGLFEP.IS_EP][i]*(dlnnidr[inputTGLFEP.IS_EP][i]+dlntidr[inputTGLFEP.IS_EP][i])
         end
+        #println(inputTGLFEP.FACTOR)
         dpdr_EP_abs = abs.(dpdr_EP)
         dpdr_EP_max = maximum(dpdr_EP_abs)
         dpdr_EP_max_loc = argmax(dpdr_EP_abs)
         n_at_max = ni[inputTGLFEP.IS_EP][dpdr_EP_max_loc]
-        if (inputTGLFEP.PROCESS_IN == 5)
+        if (inputTGLFEP.PROCESS_IN != 5)
             for ir = 1:inputTGLFEP.SCAN_N
-                println(inputTGLFEP.SCAN_N)
+                #println(inputTGLFEP.SCAN_N)
                 inputTGLFEP.FACTOR = inputTGLFEP.FACTOR*dpdr_EP_max/dpdr_EP_abs[ir_exp[ir]]
-                println(inputTGLFEP.FACTOR)
+                #println(inputTGLFEP.FACTOR)
             end
         end
         inputTGLFEP.FACTOR_MAX_PROFILE .= inputTGLFEP.FACTOR
     end
-    end
+    #end
 
-    # Run Mainsub:
-    key = Int(id / (inputTGLFEP.SCAN_N)) 
-    color = Int(id - key*(inputTGLFEP.SCAN_N))
-    TJLFEP_COMM_IN = MPI.Comm_split(MPI.COMM_WORLD, color, key)
+    # Run Mainsub Setup:
+    # negative color?: 2, 8, 5
+    #id = 3
+    #inputTGLFEP.SCAN_N = 3
+    key = id / (inputTGLFEP.SCAN_N)
+    key = Int(floor(key))
+    color = id - key*(inputTGLFEP.SCAN_N)
+    color = Int(floor(color))
+    
+    
+    TJLFEP_COMM_IN = MPI.Comm_split(TJLFEP_COMM_WORLD, color, key)
+
+    inputTGLFEP.F_REAL .= 1.0
+    if (inputTGLFEP.REAL_FREQ == 1) 
+        inputTGLFEP.F_REAL .= (cs[:]/(rmin_ex[inputMTGLF.NR]))/(2*pi*1.0e3)
+    end
 
     if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
-        inputTGLFEP.IR = inputTGLFEP.IR_EXP[color+1]
+        # Allotting Ir_exp not from inputMTGLF.
+        inputTGLFEP.IR_EXP = fill(NaN, inputTGLFEP.SCAN_N)
+        for i = 1:inputTGLFEP.SCAN_N
+            if (inputTGLFEP.SCAN_N != 1)
+                jr_exp = inputMTGLF.IRS + floor((i-1)*(inputMTGLF.NR-inputMTGLF.IRS)/(inputTGLFEP.SCAN_N-1))
+            else
+                jr_exp = inputMTGLF.IRS
+            end
+            inputTGLFEP.IR_EXP[i] = jr_exp
+        end
+        # each MPI color group is assigned one ir_exp:
+        inputTGLFEP.IR = inputTGLFEP.IR_EXP[color+1] 
+        ir::Int = inputTGLFEP.IR
     else
         inputTGLFEP.IR = color + inputMTGLF.IRS
+        ir::Int = inputTGLFEP.IR
     end
 
-    # next is the str_r which I'm skipping for now and will come back to when I have results I want to print
+    str_r = string(Char(round(Int,ir/100) + UInt32('0'))) * 
+        string(Char(round(Int,mod(ir, 100)/10) + UInt32('0'))) * 
+        string(Char(mod(ir, 10) + UInt32('0')))
+
+    inputTGLFEP.SUFFIX = "_r"*str_r
 
     inputTGLFEP.FACTOR_IN = inputTGLFEP.FACTOR[color+1]
 end
-# I will skip over the width statement as I believe right now that it is redundant and not really needed in Julia.
-#using .TJLFEP: mainsub
+#println(suffix)
+#return 0
+#println(inputTGLFEP.REAL_FREQ)
+using Dates
+if (id == 0)
+    start_time = now()
+end
+growthrate = TJLFEP.mainsub(inputTGLFEP, inputMTGLF, TJLFEP_COMM_IN) # For PROCESS_IN == 5, there will be a guarantee for WIDTH_IN_FLAG being false,
+if (id == 0)
+    end_time = now()
+
+    time_diff = end_time - start_time
+    time_in_seconds = Dates.value(time_diff) / 1000
+    println(time_in_seconds, " for np = ", np)
+    println(growthrate)
+end
+#println(growthrate)
+# Right now, width_in is being set directly from first entry from the TGLFEP input
+# rather than some range of widths as TGLFEP does. This can be easily implemented but 
+# most inputs won't need that for now.
+#if (!inputTGLFEP.WIDTH_IN_FLAG)
+#    if (id == 0)
+#        a = 2
+#    elseif (id < inputTGLFEP.SCAN_N)
+#        b = 2
+#    end
 #end
-# This is where mainsub is now called. I will make mainsub for in case I want to work in other process-in's later
-TJLFEP.mainsub(inputTGLFEP, inputMTGLF, TJLFEP_COMM_IN)
 
 # Checking out some info:
-@profview TJLFEP.mainsub(inputTGLFEP, inputMTGLF, TJLFEP_COMM_IN)
-using BenchmarkTools
-@btime TJLFEP.mainsub(inputTGLFEP, inputMTGLF, TJLFEP_COMM_IN)
+#@profview TJLFEP.mainsub(inputTGLFEP, inputMTGLF, TJLFEP_COMM_IN)
+#using BenchmarkTools
+#@btime TJLFEP.mainsub(inputTGLFEP, inputMTGLF, TJLFEP_COMM_IN)
 # The following list is for unpopulated fields and things I want to look into today:
 # inputTJLF.USE_AVE_ION_GRID
 # inputTJLF.WIDTH_SPECTRUM
@@ -146,13 +212,3 @@ using BenchmarkTools
 # inputTJLF.DAMP_PSI
 # inputTJLF.DAMP_SIG
 # inputTJLF.WDIA_TRAPPED
-
-# Before I continue, I am going to make sure that the width_in terms are all correctly allotted. Optimization right now is not really
-# what I am focused on. That will come later when I am closer to completion. Right now, one pass takes 265440 allocations, which is
-# pretty high. TJLF itself takes up 255.41 MiB, and this is just one pass of TJLFEP running TJLF. Not even the rest of the allocations
-# I need to perform on the data taken from TJLF. Speed-wise, this is, of course, why MPI is used. Allocations, however will need to probably
-# be reduced. With the current trend over the 4 rounds over 500 with 1 process, this will take 66 minutes and have half a billion allocations...
-# and I'm not even finished yet. This is obviously going to need to be reduced as much as possibly. Using previously-defined structs so it's
-# not a pure allocation each time or using pre-definitions (There will likely be other methods, just these are the basic ones).
-# Memory-wise, this is 172 GiB. That's way too large.
-

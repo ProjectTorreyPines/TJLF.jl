@@ -104,6 +104,7 @@ function convert_input(input::TJLFEP.InputTJLF{Float64}, ns::Int64, nky::Int64)
     new_input.FILTER = input.FILTER
     new_input.THETA_TRAPPED = input.THETA_TRAPPED
     new_input.SMALL = input.SMALL
+    new_input.USE_TRANSPORT_MODEL = input.USE_TRANSPORT_MODEL
 
     return new_input
 end

@@ -86,7 +86,7 @@ function readMTGLF(filename::String)
                 speciesField = Symbol(speciesField)
                 getfield(inputMTGLF, speciesField)[parse(Int,speciesIndex)] = val
             else
-                append!(irexp, parse(Int64, line[3]))
+                append!(irexp, Int(val))
             end
             # The ALPHA vector is only used for the input.profile method apparently. I cannot find it anywhere in TGLFEP besides
             # the method where it is listed in input.profile explicitly.
@@ -119,20 +119,12 @@ function readProfile(filename::String)
 end
 
 """
-Not so sure about this one yet.
-"""
-function readExpro(filename::String)
-
-end
-
-"""
 readTGLFEP extracts the values needed from the input.TGLFEP file
 
 Inputs: filename
 
 Outputs: InputTJLFEP struct
 """
-
 function readTGLFEP(filename::String, ir_exp::Vector{Int64})
     open(filename)
     lines = readlines(filename)
@@ -194,7 +186,7 @@ function readTGLFEP(filename::String, ir_exp::Vector{Int64})
 
     # NR is derived from the profile! This means that in order to read TJLFEP in Julia, we have to call the previous inputMTGLF
     # function call's NR. It will now be a required input for this function. 
-    nr = 200
+    nr = 201
 
     inputTJLFEP = InputTJLFEP{Float64}(nscan_in, widthin, nn, nr, jtscale_max, nmodes)
     inputTJLFEP.IR_EXP = ir_exp
@@ -310,14 +302,14 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
 
     inputTJLF.ZS = inputsPR.ZS
     inputTJLF.MASS = inputsPR.MASS
-    inputTJLF.AS = inputsPR.AS[ir, :]
+    inputTJLF.AS = inputsPR.AS[ir, :] # Check read_inputs for these
     inputTJLF.TAUS = inputsPR.TAUS[ir, :]
     
     inputTJLF.ZS[1] = -1.0
     
     inputsEP.FACTOR_MAX = 0.5*1.0/(inputTJLF.ZS[is]*inputsPR.AS[ir, is])
     if (inputsEP.SCAN_METHOD == 2)
-        inputsEP.FACTOR_MAX = 1.0e3
+        inputsEP.FACTOR_MAX = 1.0E3
     end
     inputsEP.FACTOR_IN
     if (inputsEP.FACTOR_IN < 0)
@@ -341,6 +333,9 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
 
     for i = 2:ns
         if (i != is)
+            #println(inputsPR.A_QN)
+            #println(inputTJLF.AS[i])
+            #println("======")
             inputTJLF.AS[i] = inputsPR.A_QN*inputTJLF.AS[i]
         end
     end
@@ -460,44 +455,79 @@ function readEXPRO()
 
     lines = readlines(filename)
 
+    ni1::Vector{Float64} = fill(NaN, 201)
     ni2::Vector{Float64} = fill(NaN, 201)
     ni3::Vector{Float64} = fill(NaN, 201)
+    ni4::Vector{Float64} = fill(NaN, 201)
+    Ti1::Vector{Float64} = fill(NaN, 201)
     Ti2::Vector{Float64} = fill(NaN, 201)
     Ti3::Vector{Float64} = fill(NaN, 201)
+    Ti4::Vector{Float64} = fill(NaN, 201)
+    dlnnidr1::Vector{Float64} = fill(NaN, 201)
     dlnnidr2::Vector{Float64} = fill(NaN, 201)
     dlnnidr3::Vector{Float64} = fill(NaN, 201)
+    dlnnidr4::Vector{Float64} = fill(NaN, 201)
+    dlntidr1::Vector{Float64} = fill(NaN, 201)
     dlntidr2::Vector{Float64} = fill(NaN, 201)
     dlntidr3::Vector{Float64} = fill(NaN, 201)
+    dlntidr4::Vector{Float64} = fill(NaN, 201)
+    cs::Vector{Float64} = fill(NaN, 201)
+    rmin_ex::Vector{Float64} = fill(NaN, 201)
 
     for line in lines[1:length(lines)]
         line = split(line, "=")
         val = line[2]
         line = split(line[1], "_")
-        for i=1:4
+        for i in eachindex(line)
             line[i] = strip(line[i])
         end
+        #println(line)
         exproname = line[2]
-        isEPname = line[3]
-        index = parse(Int64, String(line[4]))
+        if (length(line) == 4)
+            isEPname = line[3]
+        elseif (length(line) == 3)
+            isEPname = ""
+        end
+        index = parse(Int64, String(line[end]))
         name = exproname*isEPname
-        if (name == "ni2")
+        if (name == "ni1")
+            ni1[index] = parse(Float64, String(val))
+        elseif (name == "ni2")
             ni2[index] = parse(Float64, String(val))
         elseif (name == "ni3")
             ni3[index] = parse(Float64, String(val))
+        elseif (name == "ni4")
+            ni4[index] = parse(Float64, String(val))
+        elseif (name == "Ti1") 
+            Ti1[index] = parse(Float64, String(val))
         elseif (name == "Ti2")
             Ti2[index] = parse(Float64, String(val))
         elseif (name == "Ti3")
             Ti3[index] = parse(Float64, String(val))
+        elseif (name == "Ti4")
+            Ti4[index] = parse(Float64, String(val))
+        elseif (name == "dlnnidr1")
+            dlnnidr1[index] = parse(Float64, String(val))
         elseif (name == "dlnnidr2")
             dlnnidr2[index] = parse(Float64, String(val))
         elseif (name == "dlnnidr3")
             dlnnidr3[index] = parse(Float64, String(val))
+        elseif (name == "dlnnidr4")
+            dlnnidr4[index] = parse(Float64, String(val))
+        elseif (name == "dlntidr1")
+            dlntidr1[index] = parse(Float64, String(val))
         elseif (name == "dlntidr2")
             dlntidr2[index] = parse(Float64, String(val))
         elseif (name == "dlntidr3")
             dlntidr3[index] = parse(Float64, String(val))
+        elseif (name == "dlntidr4")
+            dlntidr4[index] = parse(Float64, String(val))
+        elseif (name == "cs")
+            cs[index] = parse(Float64, String(val))
+        elseif (name == "rmin")
+            rmin_ex[index] = parse(Float64, String(val))
         end
     end
-
-    return ni2, ni3, Ti2, Ti3, dlnnidr2, dlnnidr3, dlntidr2, dlntidr3
+    
+    return ni1, ni2, ni3, ni4, Ti1, Ti2, Ti3, Ti4, dlnnidr1, dlnnidr2, dlnnidr3, dlnnidr4, dlntidr1, dlntidr2, dlntidr3, dlntidr4, cs, rmin_ex
 end 

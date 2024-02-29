@@ -58,3 +58,27 @@ in the footsteps of the previous TJLF development.
 
     The mapping of the gacode input is what is confusing me the most at this point. When you have a .profile file to work with, this makes the
     whole process so straightforward from the perspective of the fortran code. 
+
+2/22:
+
+    There have been quite a lot of updates since the previous time I wrote in this notes file. I want to track a few of those and maybe eventually commit this as a journal
+    for any new student who is wondering what I've attempted to do. Firstly, TJLFEP follows a very similar method to TGLFEP right now with the most obvious exception being the
+    existence of the input.MTGLF and input.EXPRO files in the tglfep_tests folder. input.MTGLF exists as a proxy for the input.profile or input.gacode that TGLFEP takes as an input.
+    The reason for its existence is because TJLF itself reads an input.TGLF file; the input.profile method is extremely similar to this. The problem is that input.profile is largely
+    not what is used for many of the cases (INPUT_PROFILE_METHOD == 2 requires an input.gacode). input.MTGLF is created by running the altered Fortran TGLFEP on your gacode of interest
+    and it produces a new input file which displays all needed info in a long "="-delimited format (~8500 lines per input.MTGLF for NR = 201 (number of radii)). tjlfep_read_inputs.jl has
+    multiple functions which are meant to parse the input.TGLFEP (this one is the same as TGLFEP's input.TGLFEP) and the aforementioned input.MTGLF. As for the input.EXPRO, this is also
+    extrapolated from the Fortran, but is a constant and is meant to substitute for the fact that TGLFEP requires the Fortran code "EXPRO". The constants can be taken from this in the same
+    way as input.MTGLF.
+
+    driver.f90 in TGLFEP is not independently represented in TJLFEP. It is incorporated as part of main.jl. As up to now, the main focus is for PROCESS_IN = 5, here is the pathway that 
+    the program will follow given an appropriate input:
+        main.jl ==> mainsub.jl (case 5) ==> tjlf_kwscale_scan.jl =loops over=> tjlfep_ky.jl =runs=> run_tjlf.jl (from TJLF)
+    
+    One important thing that I haven't mentioned up to this point is that TJLFEP will also integrate MPI as TGLFEP did. MPI is essentially a package which divides up processes between
+    processors in order to more quickly execute the code. These processes are first split in the main.jl and are then subsequently ran on all of the following processes. There are 
+    breakpoints (MPI.Barrier()) which require all processes to finish before continuing within the code. In tjlf_kwscale_scan.jl, you can see this happen right before all of the 
+    MPI processes are then combined with ALL_REDUCE.
+
+    
+

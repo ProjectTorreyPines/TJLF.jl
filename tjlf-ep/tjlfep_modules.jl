@@ -129,6 +129,8 @@ mutable struct InputTJLF{T<:Real}
     FILTER::Union{T,Missing}
     THETA_TRAPPED::Union{T,Missing}
     SMALL::Union{T,Missing}
+
+    USE_TRANSPORT_MODEL::Union{Bool, Missing}
     
     # Any needed constructions of InputTJLF will be put here:
     
@@ -147,7 +149,7 @@ mutable struct InputTJLF{T<:Real}
             1.0,0.0,1.0,1.0,1.0,1.25,NaN,1.65,0.3,0.5,
             3.0,0.0,1.0,0.0,0.0,2.0,1.0,16.0,0.0,0.0,
             0.0,0.0,0.0,16.0,NaN,0.0,NaN,NaN,NaN,1.0,
-            1.0,1.0,0.1,0.0,0.0,2.0,0.7,1.0e-13)
+            1.0,1.0,0.1,0.0,0.0,2.0,0.7,1.0e-13,true)
         else
             new("",
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
@@ -158,7 +160,7 @@ mutable struct InputTJLF{T<:Real}
             NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
             NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
             NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-            NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13)
+            NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13,true)
         end
     end
 
@@ -233,7 +235,7 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
     QL_RATIO_SCAN::Union{Matrix{T}, Missing}
 
     CHI_GB::Union{Vector{T}, Missing}
-    IR_EXP::Union{Vector{T}, Missing} # 45 # This is used for Expro so again not sure if I'll use this or not yet
+    IR_EXP::Union{Vector{T}, Missing} # 45 
 
     NBASIS::Union{Int, Missing}
     NTOROIDAL::Union{Int, Missing}
@@ -257,21 +259,19 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
     # Ignoring suffix and str_wf_file right now.
     # As with l_print, l-WRITE_WAVEFUNCTION, l_wavefunction_out
 
-    LKEEP::Union{Array{Bool, 4}, Missing} # All the L-starting parts have 4 dimensions. See kwscale_scan for that.
-    LTEARING::Union{Array{Bool, 4}, Missing} # This needs to be defined somewhat differently then.
-    L_TH_PINCH::Union{Array{Bool, 4}, Missing} # 60
-    L_I_PINCH::Union{Array{Bool, 4}, Missing}
-    L_E_PINCH::Union{Array{Bool, 4}, Missing}
-    L_EP_PINCH::Union{Array{Bool, 4}, Missing}
-    L_QL_RATIO::Union{Array{Bool, 4}, Missing}
-    L_MAX_OUTER_PANEL::Union{Array{Bool, 4}, Missing} # 65
-
-    # Might need l_real_units if it needs to get reassigned
-    REAL_FREQ::Union{Int, Missing}
-
+    LKEEP::Vector{Bool} # All the L-starting parts have 4 dimensions. See kwscale_scan for that.
+    LTEARING::Vector{Bool} # This needs to be defined somewhat differently then.
+    L_TH_PINCH::Vector{Bool} # 60
+    L_I_PINCH::Vector{Bool}
+    L_E_PINCH::Vector{Bool}
+    L_EP_PINCH::Vector{Bool}
+    L_QL_RATIO::Vector{Bool}
+    L_MAX_OUTER_PANEL::Vector{Bool} # 65
 
     FACTOR::Union{Vector{T}, Missing}
-    #REAL_UNITS::Union{T, Missing}
+    SUFFIX::Union{String, Missing}
+    F_REAL::Union{Vector{T}, Missing}
+    REAL_FREQ::Int
 
     # I might want a default constructor for default values. I'm going to make one (no paramters)
     # which follows the 'default' case that TGLFEP used in my first test of TGLFEP (OMFIT).
@@ -290,20 +290,20 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
             NaN, NaN, missing, missing, NaN, NaN, NaN, NaN, missing, nmodes, missing, fill(NaN, nscan_in),
             NaN, NaN, NaN, NaN, fill(NaN, nr), fill(NaN, nr), fill(NaN, (jtscale_max, nr)), NaN, fill(NaN, nr), fill(NaN, nr),
             fill(NaN, (jtscale_max, nr)), fill(NaN, nr), fill(NaN, nscan_in), missing, missing, NaN, 1, missing, 1, 
-            1.0, missing, -0.2, NaN, nn, fill(NaN, nn), fill(missing, 4), fill(missing, 4),
-            fill(missing, 4), fill(missing, 4), fill(missing, 4),
-            fill(missing, 4), fill(missing, 4), fill(missing, 4),
-            missing, fill(NaN, nscan_in))
+            1.0, missing, -0.2, NaN, nn, fill(NaN, nn), fill(false, 4), fill(false, 4),
+            fill(false, 4), fill(false, 4), fill(false, 4),
+            fill(false, 4), fill(false, 4), fill(false, 4),
+            fill(NaN, nscan_in), missing, fill(NaN, nr), 0)
         else
             new(missing, missing, missing, missing, missing, missing, missing, missing, missing, missing,
             NaN, NaN, missing, missing, nscan_in, missing, missing, NaN, widthin, 0.0,
             NaN, NaN, missing, missing, NaN, NaN, NaN, NaN, missing, nmodes, missing, fill(NaN, nscan_in),
             NaN, NaN, NaN, NaN, fill(NaN, nr), fill(NaN, nr), fill(NaN, (jtscale_max, nr)), NaN, fill(NaN, nr), fill(NaN, nr),
             fill(NaN, (jtscale_max, nr)), fill(NaN, nr), fill(NaN, nscan_in), missing, missing, NaN, 1, missing, 1, 
-            1.0, missing, -0.2, NaN, nn, fill(NaN, nn), fill(missing, 4), fill(missing, 4),
-            fill(missing, 4), fill(missing, 4), fill(missing, 4),
-            fill(missing, 4), fill(missing, 4), fill(missing, 4),
-            missing, fill(NaN, nscan_in))
+            1.0, missing, -0.2, NaN, nn, fill(NaN, nn), fill(false, 4), fill(false, 4),
+            fill(false, 4), fill(false, 4), fill(false, 4),
+            fill(false, 4), fill(false, 4), fill(false, 4),
+            fill(NaN, nscan_in), missing, fill(NaN, nr), 0)
         end
     end
 end
@@ -351,7 +351,6 @@ mutable struct profile{T<:Real}
     B_UNIT::Union{Vector{T}, Missing}
 
     IS::Union{Int, Missing}
-    SCAN_N::Union{Int, Missing}
     IRS::Union{Int, Missing}
 
     A_QN::Union{T, Missing} # quasineutrality scale factor for non-EP species
@@ -365,7 +364,7 @@ mutable struct profile{T<:Real}
         fill(NaN, (nr, ns)), fill(NaN, (nr, ns)), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), 
         fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), 
         fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), 
-        fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), missing, missing, missing, NaN, missing)
+        fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), missing, missing, NaN, missing)
     end
 end
 
