@@ -329,6 +329,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         stress_par_QL_out = fill(NaN, (3, ns, maxmodes))
         stress_tor_QL_out = fill(NaN, (3, ns, maxmodes))
         exchange_QL_out = fill(NaN, (3, ns, maxmodes))
+        field_weight_out = fill(NaN, (3, nbasis, maxmodes))
     end
 
 

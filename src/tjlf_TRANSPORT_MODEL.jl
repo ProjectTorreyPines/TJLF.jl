@@ -33,6 +33,7 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
     firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2) # output eigenvalue spectrum is from the first pass
     QL_weights::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
     field_weight_out = zeros(ComplexF64, 3, nbasis, nmodes)
+    #println(original_iflux)
 
     # compute the flux spectrum and eigenvalues
     if alpha_quench_in!=0.0 || vexb_shear_s==0.0 # do not calculate spectral shift
@@ -40,7 +41,9 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
         Threads.@threads for ky_index = eachindex(ky_spect)
             # print("this is c")
             onePass!(inputs, satParams, outputHermite, vexb_shear_s, firstPass_eigenvalue, QL_weights, ky_index, field_weight_out)
+            #println(inputs.IFLUX)
         end
+        
 
     elseif !inputs.FIND_WIDTH # calculate spectral shift with predetermined width spectrum
 
@@ -55,6 +58,7 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
         Threads.@threads for ky_index = eachindex(ky_spect)
             secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index, field_weight_out)
         end
+        #println(field_weight_out, " secondPass! case 2")
 
     else # calculate the spectral shift and the width spectrum
         # initial guess if finding width
@@ -71,6 +75,7 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
             # println("this is b")
             secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index, field_weight_out)
         end
+        #println(field_weight_out, " secondPass! case 3")
 
     end
     inputs.IFLUX = original_iflux
@@ -123,7 +128,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     ky = inputs.KY_SPECTRUM[ky_index]
 
     if(inputs.FIND_WIDTH)
-        inputs.IFLUX = false
+        inputs.IFLUX = false # if FIND_WIDTH is true, IFLUX won't be ran. Is this an issue? I'm going to think on that for a day and come back to it.
         if(inputs.NEW_EIKONAL)
             # println("this is 1")
             nmodes_out, gamma_nb_min_out,
@@ -167,8 +172,8 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     if(unstable)
         eigenvalue_spectrum_out[1:nmodes_out,ky_index,1] .= gamma_out[1:nmodes_out]
         eigenvalue_spectrum_out[1:nmodes_out,ky_index,2] .= freq_out[1:nmodes_out]
-        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
-        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out] # particle_QL_out is index 1
+        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out] # energy_QL_out is index 2
         QL_weights[:,ns0:ns,1:nmodes_out,ky_index,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
         QL_weights[:,ns0:ns,1:nmodes_out,ky_index,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
         QL_weights[:,ns0:ns,1:nmodes_out,ky_index,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]

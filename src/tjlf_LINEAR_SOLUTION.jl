@@ -44,9 +44,12 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     # compute the rank of the eigenmatrix iur
     nroot = 15
     iur = (ns - ns0 + 1) * nroot * nbasis
+    maxmodes = 16
+    nb = 32
 
     alpha_quench_in = inputs.ALPHA_QUENCH
     new_eikonal_in = inputs.NEW_EIKONAL
+    #println(new_eikonal_in)
     filter_in = inputs.FILTER
 
     R_unit = satParams.R_unit
@@ -180,6 +183,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         jmax = sortperm(rr) #### sort_eigenvalues(nmodes_in,jmax), i believe this does the same thing
         jmax .= ifelse.(rr[jmax] .> epsilon1, jmax, 0)
         reverse!(jmax)
+        #println(rr)
+        #println(ri)
         nmodes_out = 0
         for j1 = 1:min(nmodes_in, size(rr, 1))
             if (jmax[j1] != 0)
@@ -368,6 +373,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     stress_par_QL_out = fill(NaN, (3, ns, nmodes_in))
     stress_tor_QL_out = fill(NaN, (3, ns, nmodes_in))
     exchange_QL_out = fill(NaN, (3, ns, nmodes_in))
+    field_weight_out = fill(NaN, (3, nbasis, nmodes_in))
 
     return nmodes_out, gamma_out, freq_out,
     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
@@ -749,16 +755,17 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
     ms = 128
     npi = 9
     np = Int(ms/8)
-    nb = inputs.NBASIS_MAX
+    nb = 32
+    maxmodes = 16
     igeo = 1 # Hard-Coded for now as with the previous LS functions:
     max_plot = Int(18*ms/8+1) # 289 length vector
-    maxmodes = inputs.NMODES
     xp = fill(NaN, max_plot)
     plot_angle_out = fill(NaN, max_plot)
     plot_field_out = zeros(ComplexF64, maxmodes, 3, max_plot)
     hp = fill(NaN, (nb, max_plot))
-    nbasis = inputs.NBASIS_MAX
-    nmodes_out = inputs.NMODES
+    nbasis = size(field_weight_out)[2]
+    nmodes_out = size(field_weight_out)[3]
+    println(nmodes_out)
     if (igeo == 0)
         dx = npi*2.0*pi/(max_plot-1) # /(max_plot-1)
         for i = 1:max_plot
@@ -780,7 +787,7 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
                 k += 1
             end # I needed to change the ms to ms+1 as the max dimension of y is ms+1 (see tjlf_geometry.jl)
             xp[j0+i] = dx*(k*satParams.y[ms+1] + satParams.y[4*j])
-            println(j0-i, ", ", ms-4*j, ", ", i, ", ",  j, ", ", length(satParams.theta))
+            #println(j0-i+1, ", ", ms-4*j, ", ", i, ", ",  j, ", ", length(satParams.theta))
             xp[j0-i] = -dx*((k+1)*satParams.y[ms+1] - satParams.y[ms+1-4*j])
             plot_angle_out[j0+i] = -(k*satParams.theta[ms+1] + satParams.theta[4*j]) #t_s comes from sgrid module. t_s is theta in satParams
             plot_angle_out[j0-i] = (k+1)*satParams.theta[ms+1] - satParams.theta[ms+1-4*j]
@@ -797,16 +804,21 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
         end # end of if nbasis > 2
     end # end of i 
     # compute the fields of the theta-grid
+    #println(field_weight_out)
+    #println("============")
+    #println(plot_field_out)
+    #println("============")
     for n = 1:nmodes_out
         for k = 1:3
             for i = 1:max_plot
                 if ((k == 1) || (k == 2 && inputs.USE_BPER) || (k == 3 && inputs.USE_BPAR))
                     for j = 1:nbasis
+                        #println("field: ", k, " nbasis: ", j, " nmode: ", n)
                         plot_field_out[n, k, i] = plot_field_out[n, k, i] + field_weight_out[k, j, n]*hp[j, i]
                     end
                 end
             end # end of i
         end # end of k
     end # end of n
-    return plot_field_out, plot_angle_out, max_plot, nmodes_out #nfields_out?
+    return plot_field_out, plot_angle_out, max_plot, nmodes_out, nmodes_out #nfields_out?
 end

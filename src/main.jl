@@ -38,10 +38,9 @@ end
 baseDirectory = "/Users/benagnew/TJLF.jl/outputs/TIM_case/case2/" 
 inputTJLF = readInput(baseDirectory*"input.tglf")
 baseDirectory = "/Users/benagnew/TJLF.jl/outputs/tglf_regression/tglf01/"
-inputTJLF = readInput(baseDirectory*"input.tglf")
+inputTJLF = readInput(baseDirectory*"input.tglf") # Creates the inputTJLF struct from the input.tglf file
 inputTJLF2 = inputTJLF
-
-
+inputTJLF.USE_TRANSPORT_MODEL
 
 inputTJLF.ALPHA_ZF = 1.0
 inputTJLF.AS_1
@@ -77,7 +76,7 @@ tDirectory = "/Users/benagnew/TJLF.jl/outputs/testB/tglf01/"
 #   start running stuff
 #*******************************************************************************************************
 begin
-    outputHermite = gauss_hermite(inputTJLF)
+    outputHermite = gauss_hermite(inputTJLF) 
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
     QL_weight, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
