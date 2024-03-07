@@ -31,7 +31,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
     nefwid = 10
     nkyhat = 5
     nkwf = nfactor*nefwid*nkyhat
-    k_max = 1
+    k_max = 4
     l_write_out = true
 
     TJLFEP_COMM = COMM_IN # This will also be modified later.
@@ -78,8 +78,18 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
     factor = fill(NaN, nfactor)
     efwid = fill(NaN, nefwid)
     kyhat = fill(NaN, nkyhat)
-    
+
+    ikyhat_write = floor(Int, nkyhat/2)
+    iefwid_write = floor(Int, nefwid/2)
+    ifactor_write = nfactor
+    # for scope purposes:
+    inputTJLF = InputTJLF{Float64}(inputsPR.NS, 12, true)
+    imark_min::Int64 = 0
+    f_guess = fill(NaN, (nkyhat, nefwid))
+    ikyhat_mark::Int64 = 0
+    iefwid_mark::Int64 = 0
     for k = 1:k_max
+        println("Pass ", k)
         # The following three loops establish equidistant spacing in factor, efwid, and kyhat
         # on the range of each we are interested in. 
         for i = 1:nfactor
@@ -111,10 +121,25 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             #println(kyhat_in)
             #println(typeof(kyhat_in))
 
-            #str_sf
-            #Then writing the out.wavefunctions
+            str_sf = string(Char(mod(floor(Int, inputsEP.FACTOR_IN/100.0), 10) + UInt32('0'))) *
+                     string(Char(mod(floor(Int, inputsEP.FACTOR_IN/10.0), 10) + UInt32('0')))  *
+                     string(Char(mod(floor(Int, inputsEP.FACTOR_IN), 10) + UInt32('0'))) *
+                     "." *
+                     string(Char(mod(floor(Int, 10*inputsEP.FACTOR_IN), 10) + UInt32('0'))) *
+                     string(Char(mod(floor(Int, 100*inputsEP.FACTOR_IN), 10) + UInt32('0'))) *
+                     string(Char(mod(floor(Int, 1000*inputsEP.FACTOR_IN), 10) + UInt32('0')))
 
-            gamma_out, freq_out = TJLFEP_ky(inputsEP, inputsPR) # This should be running over just one ky. The problem is that when tjlf_run is called,
+            str_wf_file = "out.wavefunction"*inputsEP.SUFFIX*"_sf"*str_sf
+            
+            if ((inputsEP.WRITE_WAVEFUNCTION == 1) &&
+                (ikyhat == ikyhat_write) &&
+                (iefwid == iefwid_write) &&
+                (ifactor == ifactor_write) &&
+                (k == k_max))
+                l_wavefunction_out = 1
+            end
+
+            gamma_out, freq_out, inputTJLF = TJLFEP_ky(inputsEP, inputsPR, str_wf_file, l_wavefunction_out) # This should be running over just one ky. The problem is that when tjlf_run is called,
             # it is performing the entire operation over all ky. I don't want to run this a bunch of times since it gets rid of the purposes
             # of using MPI. 
 
@@ -139,7 +164,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 l_QL_ratio_i[ikyhat,iefwid,ifactor,n] = inputsEP.L_QL_RATIO[n]
             end
             #println(growthrate)
-            println("Iteration ", i, ", id ", id)
+            #println("Iteration ", i, ", id ", id)
         end # end of MPI process collection
         
         # Ending here are this point for testing purposes:
@@ -189,7 +214,6 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         fmark = 1.0e20
         gmark = 0.0
         f_guess_mark = 1.0e20
-        f_guess = fill(NaN, (nkyhat, nefwid))
         gamma_mark_i_1 = fill(NaN, (nkyhat, nefwid))
         gamma_mark_i_2 = fill(NaN, (nkyhat, nefwid))
         f_mark_i = fill(NaN, (nkyhat, nefwid))
@@ -256,7 +280,10 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         end # if ending (mode found)
 
         # Next is the writing of the out.scalefactor files.
-        
+
+        g = fill(NaN, inputsEP.NMODES)
+        f = fill(NaN, inputsEP.NMODES)
+        keep_label = fill("", inputsEP.NMODES)
         # These will be produced whenever I run from a specified directory, say
         # via a batch file or some execution command for TJLF-EP. Running by REPL
         # does create these files, but it places them in the TJLF.JL directory,
@@ -280,7 +307,100 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 println(io, "           'F' rejected for non-AE frequency > ", inputsEP.F_REAL[inputsEP.IR]*inputsEP.FREQ_AE_UPPER, " kHz")
                 if (inputsEP.REAL_FREQ == 1) println(io, "Frequencies in real units, plasma frame [kHz]") end
             end
+            
+            ky_write = kyhat[ikyhat_write]*inputTJLF.ZS[inputsEP.IS_EP+1]/sqrt(inputTJLF.MASS[inputsEP.IS_EP+1]*inputTJLF.TAUS[inputsEP.IS_EP+1])
+
+            println(io, "--------------- ky*rho_EP= ", kyhat[ikyhat_write], "  (ky*rho_s=", ky_write, ")", 
+            "   width= ", efwid[iefwid_write], 
+            "   scalefactor= ", fmark, " -------------------")
+
+            for ifactor = 1:nfactor
+                ikyhat = ikyhat_write
+                iefwid = iefwid_write
+                for n = 1:inputsEP.NMODES
+                    g[n] = inputsEP.F_REAL[inputsEP.IR]*growthrate[ikyhat, iefwid, ifactor, n]
+                    f[n] = inputsEP.F_REAL[inputsEP.IR]*frequency[ikyhat, iefwid, ifactor, n]
+                    if (lkeep_i[ikyhat,iefwid,ifactor,n])
+                        keep_label[n] = " K  "
+                    elseif (ltearing_i[ikyhat,iefwid,ifactor,n])
+                        keep_label[n] = " T  "
+                    elseif (l_i_pinch_i[ikyhat,iefwid,ifactor,n])
+                        keep_label[n] = " Pi "
+                    elseif (l_e_pinch_i[ikyhat,iefwid,ifactor,n])
+                        keep_label[n] = " Pe "
+                    elseif (l_th_pinch_i[ikyhat,iefwid,ifactor,n])
+                        keep_label[n] = " Pth"
+                    elseif (l_EP_pinch_i[ikyhat,iefwid,ifactor,n])
+                        keep_label[n] = " PEP"
+                    elseif (l_max_outer_panel_i[ikyhat,iefwid,ifactor,n])
+                        keep_label[n] = " OP"
+                    elseif (l_QL_ratio_i[ikyhat,iefwid,ifactor,n])
+                        keep_label[n] = " QLR"
+                    elseif (frequency[ikyhat,iefwid,ifactor,n] > inputsEP.FREQ_AE_UPPER)
+                        keep_label[n] = " F  "
+                    else
+                        keep_label[n] = " ?  "
+                    end
+                end
+                if (inputsEP.REAL_FREQ == 0)
+                    for n = 1:inputsEP.NMODES
+                        println(io, factor[ifactor], " ", g[n], " ", f[n], keep_label[n])
+                    end
+                else
+                    for n = 1:inputsEP.NMODES
+                        println(io, factor[ifactor], " ", g[n], " ", f[n], keep_label[n])
+                    end
+                end
+            end # ifactor
+            close(io)
+        end 
+
+        if (fmark < 1.0e10)
+            if (k == 1)
+                f1 = fmark
+                f0 = 0.0
+            else
+                delf = (f1-f0)/3
+                f1 = fmark + delf
+                f0 = fmark - delf
+                if (f0 < 0.0) f0 = 0.0 end
+                delw = (w1-w0)/4
+                w1 = efwid[iefwid_mark] + delw
+                w0 = efwid[iefwid_mark] + delw
+                if (w1 > inputsEP.WIDTH_MAX)
+                    w0 = w0 - (w1-inputsEP.WIDTH_MAX)
+                    w1 = inputsEP.WIDTH_MAX
+                elseif (w0 < inputsEP.WIDTH_MIN)
+                    w1 = w1 + (inputsEP.WIDTH_MIN-w0)
+                    w0 = inputsEP.WIDTH_MIN
+                end
+
+                delky = (kyhat1-kyhat0)/4
+                kyhat1 = kyhat[ikyhat_mark] + delky
+                kyhat0 = kyhat[ikyhat_mark] - delky
+                if (kyhat1 > kyhat_max)
+                    kyhat0 = kyhat0 - (kyhat1-kyhat_max)
+                    kyhat1 = kyhat_max
+                elseif (kyhat0 < kyhat_min)
+                    kyhat1 = kyhat1 + (kyhat_min-kyhat0)
+                    kyhat0 = kyhat_min
+                end
+            end
+        else
+            f0 = f1
+            f1 = 10*f1
         end
+
+    end
+
+    if (imark_min > nfactor)
+        inputsEP.FACTOR_IN = 10000
+        inputsEP.WIDTH_IN = efwid[1]
+        inputsEP.KYMARK = kyhat[1]
+    else
+        inputsEP.FACTOR_IN = f_guess[ikyhat_mark, iefwid_mark]
+        inputsEP.WIDTH_IN = efwid[iefwid_mark]
+        inputsEP.KYMARK = kyhat[ikyhat_mark]
     end
 
     return growthrate

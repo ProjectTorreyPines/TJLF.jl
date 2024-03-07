@@ -765,7 +765,7 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
     hp = fill(NaN, (nb, max_plot))
     nbasis = size(field_weight_out)[2]
     nmodes_out = size(field_weight_out)[3]
-    println(nmodes_out)
+    #println(nmodes_out)
     if (igeo == 0)
         dx = npi*2.0*pi/(max_plot-1) # /(max_plot-1)
         for i = 1:max_plot
@@ -820,5 +820,5 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
             end # end of i
         end # end of k
     end # end of n
-    return plot_field_out, plot_angle_out, max_plot, nmodes_out, nmodes_out #nfields_out?
+    return plot_field_out, plot_angle_out, max_plot, nmodes_out, nmodes_out  #, nfields_out
 end

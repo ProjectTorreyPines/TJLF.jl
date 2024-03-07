@@ -12,10 +12,12 @@ include("tjlfep_ky.jl")
 include("tjlfep_kwscale_scan.jl")
 include("mainsub.jl")
 include("run_tjlfep.jl")
+include("tjlfep_complete_output.jl")
 
 
 export profile, InputTJLF, InputTJLFEP
 export readMTGLF, readTGLFEP, TJLF_map, readEXPRO
 export convert_input
+export tjlfep_complete_output
 
 end 

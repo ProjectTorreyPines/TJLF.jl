@@ -295,6 +295,7 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
     ns = inputsPR.NS
 
     is = inputsEP.IS_EP + 1
+    inputsPR.IS = is
     ir = inputsEP.IR
 
     #TJLF deletes GEOMETRY_FLAG so this is redundant:

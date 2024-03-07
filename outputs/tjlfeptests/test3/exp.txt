@@ -1,0 +1,5 @@
+This case is meant for testing larger k_max examples.
+
+SCAN_N = 2
+k_max = 4
+-n = 2

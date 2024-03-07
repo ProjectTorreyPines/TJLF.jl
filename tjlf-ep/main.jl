@@ -146,7 +146,7 @@ begin
 
     if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
         # Allotting Ir_exp not from inputMTGLF.
-        inputTGLFEP.IR_EXP = fill(NaN, inputTGLFEP.SCAN_N)
+        inputTGLFEP.IR_EXP = fill(0, inputTGLFEP.SCAN_N)
         for i = 1:inputTGLFEP.SCAN_N
             if (inputTGLFEP.SCAN_N != 1)
                 jr_exp = inputMTGLF.IRS + floor((i-1)*(inputMTGLF.NR-inputMTGLF.IRS)/(inputTGLFEP.SCAN_N-1))
@@ -185,7 +185,6 @@ if (id == 0)
     time_diff = end_time - start_time
     time_in_seconds = Dates.value(time_diff) / 1000
     println(time_in_seconds, " for np = ", np)
-    println(growthrate)
 end
 #println(growthrate)
 # Right now, width_in is being set directly from first entry from the TGLFEP input
@@ -198,6 +197,192 @@ end
 #        b = 2
 #    end
 #end
+kymark_out::Vector{Float64} = fill(NaN, inputTGLFEP.SCAN_N)
+width::Vector{Float64} = fill(NaN, inputTGLFEP.SCAN_N)
+buf_width::Vector{Float64} = fill(NaN, 1)
+buf_kymark::Vector{Float64} = fill(NaN, 1)
+
+if (!inputTGLFEP.WIDTH_IN_FLAG)
+    if (id == 0)
+        width[1] = inputTGLFEP.WIDTH_IN
+        kymark_out[1] = inputTGLFEP.KYMARK
+        for i = 1:inputTGLFEP.SCAN_N-1
+            buf_width = [width[i+1]]
+            buf_kymark = [kymark_out[i+1]]
+            MPI.Recv!(buf_width, MPI.COMM_WORLD, source=i, tag=i)
+            MPI.Recv!(buf_kymark, MPI.COMM_WORLD, source=i, tag=i+inputTGLFEP.SCAN_N)
+            width[i+1] = buf_width[1]
+            kymark_out[i+1] = buf_kymark[1]
+        end
+    elseif (id < inputTGLFEP.SCAN_N)
+        buf_width = [inputTGLFEP.WIDTH_IN]
+        buf_kymark = [inputTGLFEP.KYMARK]
+        MPI.Send(buf_width, MPI.COMM_WORLD, tag=id, dest=0) # Not at all sure about dest=0!
+        MPI.Send(buf_kymark, MPI.COMM_WORLD, tag=id+inputTGLFEP.SCAN_N, dest=0)
+    end
+end
+
+if (id == 0)
+    io2 = open("out.TGLFEP", "w")
+    println(io2, "process_in = ", inputTGLFEP.PROCESS_IN)
+
+    if (inputTGLFEP.PROCESS_IN <= 1) println(io2, "mode_in = ", inputTGLFEP.MODE_IN) end
+    if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5)) println(io2, "threshold_flag = ", inputTGLFEP.THRESHOLD_FLAG) end
+
+    println(io2, "ky_mode = ", inputTGLFEP.KY_MODEL)
+    println(io2, "--------------------------------------------------------------")
+    println(io2, "scan_n = ", inputTGLFEP.SCAN_N)
+    println(io2, "irs = ", inputTGLFEP.IRS)
+    println(io2, "n_basis = ", inputTGLFEP.N_BASIS)
+    println(io2, "scan_method = ", inputTGLFEP.SCAN_METHOD)
+
+    if (inputTGLFEP.WIDTH_IN_FLAG)
+        println(io2, "ir,  width")
+        for i = 1:inputTGLFEP.SCAN_N
+            println(io2, inputTGLFEP.IRS+i-1, width[i])
+        end
+    else
+        println(io2, "ir,  width,  kymark")
+        for i = 1:inputTGLFEP.SCAN_N
+            println(io2, inputTGLFEP.IRS+i-1, width[i], kymark_out[i])
+        end
+    end
+
+    println(io2, "--------------------------------------------------------------")
+    println(io2, "factor_in_profile = ", inputTGLFEP.FACTOR_IN_PROFILE)
+    if (inputTGLFEP.FACTOR_IN_PROFILE)
+        for i = 1:inputTGLFEP.SCAN_N
+            println(io2, inputTGLFEP.FACTOR[i])
+        end
+    else
+        println(io2, inputTGLFEP.FACTOR[1])
+    end
+
+    println(io2, "width_in_flag = ", inputTGLFEP.WIDTH_IN_FLAG)
+    if (!inputTGLFEP.WIDTH_IN_FLAG) println(io2, "width_min = ", inputTGLFEP.WIDTH_MIN, "width_max = ", inputTGLFEP.WIDTH_MAX) end
+    close(io2)
+end
+
+# Lastly is the printing of the density threshold:
+buf_factor::Vector{Float64} = fill(NaN, 1)
+if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
+    if (id == 0)
+        io3 = open("out.TGLFEP", "a")
+        println(io3, "**************************************************************")
+        println(io3, "************** The critical EP density gradient **************")
+        println(io3, "**************************************************************")
+
+        SFmin = fill(NaN, inputTGLFEP.SCAN_N)
+        SFmin_out = fill(NaN, inputMTGLF.NR)
+        dndr_crit = fill(NaN, inputTGLFEP.SCAN_N)
+        dndr_crit_out = fill(NaN, inputMTGLF.NR)
+        dpdr_crit = fill(NaN, inputTGLFEP.SCAN_N)
+        dpdr_crit_out = fill(NaN, inputMTGLF.NR)
+
+        if (inputTGLFEP.THRESHOLD_FLAG == 0)
+            SFmin[1] = inputTGLFEP.FACTOR_IN
+            println(io3, "Before MPI.Recv! for factor_in.")
+            for i = 1:inputTGLFEP.SCAN_N-1
+                buf_factor = [inputTGLFEP.FACTOR_IN]
+                MPI.Recv!(buf_factor, MPI.COMM_WORLD, source=i, tag=i)
+                SFmin[i+1] = inputTGLFEP.FACTOR_IN
+            end
+            println(io3, "After MPI.Recv! for factor_in")
+            println(io3, "--------------------------------------------------------------")
+            println(io3, "SFmin")
+
+            # Next is TGLFEP_complete_output(SFmin, SFmin_out, ir_min, ir_max, l_accept_profile)
+            SFmin, SFmin_out, ir_min, ir_max, l_accept_profile = tjlfep_complete_output(SFmin, inputTGLFEP, inputMTGLF)
+
+            if ((ir_min-inputTGLFEP.IRS+1) > 1)
+                SFmin[1:ir_min-inputTGLFEP.IRS] .= inputTGLFEP.FACTOR_MAX_PROFILE[1:ir_min-inputTGLFEP.IRS]
+                if (inputTGLFEP.IRS > 1) SFmin_out[1:inputTGLFEP.IRS-1] .= inputTGLFEP.FACTOR_MAX_PROFILE[1] end
+                SFmin_out[inputTGLFEP.IRS:ir_min-1] .= inputTGLFEP.FACTOR_MAX_PROFILE[1:ir_min-inputTGLFEP.IRS]
+            end
+            if ((ir_max-inputTGLFEP.IRS+1) < inputTGLFEP.SCAN_N)
+                SFmin[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N] .= inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
+                if (inputTGLFEP.IRS+inputTGLFEP.SCAN_N-1 < inputTGLFEP.NR) SFmin_out[inputTGLFEP.IRS+inputTGLFEP.SCAN_N:inputTGLFEP.NR] .= inputTGLFEP.FACTOR_MAX_PROFILE[inputTGLFEP.SCAN_N] end
+                SFmin_out[ir_max+1:inputTGLFEP.IRS+inputTGLFEP.SCAN_N-1] .= inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
+            end
+
+            for i = 1:inputTGLFEP.SCAN_N
+                if (l_accept_profile[i])
+                    println(io3, SFmin[i])
+                else
+                    println(io3, SFmin_out[i+inputTGLFEP.IRS-1], "   (*)")
+                end
+            end
+
+            if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
+                dndr_crit .= 10000.0
+                for i = 1:inputTGLFEP.SCAN_N
+                    if (SFmin[i] < 9000.0)
+                        dndr_crit[i] = SFmin[i]*ni[inputTGLFEP.IS_EP][Int(inputTGLFEP.IR_EXP[i])]*dlnnidr[inputTGLFEP.IS_EP][Int(inputTGLFEP.IR_EXP[i])]
+                    elseif ((i < ir_min-inputTGLFEP.IRS+1) || (i > ir_max-inputTGLFEP.IRS+1))
+                        dndr_crit[i] = inputTGLFEP.FACTOR_MAX_PROFILE[i]*ni[inputTGLFEP.IS_EP][Int(inputTGLFEP.IR_EXP[i])]*dlnnidr[inputTGLFEP.IS_EP][Int(inputTGLFEP.IR_EXP[i])]
+                    end
+                end
+                dndr_crit, dndr_crit_out, ir_dum_1, ir_dum_2, l_accept_profile = tjlfep_complete_output(dndr_crit, inputTGLFEP, inputMTGLF)
+                io4 = open("alpha_dndr_crit.input", "w")
+                println(io4, "Density critical gradient (10^19/m^4)")
+                println(io4, dndr_crit_out)
+                close(io4)
+            end
+
+            if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
+                dpdr_crit .= 10000.0
+                dpdr_EP[:] .= ni[inputTGLFEP.IS_EP][:].*Ti[inputTGLFEP.IS_EP][:].*(dlnnidr[inputTGLFEP.IS_EP][:].+dlntidr[inputTGLFEP.IS_EP][:]).*0.16022
+                for i = 1:inputTGLFEP.SCAN_N
+                    if (SFmin[i] < 9000.0)
+                        if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
+                            case = inputTGLFEP.SCAN_METHOD
+                            if (case == 1)
+                                dpdr_scale = SFmin[i]
+                            elseif (case == 2)
+                                dpdr_scale = ((SFmin[i]*dlnnidr[inputTGLFEP.IS_EP][inputTGLFEP.IR_EXP[i]]+dlntidr[inputTGLFEP.IS_EP][inputTGLFEP.IR_EXP[i]]) /
+                                (dlnnidr[inputTGLFEP.IS_EP][inputTGLFEP.IR_EXP[i]]+dlntidr[inputTGLFEP.IS_EP][inputTGLFEP.IR_EXP[i]]))
+                            end
+                            dpdr_crit[i] = dpdr_scale*dpdr_EP[inputTGLFEP.IR_EXP[i]]
+                        end # 4 || 5
+                    end # < 9000
+                end # over scan_n
+                dpdr_crit, dpdr_crit_out, ir_dum_1, ir_dum_2, l_accept_profile = tjlfep_complete_output(dpdr_crit, inputTGLFEP, inputMTGLF)
+                io5 = open("alpha_dpdr_crit.input", "w")
+                println(io5, "Pressure critical gradient (10 kPa/m)")
+                println(io5, dpdr_crit_out)
+                close(io5)
+            end # end prof. method 2
+
+            println(io3, "--------------------------------------------------------------")
+            println(io3, "The EP density threshold n_EP/n_e (%) for gamma_AE = 0")
+            for i = 1:inputTGLFEP.SCAN_N
+                println(io3, SFmin[i]*inputMTGLF.AS[inputTGLFEP.IRS+i-1, inputMTGLF.IS]*100.0) #percent
+            end
+            
+            println(io3, "--------------------------------------------------------------")
+            println(io3, "The EP beta crit (%) = beta_e*(n_EP_th/n_e)*(T_EP/T_e)")
+            for i = 1:inputTGLFEP.SCAN_N
+                if (inputMTGLF.GEOMETRY_FLAG == 0)
+                    println(io3, SFmin[i]*inputMTGLF.BETAE[inputTGLFEP.IRS+i-1]*100.0*inputMTGLF.AS[inputTGLFEP.IRS+i-1, inputMTGLF.IS]*inputMTGLF.TAUS[inputTGLFEP.IRS+i-1, inputMTGLF.IS]) #percent
+                else
+                    println(io3, SFmin[i]*inputMTGLF.BETAE[inputTGLFEP.IRS+i-1]*100.0*inputMTGLF.AS[inputTGLFEP.IRS+i-1, inputMTGLF.IS]*inputMTGLF.TAUS[inputTGLFEP.IRS+i-1, inputMTGLF.IS]*inputMTGLF.KAPPA[inputTGLFEP.IRS+i-1]^2) #percent
+                end
+            end
+
+            # there is a process_in == 4 addition I won't be doing quite yet.
+        else # ThreshFlag != 0
+            # Skipping for now as I want to test just threshold flag == 0 first
+        end # ThreshFlag
+    elseif (id < inputTGLFEP.SCAN_N)
+        if (inputTGLFEP.THRESHOLD_FLAG == 0)
+            buf_factor = [inputTGLFEP.FACTOR_IN]
+            MPI.Send(buf_factor, MPI.COMM_WORLD, tag=id, dest=0)
+        end
+        #MPI.Send(inputTGLFEP) only process-In 4 here.
+    end # id == 0
+end # process 4 || 5
+
+# The rest of the fortran is deallocations and a process_in == 6 route
 
 # Checking out some info:
 #@profview TJLFEP.mainsub(inputTGLFEP, inputMTGLF, TJLFEP_COMM_IN)

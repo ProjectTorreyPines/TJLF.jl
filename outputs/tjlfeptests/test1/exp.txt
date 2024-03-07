@@ -1,0 +1,6 @@
+This run is a standard simple case I used for debugging the program.
+It runs:
+
+SCAN_N = 2
+k_max = 1
+-n = 2

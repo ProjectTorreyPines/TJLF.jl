@@ -235,7 +235,7 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
     QL_RATIO_SCAN::Union{Matrix{T}, Missing}
 
     CHI_GB::Union{Vector{T}, Missing}
-    IR_EXP::Union{Vector{T}, Missing} # 45 
+    IR_EXP::Union{Vector{Int64}, Missing} # 45 
 
     NBASIS::Union{Int, Missing}
     NTOROIDAL::Union{Int, Missing}
@@ -289,7 +289,7 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
             NaN, NaN, missing, missing, nscan_in, missing, missing, NaN, widthin, NaN,
             NaN, NaN, missing, missing, NaN, NaN, NaN, NaN, missing, nmodes, missing, fill(NaN, nscan_in),
             NaN, NaN, NaN, NaN, fill(NaN, nr), fill(NaN, nr), fill(NaN, (jtscale_max, nr)), NaN, fill(NaN, nr), fill(NaN, nr),
-            fill(NaN, (jtscale_max, nr)), fill(NaN, nr), fill(NaN, nscan_in), missing, missing, NaN, 1, missing, 1, 
+            fill(NaN, (jtscale_max, nr)), fill(NaN, nr), fill(0, nscan_in), missing, missing, NaN, 1, missing, 1, 
             1.0, missing, -0.2, NaN, nn, fill(NaN, nn), fill(false, 4), fill(false, 4),
             fill(false, 4), fill(false, 4), fill(false, 4),
             fill(false, 4), fill(false, 4), fill(false, 4),
@@ -299,7 +299,7 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
             NaN, NaN, missing, missing, nscan_in, missing, missing, NaN, widthin, 0.0,
             NaN, NaN, missing, missing, NaN, NaN, NaN, NaN, missing, nmodes, missing, fill(NaN, nscan_in),
             NaN, NaN, NaN, NaN, fill(NaN, nr), fill(NaN, nr), fill(NaN, (jtscale_max, nr)), NaN, fill(NaN, nr), fill(NaN, nr),
-            fill(NaN, (jtscale_max, nr)), fill(NaN, nr), fill(NaN, nscan_in), missing, missing, NaN, 1, missing, 1, 
+            fill(NaN, (jtscale_max, nr)), fill(NaN, nr), fill(0, nscan_in), missing, missing, NaN, 1, missing, 1, 
             1.0, missing, -0.2, NaN, nn, fill(NaN, nn), fill(false, 4), fill(false, 4),
             fill(false, 4), fill(false, 4), fill(false, 4),
             fill(false, 4), fill(false, 4), fill(false, 4),

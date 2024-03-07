@@ -1,0 +1,5 @@
+This case is meant as a test of the changes needed for speed in GPUs.
+
+SCAN_N = 2
+k_max = 1
+-n = 4

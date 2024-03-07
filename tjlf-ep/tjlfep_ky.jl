@@ -3,8 +3,8 @@
 #using .TJLFEP
 #using .TJLFEP: convert_input
 
-function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}) #, factor_in::Int64, kyhat_in::Int64, width_in::Int64)
-
+function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, str_wf_file::String, l_wavefunction_out::Int) #, factor_in::Int64, kyhat_in::Int64, width_in::Int64)
+    #println(str_wf_file, " ", l_wavefunction_out)
     # Temp Defs:
     
     #color = 0
@@ -82,7 +82,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}) #
     #mainsub isn't really a problem but kwscale_scan is because I haven't done much in there yet. I can try to get it to call everything up to the ky scan I suppose.
    
     #println("pre-run")
-    gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams = run_TJLF(convInput)
+    gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams = TJLF.run(convInput)
     
     #println(typeof(field_weight_out))
     #println(typeof(satParams.y))
@@ -104,6 +104,10 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}) #
 
     # I tried my best... Let's see if it was good enough for a first try lol. Probably not but I'mma see.
     wavefunction, angle, nplot, nmodes, nmodes_out = get_wavefunction(convInput, satParams, field_weight_out)
+    # I need a few more outputs from wavefunction:
+    # nfields_out
+    # max_plot_out
+
 
     inputsEP.LTEARING .= false
     inputsEP.L_I_PINCH .= false
@@ -135,7 +139,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}) #
     chi_e_cond = fill(NaN, 4)
 
     #println(wavefunction)
-    for n = 1:nmodes_out
+    for n = 1:nmodes_out # not sure about nmodes_out. Fortran does some assuming that Julia doesn't.
         wave_max = maximum(abswavefunction[n,1,:])+1.0e-3
         wave_max_loc = argmax(abswavefunction[n,1,:])
         n_balloon_pi = Int((max_plot-1)/9)
@@ -195,9 +199,52 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}) #
         inputsEP.LKEEP[n] = inputsEP.LKEEP[n] && !inputsEP.L_QL_RATIO[n]
     end
 
-    # Next is writing the wavefunction itself!
+    # Next is writing the wavefunction files themselves:
+    if (l_wavefunction_out == 1) # nplot = max_plot_out; nfields = 1 by def.
+        io6 = open(str_wf_file, "w")
+        println(io6, "nmodes=", nmodes_out, " nfields=3", " max_plot=", nplot)
+        println(io6, "ky=", inputTJLF.KY, " width=", inputTJLF.WIDTH)
+        println(io6, "theta     ", "((Re(field_i), Im(field_i),i=(1,nfields)),j=1,nmodes)")
+        println(io6, "Tearing metric: ", x_tear_test)
+        println(io6, "DEP: ", DEP)
+        println(io6, "chi_th: ", chi_th)
+        println(io6, "chi_i: ", chi_i)
+        println(io6, "chi_i_cond: ", chi_i_cond)
+        println(io6, "chi_e: ", chi_e)
+        println(io6, "chi_e_cond: ", chi_e_cond)
+        println(io6, "i_QL_cond_flux: ", i_QL_cond_flux)
+        println(io6, "e_QL_cond_flux: ", e_QL_cond_flux)
+        println(io6, "QL_ratio: ", QL_flux_ratio)
+        println(io6, "lkeep: ", inputsEP.LKEEP)
+        # Renormalize and adjust phases:
+        for n = 1:nmodes_out
+            max_phi = maximum(abswavefunction[n,1,:])
+            max_apar = maximum(abswavefunction[n,2,:])
+            max_field = maximum([max_phi, max_apar])
+            phase = atan(imag(wavefunction[n,1,Int((nplot+1)/2)]),real(wavefunction[n,1,Int((nplot+1)/2)]))
+            for jfields = 1:3
+                z = 0+1im
+                wavefunction[n,jfields,:] .= wavefunction[n,jfields,:]/(max_field*exp(z*phase))
+            end
+        end
+        #Write renormalized, re-phased eigenfunctions out to str_wf_file.
+        for i = 1:max_plot
+            #kcomp = 0
+            #wave_write = fill(0.0, 20)
+            #for n = 1:nmodes_out
+            #    for jfields = 1:3
+            #        kcomp += 1
+            #        wave_write[kcomp] = real(wavefunction[n,jfields,i])
+            #        kcomp += 1
+            #        wave_write[kcomp] = imag(wavefunction[n,jfields,i])
+            #    end
+            #end
+            println(io6, angle[i], " ", real(wavefunction[1,1,i]), " ", imag(wavefunction[1,1,i]), " ",
+                    real(wavefunction[1,2,i]), " ", imag(wavefunction[1,2,i]))
+        end
 
-
-
-    return gamma_out, freq_out
+        close(io6)
+    end
+    # This is the end of ky.jl. Returning values will likely need to be changed later.
+    return gamma_out, freq_out, inputTJLF
 end

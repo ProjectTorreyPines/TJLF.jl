@@ -1,0 +1,1 @@
+This directory is meant for direct comparison of results in TGLF-EP and TJLF-EP for SCAN_N = 4 with 4 processes. I will move my results from NoMachine here when they have finished running.

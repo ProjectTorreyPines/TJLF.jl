@@ -1,0 +1,7 @@
+factor, (gamma(n), freq(n), flag, n=1, nmodes_in)
+flag key: 'K' mode is kept
+           'T' rejected for tearing parity
+           'Pth' rejected for thermal pinch
+           'QLR' rejected for QL ratio EP/|chi_i| < 0.001
+           'F' rejected for non-AE frequency > -22.061861962744125 kHz
+Frequencies in real units, plasma frame [kHz]
