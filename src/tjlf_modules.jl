@@ -281,6 +281,8 @@ mutable struct InputTJLF{T<:Real}
     THETA_TRAPPED::Union{T,Missing}
     SMALL::Union{T,Missing}
 
+    USE_TRANSPORT_MODEL::Union{Bool, Missing}
+
     function InputTJLF()
         return InputTJLF{Float64}()
     end
@@ -294,7 +296,7 @@ mutable struct InputTJLF{T<:Real}
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-            missing,missing,missing)
+            missing,missing,missing,missing)
     end
 
     #For list-format inputs:
@@ -314,7 +316,7 @@ mutable struct InputTJLF{T<:Real}
         NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13)
+        NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13,true)
     end
 
     # create InputTJLF struct given a InputTGLF struct

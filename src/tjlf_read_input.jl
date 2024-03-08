@@ -42,7 +42,7 @@ function readInput(filename::String)::InputTJLF
     # create InputTJLF struct
     inputTJLF = InputTJLF{Float64}(ns,nky)
     # fields that aren't used or implemented
-    deletedFields = ["USE_TRANSPORT_MODEL","GEOMETRY_FLAG","B_MODEL_SA","FT_MODEL_SA","VPAR_SHEAR_MODEL","WRITE_WAVEFUNCTION_FLAG","VTS_SHEAR","VNS_SHEAR","VEXB","RMIN_SA","RMAJ_SA","Q_SA","SHAT_SA","ALPHA_SA","XWELL_SA","THETA0_SA","NN_MAX_ERROR"]
+    deletedFields = ["GEOMETRY_FLAG","B_MODEL_SA","FT_MODEL_SA","VPAR_SHEAR_MODEL","WRITE_WAVEFUNCTION_FLAG","VTS_SHEAR","VNS_SHEAR","VEXB","RMIN_SA","RMAJ_SA","Q_SA","SHAT_SA","ALPHA_SA","XWELL_SA","THETA0_SA","NN_MAX_ERROR"]
 
     # go through each line of the input.tglf file
     for line in lines[1:length(lines)]
@@ -131,7 +131,7 @@ function readInput(filename::String)::InputTJLF
 
     #If you want to test a long-format example (see tjlf_modules.jl), inP = true, otherwise, inP = false.
     #This is overly simplistic but I didn't want to mess anything else up.
-    inP = true
+    inP = false
     if inP
         inputTJLF = InputTJLF{Float64}(inP)
     end
@@ -143,7 +143,6 @@ function readInput(filename::String)::InputTJLF
     return inputTJLF
 
 end
-
 
 """
     function checkInput(inputTJLF::InputTJLF)

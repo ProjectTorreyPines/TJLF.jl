@@ -1,0 +1,5 @@
+test4 is a new run created for testing higher scan_n on my computer, as well as focusing more on the time-to-completion of the mainsub function.
+
+SCAN_N = 4
+""
+-n = 4

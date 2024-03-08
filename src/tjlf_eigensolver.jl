@@ -25,6 +25,15 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         ky_index::Int,
                         find_eigenvector::Bool) where T<:Real where K<:Complex
 
+    # tglf_dimensions contains info about nx, nbasis, nbasis_max, ns0, ns, nky, iur, nroot.
+    # tglf_global is defaults. This is ignored here.
+    # tglf_closure is ... confusing
+    # tglf_species is for zs, mass, vs, fts, rlts, rlns, as, taus, etc... That is contained in inputs.
+    # tglf_eigen contains amat, bmat, rr, ri, eigenvalue, etc. These aren't really used yet here.
+    # tglf_coeff has all the hermite basis matrix coefficients (They're all here too but independent structs)
+    # tglf_nuei_coeff is weird lol
+    # tglf_sgrid is for saving the results from the 
+
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
     ft3 = ft^3
@@ -77,7 +86,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # START
     #*************************************************************
 
-    k_par0 = park_in/(R_unit*q_unit*width_in)
+    k_par0 = park_in/(R_unit*q_unit*width_in) # k_par0 shouldn't be infinity... R_unit, q_unit, or width_in are 0...
+    #println("width_in: ", width_in) # width_in is 0.0! What.... width_in = WIDTH_SPECTRUM[ky] or something...
+
     w_d0 = ky/R_unit
     w_cd = -gchat_in*w_d0
     w_s = -ky/B_unit
@@ -932,10 +943,10 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     end  # nroot>6
 
                     w_d1 = -ghat_in*w_d0
-                    k_par1 = k_par0
+                    k_par1 = k_par0 # k_par0 is infinity when js==is
                     if(js!=is)
                         w_d1 = 0.0
-                        k_par1 = 0.0
+                        k_par1 = 0.0 # This still activates.
                     end
                     modw_d1 = abs(w_d1)
                     modk_par1 = abs(k_par1)
@@ -964,10 +975,10 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradBgu3=0.0
                             gradBgu33=0.0
                         end
-                    else
+                    else # The problem here now is that k_par1 is infinity. This won't converge obviously.
                         @warn "NOT TESTED eigensolve.jl ln 950"
-                        gradB = gradB1*aveGradB.gradB[ib,jb]
-                        gradBhp1=gradB1*aveGradB.gradBhp1[is,ib,jb]
+                        gradB = gradB1*ave.gradB[ib,jb] # There is no aveGradB.gradB. There is of the correct dimension in Ave, though...
+                        gradBhp1=gradB1*aveGradB.gradBhp1[is,ib,jb] 
                         gradBhp3=gradB1*aveGradB.gradBhp3[is,ib,jb]
                         gradBhr11=gradB1*aveGradB.gradBhr11[is,ib,jb]
                         gradBhr13=gradB1*aveGradB.gradBhr13[is,ib,jb]
