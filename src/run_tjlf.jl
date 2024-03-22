@@ -18,7 +18,10 @@ end
 
 parameters:
     input_tjlfs::InputTJLF                  - InputTJLF struct
-    
+
+outputs:
+    outputs                                 - fluxes (field, species, type)
+
 description:
     Runs TJLF on a single InputTJLF struct, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
@@ -34,7 +37,7 @@ parameters:
     input_tjlfs::Vector{InputTJLF}          - vector of InputTJLF structs
     
 outputs:
-    outputs                                 - vector of the fluxes
+    outputs                                 - vector of fluxes (field, species, type)
     
 description:
     Runs TJLF on a vector of InputTJLF structs, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
@@ -48,3 +51,16 @@ function run_tjlf(input_tjlfs::Vector{InputTJLF})
     end
     return outputs
 end
+
+# (field, species, type)
+# type: (particle, energy, torodial stress, parallel stress, exchange)
+
+Qe(QL_flux_out::Array{Float64}) = sum(QL_flux_out[:, 1, 2])
+
+Qi(QL_flux_out::Array{Float64}) = sum(QL_flux_out[:, 2:end, 2])
+
+Πi(QL_flux_out::Array{Float64}) = sum(QL_flux_out[:, 2:end, 3])
+
+Γe(QL_flux_out::Array{Float64}) = sum(QL_flux_out[:, 1, 1])
+
+Γi(QL_flux_out::Array{Float64}) = [sum(QL_flux_out[:, k, 1]) for k in 1:size(QL_flux_out)[2]-1]
