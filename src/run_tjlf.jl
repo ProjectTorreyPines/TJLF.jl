@@ -63,4 +63,4 @@ Qi(QL_flux_out::Array{Float64}) = sum(QL_flux_out[:, 2:end, 2])
 
 Γe(QL_flux_out::Array{Float64}) = sum(QL_flux_out[:, 1, 1])
 
-Γi(QL_flux_out::Array{Float64}) = [sum(QL_flux_out[:, k, 1]) for k in 1:size(QL_flux_out)[2]-1]
+Γi(QL_flux_out::Array{Float64}) = [sum(QL_flux_out[:, k, 1]) for k in 2:size(QL_flux_out)[2]]
