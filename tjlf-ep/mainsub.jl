@@ -1,9 +1,4 @@
-using MPI
-function mainsub(inputsEP::InputTJLFEP, inputsPR::profile, COMM_IN::MPI.Comm)
-    TJLFEP_COMM = COMM_IN
-
-    id = MPI.Comm_rank(TJLFEP_COMM)
-    np = MPI.Comm_size(TJLFEP_COMM)
+function mainsub(inputsEP::InputTJLFEP, inputsPR::profile)
     x = inputsEP.PROCESS_IN
     #println("PROCESS_IN = ")
     #println(x)
@@ -26,14 +21,12 @@ function mainsub(inputsEP::InputTJLFEP, inputsPR::profile, COMM_IN::MPI.Comm)
         inputsEP.MODE_IN = 2
         inputsEP.KY_MODEL = 3
 
-        growthrate = kwscale_scan(inputsEP, inputsPR, TJLFEP_COMM)
-        return growthrate
-        msg = "Yes"
-        return msg
+        println(inputsEP.MODE_IN)
+
+        growthrate, inputsEP, inputsPR = kwscale_scan(inputsEP, inputsPR)
+        return growthrate, inputsEP, inputsPR
     elseif (x == 6)
         msg = "No"
         return msg # There will be a specific return statement for each process_in case.
     end
-
-
 end

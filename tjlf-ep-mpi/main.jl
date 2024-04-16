@@ -71,7 +71,7 @@ using .TJLFEP: convert_input
 include("../src/TJLF.jl")
 using .TJLF
 
-ni1, ni2, ni3, ni4, Ti1, Ti2, Ti3, Ti4, dlnnidr1, dlnnidr2, dlnnidr3, dlnnidr4, dlntidr1, dlntidr2, dlntidr3, dlntidr4, cs, rmin_ex = TJLFEP.readEXPRO()
+#ni1, ni2, ni3, ni4, Ti1, Ti2, Ti3, Ti4, dlnnidr1, dlnnidr2, dlnnidr3, dlnnidr4, dlntidr1, dlntidr2, dlntidr3, dlntidr4, cs, rmin_ex = TJLFEP.readEXPRO()
 
 
 #=io177 = open("csvEXPRO.txt", "w")

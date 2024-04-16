@@ -273,6 +273,8 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
     F_REAL::Union{Vector{T}, Missing}
     REAL_FREQ::Int
 
+    WIDTH::Union{Vector{T}, Missing}
+
     # I might want a default constructor for default values. I'm going to make one (no paramters)
     # which follows the 'default' case that TGLFEP used in my first test of TGLFEP (OMFIT).
 
@@ -293,7 +295,7 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
             1.0, missing, -0.2, NaN, nn, fill(NaN, nn), fill(false, 4), fill(false, 4),
             fill(false, 4), fill(false, 4), fill(false, 4),
             fill(false, 4), fill(false, 4), fill(false, 4),
-            fill(NaN, nscan_in), missing, fill(NaN, nr), 0)
+            fill(NaN, nscan_in), missing, fill(NaN, nr), 0, fill(NaN, nscan_in))
         else
             new(missing, missing, missing, missing, missing, missing, missing, missing, missing, missing,
             NaN, NaN, missing, missing, nscan_in, missing, missing, NaN, widthin, 0.0,
@@ -303,7 +305,7 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
             1.0, missing, -0.2, NaN, nn, fill(NaN, nn), fill(false, 4), fill(false, 4),
             fill(false, 4), fill(false, 4), fill(false, 4),
             fill(false, 4), fill(false, 4), fill(false, 4),
-            fill(NaN, nscan_in), missing, fill(NaN, nr), 0)
+            fill(NaN, nscan_in), missing, fill(NaN, nr), 0, fill(NaN, nscan_in))
         end
     end
 end

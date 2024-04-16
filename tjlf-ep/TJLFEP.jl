@@ -11,7 +11,7 @@ include("EXPROconst.jl")
 include("tjlfep_ky.jl")
 include("tjlfep_kwscale_scan.jl")
 include("mainsub.jl")
-include("run_tjlfep.jl")
+include("conv_input.jl")
 include("tjlfep_complete_output.jl")
 
 

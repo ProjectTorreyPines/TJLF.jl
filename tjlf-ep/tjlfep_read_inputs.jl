@@ -203,9 +203,10 @@ function readTGLFEP(filename::String, ir_exp::Vector{Int64})
         line = split(line[1], " ")
         # Now I will have all input parameters I want. A space must exist between the fields. It is better if it is just one space but can be UP TO a tab (3 spaces in VSCode where I am editing this).
         
-        vecFields = ["WIDTH_IN", "FACTOR"] # For now...
+        vecFields = ["WIDTH", "FACTOR"] # For now...
 
         if line[2] ∈ vecFields 
+            #if ()
             field = Symbol(line[2])
             getfield(inputTJLFEP, field) .= [parse(Float64,line[1])]
         else

@@ -11,15 +11,15 @@ function tjlfep_complete_output(profile_in::Vector{T}, inputsEP::InputTJLFEP{Flo
 
     ir_out = fill(0, inputsEP.SCAN_N)
 
-    for i_r = inputsEP.IRS:inputsEP.IRS+inputsEP.SCAN_N-1
-        ir_in = Int(i_r-inputsEP.IRS+1)
+    for i_r = inputsEP.IRS:(inputsEP.IRS+inputsEP.SCAN_N-1)
+        ir_in = i_r-inputsEP.IRS+1
         if (inputsEP.INPUT_PROFILE_METHOD == 2)
-            ir_out[ir_in] = Int(inputsEP.IR_EXP[ir_in])
+            ir_out[ir_in] = inputsEP.IR_EXP[ir_in]
         else
             ir_out[ir_in] = i_r
         end
-        l_exclude = (profile_in[ir_in] == profile_in[ir_in]+1.0) # Infinity test (check validity)
-        l_exclude = (l_exclude || (profile_in[ir_in] != profile_in[ir_in])) # NaN test (check validity)
+        l_exclude = (profile_in[ir_in] == Inf) # Infinity test (check validity)
+        l_exclude = (l_exclude || (profile_in[ir_in] == NaN)) # NaN test (check validity)
         l_exclude = (l_exclude || (profile_in[ir_in] < 0.0)) # Negative value test (check validity)
         if (!l_exclude)
             profile_out[ir_out[ir_in]] = profile_in[ir_in]
