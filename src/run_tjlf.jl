@@ -31,7 +31,7 @@ function run(inputTJLF::InputTJLF{Float64})
             nmodes_out, gamma_nb_min_out, gamma_out, freq_out, particle_QL_out,
             energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out = tjlf_max(inputTJLF, 
             satParams, outputHermite, inputTJLF.KY, inputTJLF.VEXB_SHEAR, 1)
-            return gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams
+            return gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams, nmodes_out
         else
             # Do tjlf_ls
             #println("LS route")
@@ -42,7 +42,7 @@ function run(inputTJLF::InputTJLF{Float64})
             nmodes_out, gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
             NaN, field_weight_out = tjlf_LS(inputTJLF, satParams, outputHermite, inputTJLF.KY, inputTJLF.NBASIS_MAX, inputTJLF.VEXB_SHEAR,
             1)
-            return gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams
+            return gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams, nmodes_out
         end
     end
 end

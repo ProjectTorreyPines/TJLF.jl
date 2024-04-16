@@ -842,7 +842,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
         t_s[ms-m+2] = -2π - t_s[m]
     end
 
-    # Loop to compute most geometrical quantities needed for Mercie-Luc expansion
+    # Loop to compute most geometrical quantities needed for Mercier-Luc expansion
     # R, Z, R*Bp on flux surface s-grid
     B_unit_out = zeros(T, ms + 1)
     # grad_r_out = zeros(Float64, ms + 1)
@@ -854,16 +854,89 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
         arg_z = theta + zeta_loc*sin(2.0*theta)
         darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
 
+        # I presume here is where I will be implementing the extended MXH geometry:
+        # theta_R = theta + c_0(r) + sum(c_n(r)*cos(n*theta)+s_n(r)*sin(n(theta)))
+        # We do have the theta grid, so that is easy. c_n and s_n are harder.
+        # I think I need  abetter understanding of other implementations of this
+        # method to know what to do here, to be honest. I will look at CGYRO
+
+        # Here, there could be some flag that allows the choice of MXH or standard:
+
+        # Shaping conditions will be held in a new struct. Where they will be set is not going to be determined here yet.
+        
+        # For some condition that mxh is being used (mxh_cond), arg_r is set
+        # in a different manner.
+        mxh_cond = false # for now
+        sh = Shape{Float64}(false) # Defaulted to one gacode input right now.
+        if (mxh_cond)
+            # in cgyro, this is "a":
+            arg_r = theta + sh.cos0 +
+                    sh.cos1*cos(theta) +
+                    sh.cos2*cos(2*theta) + 
+                    sh.cos3*cos(3*theta) +
+                    sh.cos4*cos(4*theta) + 
+                    sh.cos5*cos(5*theta) +
+                    sh.cos6*cos(6*theta) + 
+                    x_delta*sin(theta) -
+                    zeta_loc*sin(2*theta) +
+                    sh.sin3*sin(3*theta) +
+                    sh.sin4*sin(4*theta) +
+                    sh.sin5*sin(5*theta) +
+                    sh.sin6*sin(6*theta)
+            # in cgyro, this is "a_t":
+            darg_r = 1.0 - sh.cos1*sin(theta) -
+                     2*sh.cos2*sin(2*theta) - 
+                     3*sh.cos3*sin(3*theta) - 
+                     4*sh.cos4*sin(4*theta) - 
+                     5*sh.cos5*sin(5*theta) - 
+                     6*sh.cos6*sin(6*theta) + 
+                     x_delta*cos(theta) - 
+                     2*zeta_loc*cos(2*theta) +
+                     3*sh.sin3*cos(3*theta) +
+                     4*sh.sin4*cos(4*theta) +
+                     5*sh.sin5*cos(5*theta) +
+                     6*sh.sin6*cos(6*theta)       
+            # in cgyro, this is "a_tt": this is irrelevant for TJLF (?)
+            ddarg_r = -sh.cos1*cos(theta) -
+                      4*sh.cos2*cos(2*theta) -
+                      9*sh.cos3*cos(3*theta) -
+                      16*sh.cos4*cos(4*theta) - 
+                      25*sh.cos5*cos(5*theta) -
+                      36*sh.cos6*cos(6*theta) -
+                      x_delta*sin(theta) +
+                      4*zeta_loc*sin(2*theta) -
+                      9*sh.sin3*sin(3*theta) -
+                      16*sh.sin4*sin(4*theta) -
+                      25*sh.sin5*sin(5*theta) -
+                      36*sh.sin6*sin(6*theta)
+        end
+
         R[m] = rmaj_loc + rmin_loc*cos(arg_r) # R(theta)
         Z[m] = zmaj_loc + kappa_loc*rmin_loc*sin(arg_z) # Z(theta)
+
+        # Each should have ms+1 points.
+        if (m == ms+1 && false)
+            println("t: ", t_s)
+            println("R: ", R)
+            println("Z: ", Z)
+        end
 
         R_t = -rmin_loc*sin(arg_r)*darg_r # dR/dtheta
         Z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z # dZ/dtheta
         l_t = √(R_t^2 + Z_t^2) # dl/dtheta
 
-        # dR/dr
+        # dR/dr - uses Shape struct if mxh_cond
         R_r = drmajdx_loc + drmindx_loc*cos(arg_r) - sin(arg_r)*s_delta_loc*sin(theta)/√(1.0 - delta_loc^2)
-        # dZ/dr
+        if (mxh_cond)
+            R_r = drmajdx_loc + drmindx_loc*cos(arg_r) - sin(arg_r)*(sh.s_cos0 + sh.s_cos1*cos(theta) +
+                                                                     sh.s_cos2*cos(2*theta) + sh.s_cos3*cos(3*theta) +
+                                                                     sh.s_cos4*cos(4*theta) + sh.s_cos5*cos(5*theta) +
+                                                                     sh.s_cos6*cos(6*theta) + s_delta_loc*sin(theta)/cos(x_delta) -
+                                                                     s_zeta_loc*sin(2*theta) + sh.s_sin3*sin(3*theta) +
+                                                                     sh.s_sin4*sin(4*theta) + sh.s_sin5*sin(5*theta) +
+                                                                     sh.s_sin6*sin(6*theta))
+        end
+        # dZ/dr - no alterations needed
         Z_r = dzmajdx_loc + kappa_loc*sin(arg_z)*(drmindx_loc +s_kappa_loc) + kappa_loc*cos(arg_z)*s_zeta_loc*sin(2.0*theta)
         # Jacobian
         det = R_r*Z_t - R_t*Z_r

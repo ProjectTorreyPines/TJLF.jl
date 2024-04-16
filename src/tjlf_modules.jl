@@ -1064,3 +1064,48 @@ mutable struct AveGradB{T<:Real}
         )
     end
 end
+
+mutable struct Shape{T<:Real}
+    cos0::T
+    cos1::T
+    cos2::T
+    cos3::T
+    cos4::T
+    cos5::T
+    cos6::T
+
+    s_cos0::T
+    s_cos1::T
+    s_cos2::T
+    s_cos3::T
+    s_cos4::T
+    s_cos5::T
+    s_cos6::T
+
+    sin3::T
+    sin4::T
+    sin5::T
+    sin6::T
+
+    s_sin3::T
+    s_sin4::T
+    s_sin5::T
+    s_sin6::T
+
+    function Shape{T}(i1) where {T<:Real}
+        
+        if (i1)
+            new(2.90045e-2, 1.44864e-2, -2.97601e-3, -1.05672e-3, 2.63407e-4,
+            -7.27970e-6, 0.0, 1.17396e-2, 2.81148e-2, -1.03346e-2, 
+            -4.60873e-3, -1.13297e-3, -9.45857e-4, 0.0, 1.14492e-3,
+            1.09027e-3, 5.65009e-4, 0.0, 1.09027e-3, 3.95187e-3,
+            2.57056e-3, 0.0)
+        else # Default:
+            new(0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0)
+        end
+    end
+end

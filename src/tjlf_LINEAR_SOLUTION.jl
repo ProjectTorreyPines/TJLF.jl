@@ -743,7 +743,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
 end
 
-function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, field_weight_out::Array{ComplexF64, 3}) where T<:Real 
+function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, field_weight_out::Array{ComplexF64, 3}, nmodes_out::Int64) where T<:Real 
     # The tglf version of this function depends on tglf_dimensions, tglf_global, and tglf_sgrid. The wavefunction writing process is 
     # entirely removed from TJLF. It was omitted (see deletedFields in the readInput function). I could either try to complete this
     # without consideration for the wavefunction writing as is done in TJLFEP, or I could take a long detour and write the wavefunction
@@ -764,7 +764,6 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
     plot_field_out = zeros(ComplexF64, maxmodes, 3, max_plot)
     hp = fill(NaN, (nb, max_plot))
     nbasis = size(field_weight_out)[2]
-    nmodes_out = size(field_weight_out)[3]
     #println(nmodes_out)
     if (igeo == 0)
         dx = npi*2.0*pi/(max_plot-1) # /(max_plot-1)
