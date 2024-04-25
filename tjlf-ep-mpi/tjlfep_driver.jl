@@ -2,6 +2,7 @@ using MPI
 include("TJLFEP.jl")
 using .TJLFEP
 using .TJLFEP: convert_input
+using .TJLFEP: revert_input
 include("../src/TJLF.jl")
 using .TJLF
 
@@ -139,10 +140,19 @@ time_diff = end_time - start_time
 time_in_seconds = Dates.value(time_diff) / 1000
 println(time_in_seconds, " for np = ", np_world)
 end
-
-if (inputTGLFEP.IR == 201)
-    #println(growthrate)
+#=
+if (inputTGLFEP.IR == 201 && id_local == 0)
+    #println("201: ", growthrate[:, 1, 1, :])
 end
+MPI.Barrier(MPI.COMM_WORLD)
+if (inputTGLFEP.IR == 2 && id_local == 0)
+    #println("2: ", growthrate[:, 1, 1, :])
+end
+MPI.Barrier(MPI.COMM_WORLD)
+if (inputTGLFEP.IR == 101 && id_local == 0)
+    #println("101: ", growthrate[:, 1, 1, :])
+end
+=#
 # Right now, width_in is being set directly from first entry from the TGLFEP input
 # rather than some range of widths as TGLFEP does. This can be easily implemented but 
 # most inputs won't need that for now.

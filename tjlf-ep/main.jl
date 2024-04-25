@@ -2,6 +2,7 @@
 include("TJLFEP.jl")
 using .TJLFEP
 using .TJLFEP: convert_input
+using .TJLFEP: revert_input
 include("../src/TJLF.jl")
 using .TJLF
 using Base.Threads

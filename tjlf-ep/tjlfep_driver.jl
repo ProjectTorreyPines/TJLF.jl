@@ -2,6 +2,7 @@
 include("TJLFEP.jl")
 using .TJLFEP
 using .TJLFEP: convert_input
+using .TJLFEP: revert_input
 include("../src/TJLF.jl")
 using .TJLF
 using Base.Threads
@@ -36,14 +37,14 @@ println(homedir)
 iEPexist = isfile(homedir*"/input.TGLFEP")
 iMPexist = isfile(homedir*"/input.MTGLF")
 
-#@assert iEPexist != false "TGLFEP input file not found in directory"
-#@assert iMPexist != false "MTGLF input file not found in directory"
+@assert iEPexist != false "TGLFEP input file not found in directory"
+@assert iMPexist != false "MTGLF input file not found in directory"
 
 inputEPfile = homedir*"/input.TGLFEP"
 inputMPfile = homedir*"/input.MTGLF"
 
-inputEPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.TGLFEP"
-inputMPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.MTGLF"
+#inputEPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.TGLFEP"
+#inputMPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.MTGLF"
 
 prof = TJLFEP.readMTGLF(inputMPfile)
 inputMTGLF = prof[1]
@@ -93,7 +94,7 @@ if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
 end
 
 
-# Needs to be corrected later (in mainsub):
+# Needs to be corrected later (before mainsub):
 #=
     # each MPI color group is assigned one ir_exp:
     # !correct color!:
@@ -117,8 +118,14 @@ inputTGLFEP.FACTOR_IN = inputTGLFEP.FACTOR[color+1]
 # FACTOR_IN
 # color & id (sort of)
 
+# deepcopy is required so as to avoid overwriting of data:
 n_ir = inputTGLFEP.SCAN_N
-arrTGLFEP = fill(inputTGLFEP, n_ir)
+Ts = fill(inputTGLFEP, n_ir)
+Ts[1] = deepcopy(inputTGLFEP)
+for i in 2:n_ir
+    Ts[i] = deepcopy(Ts[i-1])
+end
+arrTGLFEP = Ts
 arrMTGLF = fill(inputMTGLF, n_ir)
 arrgrowth = fill(fill(NaN,(5, 10, 10, inputTGLFEP.NMODES)), n_ir)
 
@@ -126,7 +133,7 @@ using Dates
 
 start_time = now()
 
-Threads.@threads for i in 1:n_ir
+for i in 1:n_ir
     #try
         arrTGLFEP[i].IR = arrTGLFEP[i].IR_EXP[i]
         #println(arrTGLFEP[i].IR)

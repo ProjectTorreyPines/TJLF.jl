@@ -17,7 +17,7 @@ include("tjlfep_complete_output.jl")
 
 export profile, InputTJLF, InputTJLFEP
 export readMTGLF, readTGLFEP, TJLF_map, readEXPRO
-export convert_input
+export convert_input, revert_input
 export tjlfep_complete_output
 
 end 

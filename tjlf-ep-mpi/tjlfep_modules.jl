@@ -141,15 +141,15 @@ mutable struct InputTJLF{T<:Real}
     function InputTJLF{T}(ns::Int, nky::Int, dflt::Bool) where {T<:Real}
         if dflt
             new("GYRO",
-            false,false,true,true,false,missing,true,true,true,false,
-            0,2,2,21,4,2,16,12,1,2,0,-1,
+            false,false,true,true,false,missing,true,false,true,false,
+            0,2,2,21,4,4,32,12,1,2,0,-1,
             fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
             fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN*im,(nky)),missing,
             1.0,1.0,0.3,0.0,0.0,0.0,1.0,0.0,0.0,1.0,
-            1.0,0.0,1.0,1.0,1.0,1.25,NaN,1.65,0.3,0.5,
+            1.0,0.0,1.0,1.0,1.0,1.25,18.0,1.65,0.3,0.5,
             3.0,0.0,1.0,0.0,0.0,2.0,1.0,16.0,0.0,0.0,
-            0.0,0.0,0.0,16.0,NaN,0.0,NaN,NaN,NaN,1.0,
-            1.0,1.0,0.1,0.0,0.0,2.0,0.7,1.0e-13,true)
+            0.0,0.0,0.0,16.0,0.0,0.0,0.0,0.0,0.0,1.0,
+            1.0,1.0,0.1,0.0,0.0,0.0,0.7,1.0e-13,true)
         else
             new("",
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,

@@ -101,7 +101,8 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             println("factor, efwid, kyhat: ", factor, efwid, kyhat)
         end=#
         # Threads:
-        Threads.@threads for i = 1:nkwf
+        #=Threads.@threads=# 
+        for i = 1:nkwf
             l_wavefunction_out = 0
 
             # The following 3 statments define each combination of ikyhat, iefwid, and ifactor.
@@ -181,6 +182,26 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             if (inputsEP.IR == 201 && ((id == 0 && k == 4 && i == 1) || (id == 1 && k == 3) || (id == 0 && k == 3 && mod(i, 2) == 0)))
                 testid = true
             end=#
+            if (inputsEP.IR == 3 && k == 1 && false)
+                println("================= Iter: ", i, " ================")
+                println(inputsEP.PROCESS_IN)
+                println(inputsEP.THRESHOLD_FLAG)
+                println(inputsEP.SCAN_METHOD)
+                println(inputsEP.QL_THRESH_RATIO)
+                println(inputsEP.Q_SCALE)
+                println(inputsEP.KY_MODEL)
+                println(inputsEP.FACTOR_IN)
+                println(inputsEP.WIDTH_IN)
+                println(inputsEP.KYHAT_IN)
+                println(inputsEP.WIDTH_MIN)
+                println(inputsEP.WIDTH_MAX)
+                println(inputsEP.IS_EP)
+                println(inputsEP.IR)
+                println(inputsEP.JTSCALE)
+                println(inputsEP.NN)
+                println(inputsEP.FREQ_AE_UPPER)
+            end
+
             gamma_out, freq_out, inputTJLF = TJLFEP_ky(inputsEP, inputsPR, str_wf_file, l_wavefunction_out)
             
             #=if (id == 0 && inputsEP.IR == 201 && k == 1)
@@ -195,9 +216,9 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                     println("After ky: ", inputsEP.L_TH_PINCH, " : ", i, " : ", k, " : ", id)
                     println(inputsEP)
                 end=#
-            #if (inputsEP.IR == 201 && k == 3)
-            #    println("gamma_out for iter on run 1: ", gamma_out, " ", i)
-            #end
+            if (inputsEP.IR == 2 && k == 1)
+                #println("gamma_out for iter on run 1: ", gamma_out, " ", i)
+            end
 
             # it is performing the entire operation over all ky. I don't want to run this a bunch of times since it gets rid of the purposes
             # of using MPI. 
@@ -491,12 +512,12 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 if (inputsEP.REAL_FREQ == 0)
                     for n = 1:inputsEP.NMODES
                         println(io, factor[ifactor], " ", g[n], " ", f[n], keep_label[n])
-                        println(io, tlabelvec[n])
+                        #println(io, tlabelvec[n])
                     end
                 else
                     for n = 1:inputsEP.NMODES
                         println(io, factor[ifactor], " ", g[n], " ", f[n], keep_label[n])
-                        println(io, tlabelvec[n])
+                        #println(io, tlabelvec[n])
                     end
                 end
             end # ifactor
@@ -552,13 +573,13 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         inputsEP.FACTOR_IN = 10000
         inputsEP.WIDTH_IN = efwid[1]
         inputsEP.KYMARK = kyhat[1]
-        println("imark_min > nfactor", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
+        println("imark_min > nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
     else
         # If, over the scan of k, there's an unstable mode, set each to each marked point.
         inputsEP.FACTOR_IN = f_guess[ikyhat_mark, iefwid_mark]
         inputsEP.WIDTH_IN = efwid[iefwid_mark]
         inputsEP.KYMARK = kyhat[ikyhat_mark]
-        println("imark_min <= nfactor", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
+        println("imark_min <= nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
     end
 
     println("ir: ", inputsEP.IR, " iefwid_mark: ", iefwid_mark, " ikyhat_mark: ", ikyhat_mark)

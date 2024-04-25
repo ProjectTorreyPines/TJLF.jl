@@ -282,7 +282,7 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
     inputsEP.KY_MODEL = 3
     =#
     # Okay finally I can do this lol:
-    inputTJLF = InputTJLF{Float64}(inputsPR.NS, 12, true)
+    inputTJLF = InputTJLF{Float64}(inputsPR.NS, 12, true) # It is being set to the default...
     if (inputsEP.IR < 1 || inputsEP.IR > inputsPR.NR)
         println("ir isn't within range")
         return 1
@@ -321,9 +321,22 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
         inputsEP.FACTOR_IN = inputsEP.FACTOR_MAX
     end
 
+    # Trying to correct for rounding point errors:
+    # e.g. 0.1000000001 -> 0.1
+
+    inputsEP.FACTOR_IN = round(100000*inputsEP.FACTOR_IN)/100000
+
     if (inputsEP.SCAN_METHOD == 1)
         inputTJLF.AS[is] = inputsPR.AS[ir, is]*inputsEP.FACTOR_IN
     end
+
+    # Things to print for formality:
+    # is
+    # inputsEP.FACTOR_MAX
+    # sum0 (after)
+    # AS
+
+
 
     sum0 = 0.0
     for i = 2:ns
@@ -331,17 +344,31 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
             sum0 = sum0 + inputTJLF.ZS[i]*inputTJLF.AS[i]
         end
     end
+    if (inputsEP.IR == 2 && false)
+        println("======")
+        println(inputsPR.A_QN)
+        println(inputTJLF.ZS)
+    end
     inputsPR.A_QN = (1.0 - inputTJLF.ZS[is]*inputTJLF.AS[is]) / sum0
 
+    if (inputsEP.IR == 2 && false)
+        println(sum0)
+        println(inputsPR.A_QN)
+        println(inputTJLF.AS)
+        println("======")
+    end
     for i = 2:ns
         if (i != is)
-            #println(inputsPR.A_QN)
-            #println(inputTJLF.AS[i])
-            #println("======")
             inputTJLF.AS[i] = inputsPR.A_QN*inputTJLF.AS[i]
         end
     end
-    inputsEP.MODE_IN
+    if (inputsEP.IR == 2 && false)
+        println(inputTJLF.AS)
+    end
+    
+    #println("is, FACTOR_MAX, FACTOR_IN, sum0, AS:")
+    #println(is, " ", inputsEP.FACTOR_MAX, " ", inputsEP.FACTOR_IN, " ", sum0, " ", inputTJLF.AS)
+
     if (inputsEP.MODE_IN == 2) # EP drive only
         for i = 1:ns
             if (i != is)

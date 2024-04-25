@@ -468,6 +468,8 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, te
     # This is one of the only things that is ran to for inputTJLF:
     inputsEP.FREQ_AE_UPPER = inputsEP.FREQ_CUTOFF*abs(inputsPR.OMEGA_TAE[ir])
     
+    #println(inputsPR.A_QN, " ", inputTJLF.AS, " ", inputTJLF.KY)
+
     return inputTJLF
 end
 """

@@ -194,9 +194,11 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 #println(str_sf, " for round ", k, ", id & ir: ", id, " ", inputsEP.IR)
             end
             testid = false
+            #=
             if (inputsEP.IR == 2 && ((id == 0 && k == 3 && i == 1) || (id == 1 && k == 2 && i >= 450) || (id == 0 && k == 2 && mod(i, 2) == 0 && i >= 450)))
                 testid = true
             end
+            =#
 
             if (testid)
                 #println(inputsEP.FACTOR_IN)
@@ -206,7 +208,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             # nmodes_out -- 
             # chi_th -- 
             # LKEEP -- 
-
+            #println("Iteration ", i, ", id ", id)
             gamma_out, freq_out, inputTJLF = TJLFEP_ky(inputsEP, inputsPR, str_wf_file, l_wavefunction_out, testid)
             
             #=if (id == 0 && inputsEP.IR == 201 && k == 1)
@@ -403,6 +405,9 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                     gamma_mark_i_1[ikyhat, iefwid] = gamma_g1
                     gamma_mark_i_2[ikyhat, iefwid] = gamma_g2
                     f_mark_i[ikyhat, iefwid] = f_g1
+                    if (inputsEP.IR == 201)
+                        println(gamma_g1, " : ", gamma_g2)
+                    end
                 end # iefwid
             end # ikyhat
             # This next one seems to only happen on the lower of the TWO
@@ -454,6 +459,10 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                                 println("kywrite, wdwrite: ", ikyhat_mark, " ", iefwid_mark)
                                 println("After: ", fmark, ", ", gmark, ", ", f_guess_mark)
                             end=#
+
+                            if (inputsEP.IR == 201)
+                                println("Marks set: ", fmark)
+                            end
                         end
                     else
                         #println("Statements NOT set! for id & ir: ", id, " ", inputsEP.IR)
@@ -628,6 +637,8 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
     else
         # If, over the scan of k, there's an unstable mode, set each to each marked point.
         inputsEP.FACTOR_IN = f_guess[ikyhat_mark, iefwid_mark]
+        println("efwid: ", efwid)
+        println("iefwid_mark: ",iefwid_mark)
         inputsEP.WIDTH_IN = efwid[iefwid_mark]
         inputsEP.KYMARK = kyhat[ikyhat_mark]
     end

@@ -82,9 +82,26 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     #mainsub isn't really a problem but kwscale_scan is because I haven't done much in there yet. I can try to get it to call everything up to the ky scan I suppose.
    
     #println("pre-run")
+
+
+    if (inputsEP.IR == 2 && false)
+        io77 = open("run.out", "a")
+        for i in eachindex(convInput.AS)
+            println(io77, convInput.AS[i])
+        end
+        println(io77, " ")
+        close(io77)
+    end
+
+    #if (inputsEP.IR == 2)
+    #    println(convInput.IBRANCH)
+    #    println(convInput.WIDTH)
+    #end
     gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams, nmodes_out = TJLF.run(convInput)
     #println(typeof(field_weight_out))
     #println(typeof(satParams.y))
+
+    inputTJLF = revert_input(convInput, convInput.NS, convInput.NKY)
     
     # Next is the get_growthrate stuff. I now need to make sure that run_TJLF is giving me all the information I need to continue this.
 
