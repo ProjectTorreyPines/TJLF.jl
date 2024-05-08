@@ -34,3 +34,11 @@ main.jl/driver.jl ==> mainsub.jl ==> kwscale_scan.jl ==> ky.jl,
                                                          then TJLF.get_wavefunction()...
 
 This txt file will be further edited later.
+
+
+
+
+
+87001 - jl
+
+109016 - Fortran

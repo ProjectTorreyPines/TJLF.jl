@@ -280,8 +280,8 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
     println(io3, "************** The critical EP density gradient **************")
     println(io3, "**************************************************************")
 
-    SFmin = fill(NaN, inputTGLFEP.SCAN_N)
-    SFmin_out = fill(NaN, inputMTGLF.NR)
+    SFmin = fill(0.0, inputTGLFEP.SCAN_N)
+    SFmin_out = fill(0.0, inputMTGLF.NR)
     dndr_crit = fill(NaN, inputTGLFEP.SCAN_N)
     dndr_crit_out = fill(NaN, inputMTGLF.NR)
     dpdr_crit = fill(NaN, inputTGLFEP.SCAN_N)
@@ -315,14 +315,24 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
         println(io3, SFmin, " SFmin after buf and coutput") # after comp.out
         #println(io3, inputTGLFEP.FACTOR_MAX_PROFILE)
         if ((ir_min-inputTGLFEP.IRS+1) > 1)
-            SFmin[1:ir_min-inputTGLFEP.IRS] .= inputTGLFEP.FACTOR_MAX_PROFILE[1:ir_min-inputTGLFEP.IRS]
+            if (ir_min-inputTGLFEP.IRS > inputTGLFEP.SCAN_N)
+                SFmin[1:inputTGLFEP.SCAN_N] = inputTGLFEP.FACTOR_MAX_PROFILE[1:inputTGLFEP.SCAN_N]
+            else
+                SFmin[1:ir_min-inputTGLFEP.IRS] = inputTGLFEP.FACTOR_MAX_PROFILE[1:ir_min-inputTGLFEP.IRS]
+            end
             if (inputTGLFEP.IRS > 1) SFmin_out[1:inputTGLFEP.IRS-1] .= inputTGLFEP.FACTOR_MAX_PROFILE[1] end
-            SFmin_out[inputTGLFEP.IRS:ir_min-1] .= inputTGLFEP.FACTOR_MAX_PROFILE[1:ir_min-inputTGLFEP.IRS]
+
+            if (ir_min-inputTGLFEP.IRS > inputTGLFEP.SCAN_N)
+                # The +1 on SFmin_out exists because the original is keeping a spacing of 1 between the two...
+                SFmin_out[inputTGLFEP.IRS:inputTGLFEP.SCAN_N+1] = inputTGLFEP.FACTOR_MAX_PROFILE[1:inputTGLFEP.SCAN_N]
+            else
+                SFmin_out[inputTGLFEP.IRS:ir_min-1] = inputTGLFEP.FACTOR_MAX_PROFILE[1:ir_min-inputTGLFEP.IRS]
+            end
         end
         if ((ir_max-inputTGLFEP.IRS+1) < inputTGLFEP.SCAN_N)
-            SFmin[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N] .= inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
+            SFmin[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N] = inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
             if (inputTGLFEP.IRS+inputTGLFEP.SCAN_N-1 < inputMTGLF.NR) SFmin_out[inputTGLFEP.IRS+inputTGLFEP.SCAN_N:inputMTGLF.NR] .= inputTGLFEP.FACTOR_MAX_PROFILE[inputTGLFEP.SCAN_N] end
-            SFmin_out[ir_max+1:inputTGLFEP.IRS+inputTGLFEP.SCAN_N-1] .= inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
+            SFmin_out[ir_max+1:inputTGLFEP.IRS+inputTGLFEP.SCAN_N-1] = inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
         end
         println(io3, SFmin, " SFmin after Max assign")
         for i = 1:inputTGLFEP.SCAN_N

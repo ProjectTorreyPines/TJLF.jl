@@ -14,8 +14,7 @@ function readMTGLF(filename::String)
     dflt = true
     ns = -1
     nr = -1
-
-    kygrid_model = -1
+    
     for line in lines[1:100]
         line = split(line, "\n")
         line = split(line[1],"=")

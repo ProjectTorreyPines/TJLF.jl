@@ -267,7 +267,6 @@ mutable struct InputTJLF{T<:Real}
     Q_PRIME_LOC::Union{T,Missing}
     BETA_LOC::Union{T,Missing}
     KX0_LOC::Union{T,Missing}
-
     DAMP_PSI::Union{T,Missing}
     DAMP_SIG::Union{T,Missing}
     WDIA_TRAPPED::Union{T,Missing}

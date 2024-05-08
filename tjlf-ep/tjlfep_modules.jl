@@ -39,23 +39,23 @@ mutable struct InputTJLF{T<:Real}
     USE_BPER::Union{Bool,Missing}
     USE_BPAR::Union{Bool,Missing}
     USE_MHD_RULE::Union{Bool,Missing}
-    USE_BISECTION::Union{Bool,Missing}
+    USE_BISECTION::Union{Bool,Missing} # 5
     USE_INBOARD_DETRAPPED::Union{Bool,Missing}
     USE_AVE_ION_GRID::Union{Bool,Missing} # don't see this in TGLF
     NEW_EIKONAL::Union{Bool,Missing} ## this seems useless, the flag has to be both true and false to do anything
     FIND_WIDTH::Union{Bool,Missing}
-    IFLUX::Union{Bool,Missing}
+    IFLUX::Union{Bool,Missing} # 10
     ADIABATIC_ELEC::Union{Bool,Missing}
 
     SAT_RULE::Union{Int,Missing}
     NS::Union{Int,Missing}
     NMODES::Union{Int,Missing}
-    NWIDTH::Union{Int,Missing}
+    NWIDTH::Union{Int,Missing} # 15
     NBASIS_MAX::Union{Int,Missing}
     NBASIS_MIN::Union{Int,Missing}
     NXGRID::Union{Int,Missing}
     NKY::Union{Int,Missing}
-    KYGRID_MODEL::Union{Int,Missing}
+    KYGRID_MODEL::Union{Int,Missing} # 20
     XNU_MODEL::Union{Int,Missing}
     VPAR_MODEL::Union{Int,Missing}
     IBRANCH::Union{Int,Missing}
@@ -142,7 +142,7 @@ mutable struct InputTJLF{T<:Real}
         if dflt
             new("GYRO",
             false,false,true,true,false,missing,true,false,true,false,
-            0,2,2,21,4,4,32,12,1,2,0,-1,
+            0,2,2,21,4,4,32,12,0,2,0,-1,
             fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
             fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN*im,(nky)),missing,
             1.0,1.0,0.3,0.0,0.0,0.0,1.0,0.0,0.0,1.0,

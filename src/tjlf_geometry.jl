@@ -134,7 +134,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     grad_r0_out = satParams.grad_r0
 
     f = satParams.Bt0 * inputs.RMAJ_LOC # Bt0_out = f/rmaj_input defined
-
+    
     kx0 = inputs.KX0_LOC/ky
     if(alpha_quench_in==0.0 && !isnan(kx0_e))
         if(inputs.UNITS=="GYRO")

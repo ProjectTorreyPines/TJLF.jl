@@ -67,15 +67,15 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         efwid .= NaN
         kyhat .= NaN
         for i = 1:nfactor
-            factor[i] = (f1-f0)/nfactor*i+f0
+            factor[i] = ((f1-f0)/nfactor)*i+f0
             # k = 1: FACTOR_IN = 1.0
             # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         end
         for i = 1:nefwid
-            efwid[i] = (w1-w0)/nefwid*i+w0
+            efwid[i] = ((w1-w0)/nefwid)*i+w0
         end
         for i = 1:nkyhat
-            kyhat[i] = (kyhat1-kyhat0)/nkyhat*i+kyhat0
+            kyhat[i] = ((kyhat1-kyhat0)/nkyhat)*i+kyhat0
         end
         #MPI.Barrier(TJLFEP_COMM)
         #println(np_local)
@@ -109,6 +109,10 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             ikyhat = Int(floor((i-1)/(nefwid*nfactor))+1) # 2
             iefwid = Int(floor(1.0*mod(i-1, nefwid*nfactor)/nfactor)+1) # 5
             ifactor = mod(i-1, nfactor)+1 # 10
+            if (k == 3 && i == 1)
+                #println("=== efwid : iefwid : efwid[iefwid] ===")
+                #println(efwid, " : ", iefwid, " : ", efwid[iefwid])
+            end
 
             inputsEP.FACTOR_IN = factor[ifactor] # Just used in mapping
             inputsEP.KYHAT_IN = kyhat[ikyhat] # Set equal to ky_in
@@ -178,10 +182,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 l_wavefunction_out = 1
                 #println(str_sf, " for round ", k, ", id & ir: ", id, " ", inputsEP.IR)
             end
-            #=testid = false
-            if (inputsEP.IR == 201 && ((id == 0 && k == 4 && i == 1) || (id == 1 && k == 3) || (id == 0 && k == 3 && mod(i, 2) == 0)))
-                testid = true
-            end=#
+            
             if (inputsEP.IR == 3 && k == 1 && false)
                 println("================= Iter: ", i, " ================")
                 println(inputsEP.PROCESS_IN)
@@ -200,6 +201,15 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 println(inputsEP.JTSCALE)
                 println(inputsEP.NN)
                 println(inputsEP.FREQ_AE_UPPER)
+            end
+
+            #testid = false
+            #if (inputsEP.IR == 101)
+            #    testid = true
+            #end
+
+            if (inputsEP.IR == 101)
+                #println("============== Iter: ", i)
             end
 
             gamma_out, freq_out, inputTJLF = TJLFEP_ky(inputsEP, inputsPR, str_wf_file, l_wavefunction_out)
@@ -236,6 +246,12 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 println("id 1 l_th_pinch at iter: ", inputsEP.L_TH_PINCH, ", ", i)
             end=#
             #Following this is the run of getting:
+            if (inputsEP.IR == 101)
+                #println("===========")
+                #println("Before L_MAX_OUTER_PANEL: ")
+                #println(inputsEP.L_MAX_OUTER_PANEL)
+            end
+
             for n = 1:inputsEP.NMODES
                 growthrate[ikyhat,iefwid,ifactor,n] = gamma_out[n]
                 frequency[ikyhat,iefwid,ifactor,n]  = freq_out[n]
@@ -250,6 +266,16 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             end
             #println(growthrate)
             #println("Iteration ", i, ", id ", id)
+
+            if (inputsEP.IR == 101)
+                println("============== Iter: ", i)
+                #println("growthrate, l_max_outer_panel_i at: [", ikyhat, ", ", iefwid, ", ", ifactor, "]")
+                #println(growthrate[ikyhat, iefwid, ifactor, :])
+                #println("-----After----")
+                println(lkeep_i[ikyhat,iefwid,ifactor, :])
+            end
+            #sds = -1
+            #@assert sds != -1 "End"
         end # end of MPI process collection
         
         # Ending here are this point for testing purposes:
@@ -381,8 +407,15 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                         if (lkeep_i[ikyhat, iefwid, imark_ref, n])
                             gamma_g1 = max((growthrate[ikyhat, iefwid, imark_ref, n]), gamma_g1)
                         end
-                        if (imark_ref+1 < 11 && lkeep_i[ikyhat, iefwid, imark_ref+1, n])
-                            gamma_g2 = max((growthrate[ikyhat, iefwid, imark_ref+1, n]), gamma_g2)
+                        if (imark_ref+1 < 11)
+                            if (lkeep_i[ikyhat, iefwid, imark_ref+1, n])
+                                gamma_g2 = max((growthrate[ikyhat, iefwid, imark_ref+1, n]), gamma_g2)
+                            end
+                        end
+                        if (imark_ref+1 == 11 && n == 4)
+                            println("ikyhat, iefwid: ", ikyhat, " ", iefwid)
+                            println("imarkref+1=11 : f_g1 & f_g2: ", f_g1, " ", f_g2)
+                            println("imarkref+1=11 : gamma_g1 & gamma_g2: ", gamma_g1, " ", gamma_g2)
                         end
                     end
                     f_guess[ikyhat, iefwid] = (gamma_g1*f_g2-gamma_g2*f_g1)/(gamma_g1-gamma_g2)
@@ -393,6 +426,11 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             end # ikyhat
             # This next one seems to only happen on the lower of the TWO
             # ir for just the first round of k ???
+            #println("=== lkeep_ref ===")
+            #println(lkeep_ref)
+            #println("Round: ", k)
+            #println("=================")
+
             for ikyhat = 1:nkyhat
                 for iefwid = 1:nefwid
                     if ((lkeep_ref[ikyhat, iefwid]) && (gamma_mark_i_1[ikyhat, iefwid] < 0.95*gamma_mark_i_2[ikyhat, iefwid]) &&
@@ -402,18 +440,23 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                             ikyhat_write = ikyhat
                             iefwid_mark = iefwid
                             iefwid_write = iefwid
-                            #=if (id == 0)
-                                println("Statements set! for id & ir and k: ", id, " ", inputsEP.IR, " ", k)
-                                println("kywrite, wdwrite: ", ikyhat_mark, " ", iefwid_mark)
+                            
+                            if (inputsEP.IR == 101)
+                                #println("Marks set: ", iefwid_mark, " : ", ikyhat_mark)
+                                #println("conds: lkeep, gamma_mark_i_1, 0.95*gamma_mark_i_2, f_mark_i, gmark, fmark")
+                                #println(lkeep_ref[ikyhat,iefwid], " ", gamma_mark_i_1[ikyhat, iefwid], " ", 0.95*gamma_mark_i_2[ikyhat,iefwid])
+                                #println(f_mark_i[ikyhat,iefwid], " ", gmark, " ", fmark)
                             end
-                            #MPI.Barrier(TJLFEP_COMM)
-                            if (id == 1)
-                                #println("Statements set! for id & ir and k: ", id, " ", inputsEP.IR, " ", k)
-                                #println("kywrite, wdwrite: ", ikyhat_mark, " ", iefwid_mark)
-                            end=#
+
                             gmark = gamma_mark_i_1[ikyhat, iefwid]
                             fmark = f_mark_i[ikyhat, iefwid]
                             f_guess_mark = f_guess[ikyhat, iefwid]
+                            
+                            if (inputsEP.IR == 101)
+                                #println("update: ", gmark, " : ", fmark, " : ", f_guess_mark)
+                                #println("===========")
+                            end
+
                             #=if (id == 0)
                                 println("Statements set! for id & ir and k: ", id, " ", inputsEP.IR, " ", k)
                                 println("kywrite, wdwrite: ", ikyhat_mark, " ", iefwid_mark)
@@ -512,12 +555,12 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 if (inputsEP.REAL_FREQ == 0)
                     for n = 1:inputsEP.NMODES
                         println(io, factor[ifactor], " ", g[n], " ", f[n], keep_label[n])
-                        #println(io, tlabelvec[n])
+                        println(io, tlabelvec[n])
                     end
                 else
                     for n = 1:inputsEP.NMODES
                         println(io, factor[ifactor], " ", g[n], " ", f[n], keep_label[n])
-                        #println(io, tlabelvec[n])
+                        println(io, tlabelvec[n])
                     end
                 end
             end # ifactor
@@ -527,6 +570,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             if (k == 1)
                 f1 = fmark
                 f0 = 0.0
+                #println("fmark > 1e10 : Pass ", k)
             else
                 delf = (f1-f0)/3
                 #=if (id == 0 && inputsEP.IR == 201)
@@ -538,10 +582,12 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 end=#
                 f1 = fmark + delf
                 f0 = fmark - delf
-                if (f0 < 0.0) f0 = 0.0 end
-                delw = (w1-w0)/4
+                if (f0 < 0.0) 
+                    f0 = 0.0 
+                end
+                delw = (w1-w0)/4.0
                 w1 = efwid[iefwid_mark] + delw
-                w0 = efwid[iefwid_mark] + delw
+                w0 = efwid[iefwid_mark] - delw
                 if (w1 > inputsEP.WIDTH_MAX)
                     w0 = w0 - (w1-inputsEP.WIDTH_MAX)
                     w1 = inputsEP.WIDTH_MAX
@@ -549,7 +595,10 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                     w1 = w1 + (inputsEP.WIDTH_MIN-w0)
                     w0 = inputsEP.WIDTH_MIN
                 end
-
+                #println(iefwid_mark, " iefwid_mark")
+                #println(efwid, " efwid")
+                #println("out: (w1, w0) : delw = (", w1, ", ", w0, ") : ", delw)
+                #println("fmark > 1e10 : Pass ", k)
                 delky = (kyhat1-kyhat0)/4
                 kyhat1 = kyhat[ikyhat_mark] + delky
                 kyhat0 = kyhat[ikyhat_mark] - delky
@@ -563,7 +612,8 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             end # k > 1
         else
             f0 = f1
-            f1 = 10*f1
+            f1 = 10.0*f1
+            #println("fmark < 1e10 : Pass ", k)
         end
 
     end # end of k

@@ -764,6 +764,7 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
     plot_field_out = zeros(ComplexF64, maxmodes, 3, max_plot)
     hp = fill(NaN, (nb, max_plot))
     nbasis = size(field_weight_out)[2]
+    #println("Nbasis: ", nbasis)
     #println(nmodes_out)
     if (igeo == 0)
         dx = npi*2.0*pi/(max_plot-1) # /(max_plot-1)
@@ -772,7 +773,7 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
             plot_angle_out[i] = xp[i]
         end
     else
-        dx = 2.0*pi/(satParams.y[ms]*inputs.WIDTH) # y comes from s_grid. width_in is not a tjlf struct thing; they mean width.
+        dx = 2.0*pi/(satParams.y[ms+1]*inputs.WIDTH) # y comes from s_grid. width_in is not a tjlf struct thing; they mean width.
         j0 = npi*np+1
         xp[j0] = 0.0 
         plot_angle_out[j0] = 0.0
@@ -785,14 +786,14 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
                 j -= 2*np
                 k += 1
             end # I needed to change the ms to ms+1 as the max dimension of y is ms+1 (see tjlf_geometry.jl)
-            xp[j0+i] = dx*(k*satParams.y[ms+1] + satParams.y[4*j])
+            xp[j0+i] = dx*(k*satParams.y[ms+1] + satParams.y[4*j+1])
             #println(j0-i+1, ", ", ms-4*j, ", ", i, ", ",  j, ", ", length(satParams.theta))
-            xp[j0-i] = -dx*((k+1)*satParams.y[ms+1] - satParams.y[ms+1-4*j])
-            plot_angle_out[j0+i] = -(k*satParams.theta[ms+1] + satParams.theta[4*j]) #t_s comes from sgrid module. t_s is theta in satParams
-            plot_angle_out[j0-i] = (k+1)*satParams.theta[ms+1] - satParams.theta[ms+1-4*j]
+            xp[j0-i] = -dx*((k+1)*satParams.y[ms+1] - satParams.y[ms-4*j+1])
+            plot_angle_out[j0+i] = -(k*satParams.theta[ms+1] + satParams.theta[4*j+1]) #t_s comes from sgrid module. t_s is theta in satParams
+            plot_angle_out[j0-i] = (k+1)*satParams.theta[ms+1] - satParams.theta[ms-4*j+1]
         end
     end
-    hp0 = sqrt(2)/pi^0.25
+    hp0 = sqrt(2)/(pi^0.25)
     for i = 1:max_plot
         hp[1, i] = hp0*exp(-xp[i]*xp[i]/2.0)
         hp[2, i] = xp[i]*sqrt(2)*hp0*exp(-xp[i]*xp[i]/2.0)
