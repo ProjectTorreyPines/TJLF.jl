@@ -1,0 +1,4 @@
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** STEP 9072629.0 ON nid00023 CANCELLED AT 2018-04-27T15:47:49 DUE TO TIME LIMIT ***
+srun: got SIGCONT
+srun: forcing job termination

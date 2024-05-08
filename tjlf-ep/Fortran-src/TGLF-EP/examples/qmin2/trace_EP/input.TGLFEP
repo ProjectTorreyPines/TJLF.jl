@@ -1,0 +1,19 @@
+5  PROCESS_IN
+2  KY_MODEL
+
+50  SCAN_N
+2   IRS
+
+.false.  FACTOR_IN_PROFILE
+1.0  FACTOR_IN
+
+.false.  WIDTH_IN_FLAG
+0.3 WIDTH_MIN (not used)
+2.0 WIDTH_MAX (not used)
+
+2 INPUT_PROFILE_METHOD
+4 IS_EP
+1.0 M_I
+1.0 Q_I
+1.0 M_EP
+1.0 Q_EP

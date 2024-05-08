@@ -1,0 +1,68 @@
+4  PROCESS_IN
+0  THRESHOLD_FLAG
+2  KY_MODEL
+
+50  SCAN_N; Can be less than number of radial grids in input.profile
+1   IRS
+
+.false.  FACTOR_IN_PROFILE
+10.0  FACTOR_IN
+
+.true.  WIDTH_IN_FLAG
+1.85 WIDTH_IN
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+1.85
+
+1 INPUT_PROFILE_METHOD
+1 IS_EP  ! Ignored for INPUT_PROFILE_METHOD=1
+1.0 M_I
+1.0 Q_I
+1.0 M_EP
+1.0 Q_EP

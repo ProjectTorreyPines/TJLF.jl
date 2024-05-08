@@ -1,0 +1,34 @@
+This example scans the q parameter with all others fixed. 
+Derived quantities that depend on q (or other scanned parameters), must also 
+be changed self consistently for physically consistent simulation.
+
+Derivd quantities are:
+
+q_prime = (q*a/r)^2*s_hat ; s_hat=(dq/dr)*(r/q) is magnetic shear
+
+p_prime = (q*a^2/8*pi*r)*beta_unit*(1/p)*(dp/dr) ; p is total pressure
+
+Self conistently, dp/dr=Sum_s [n_s*T_s*(1/L_ns + 1/L_Ts)] 
+                                         ; L_*s are gradient lengths
+
+beta_unit = 2.0*mu_0*1.6022*10E3*p/(B_unit)^2
+
+B_unit = B_t * [kappa+0.5*r*(dkappa/dr)] ; B_t is toroidal B,
+                                               kappa is elongation
+       B_unit is based on approximation of flux-surface cross-section area A
+           A = pi*r^2*kappa
+
+k_y*rho_s|_n=1 = (1.0*q/rmin)*rho_s
+
+  rho_s = (1.60217662E-19*1.0E3*Te/(mi_1*2*1.6726219E-27))^0.5 / omega_1  
+                                                  ; in meters with Te in eV
+  omega_1 = (Z_1*1.60217662E-19 * B_unit) / (mi_1*2*1.6726219E-27)   
+              ; in 1/s with mi_1 main-ion mass in deuterium mass units,
+                 Z_1 main ion charge number, and B_unit in Tesla
+
+All above parameters are normalized by T_e except k_y*rho_s. This parameter is
+for reference only and is *not used*. No absolute T_e is specified in 
+input.profile, and nothing internal to TGLF ot TGLF-EP cares about it.
+The value for k_y*rho_s set in this example is for chosen to be approximately
+right for a typical DIII-D case, but is arbitrary.
+

@@ -1,0 +1,13 @@
+#!/bin/bash -l
+
+#SBATCH -p debug
+#SBATCH -A m808
+#SBATCH -o ./run.out
+#SBATCH -e ./run.err
+#SBATCH -N 11 
+#SBATCH -t 00:30:00
+#SBATCH -C haswell
+#SBATCH -J TGLFEP
+
+cd $SLURM_SUBMIT_DIR
+srun -n 325 /global/u2/b/bassem/gacode_edison_4-2018/TGLFEP/TGLFEP_driver
