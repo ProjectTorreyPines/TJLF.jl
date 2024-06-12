@@ -16,8 +16,9 @@ BLAS.set_num_threads(1)
 # Things needed:
 # Number of ir (color). This is the main driver of the thread in driver.
 # Each of these also has a few things that depend on n_ir. The ir chosen,
-# the str_r, factor_in, and SUFFIX
+# the str_r, factor_in, and SUFFIX 
 
+# Default values for EXPRO:
 ni = TJLFEP.exproConst.ni
 Ti = TJLFEP.exproConst.Ti
 dlnnidr = TJLFEP.exproConst.dlnnidr
@@ -31,39 +32,48 @@ homedir = pwd()
 
 iEPexist::Bool = false
 iMPexist::Bool = false
+iEXPexist::Bool = false
 
 println(homedir)
 
 iEPexist = isfile(homedir*"/input.TGLFEP")
 iMPexist = isfile(homedir*"/input.MTGLF")
+iEXPexist = isfile(homedir*"/input.EXPRO")
 
 @assert iEPexist != false "TGLFEP input file not found in directory"
 @assert iMPexist != false "MTGLF input file not found in directory"
+@assert iEXPexist != false "EXPRO input file not found in directory"
 
 inputEPfile = homedir*"/input.TGLFEP"
 inputMPfile = homedir*"/input.MTGLF"
+inputEXPfile = homedir*"/input.EXPRO"
 
 #inputEPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.TGLFEP"
 #inputMPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.MTGLF"
 
+# Set up profile struct:
 prof = TJLFEP.readMTGLF(inputMPfile)
 inputMTGLF = prof[1]
 ir_exp = prof[2]
 
-#begin
+# Set up TGLFEP struct:
 inputTGLFEP = TJLFEP.readTGLFEP(inputEPfile, ir_exp)
+
+# Set up EXPRO constants:
+ni, Ti, dlnnidr, dlntidr, cs, rmin_ex = TJLFEP.readEXPRO(inputEXPfile, inputTGLFEP.IS_EP)
+
 #inputTGLFEP.FACTOR_MAX_PROFILE
 dpdr_EP = fill(NaN, inputMTGLF.NR)
 if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
     #@assert inputTGLFEP.IS_EP != 2 || inputTGLFEP.IS_EP != 3 "IS_EP value not supported in EXPRO. See EXPROconst.jl"
     for i in eachindex(dpdr_EP)
-        dpdr_EP[i] = ni[inputTGLFEP.IS_EP][i]*Ti[inputTGLFEP.IS_EP][i]*(dlnnidr[inputTGLFEP.IS_EP][i]+dlntidr[inputTGLFEP.IS_EP][i])
+        dpdr_EP[i] = ni[i]*Ti[i]*(dlnnidr[i]+dlntidr[i])
     end
     #println(inputTGLFEP.FACTOR)
     dpdr_EP_abs = abs.(dpdr_EP)
     dpdr_EP_max = maximum(dpdr_EP_abs)
     dpdr_EP_max_loc = argmax(dpdr_EP_abs)
-    n_at_max = ni[inputTGLFEP.IS_EP][dpdr_EP_max_loc]
+    n_at_max = ni[dpdr_EP_max_loc]
     if (inputTGLFEP.PROCESS_IN != 5)
         for ir = 1:inputTGLFEP.SCAN_N
             #println(inputTGLFEP.SCAN_N)
@@ -96,6 +106,8 @@ end
 
 # Needs to be corrected later (before mainsub):
 #=
+This is just a list, not something that needs to be uncommented for the Threads version:
+
     # each MPI color group is assigned one ir_exp:
     # !correct color!:
     inputTGLFEP.IR = inputTGLFEP.IR_EXP[color+1] 
@@ -146,7 +158,7 @@ for i in 1:n_ir
         arrTGLFEP[i].FACTOR_IN = arrTGLFEP[i].FACTOR[i]
         input1 = arrTGLFEP[i]
         input2 = arrMTGLF[i]
-        arrgrowth[i], arrTGLFEP[i], arrMTGLF[i] = TJLFEP.mainsub(input1, input2)
+        arrgrowth[i], arrTGLFEP[i], arrMTGLF[i] = TJLFEP.mainsub(input1, input2, true)
     #catch
     #end
 end
@@ -159,7 +171,7 @@ println(time_in_seconds)
 
 
 
-#println(growthrate)
+# println(growthrate)
 # Right now, width_in is being set directly from first entry from the TGLFEP input
 # rather than some range of widths as TGLFEP does. This can be easily implemented but 
 # most inputs won't need that for now.
@@ -168,8 +180,10 @@ println(time_in_seconds)
 
 kymark_out::Vector{Float64} = fill(NaN, inputTGLFEP.SCAN_N)
 width::Vector{Float64} = fill(NaN, inputTGLFEP.SCAN_N)
-#local buf_width::Vector{Float64} = fill(NaN, 1)
-#local buf_kymark::Vector{Float64} = fill(NaN, 1)
+
+# MPI:
+# local buf_width::Vector{Float64} = fill(NaN, 1)
+# local buf_kymark::Vector{Float64} = fill(NaN, 1)
 
 if (!inputTGLFEP.WIDTH_IN_FLAG)
     # Non-MPI:
@@ -216,7 +230,7 @@ if (!inputTGLFEP.WIDTH_IN_FLAG)
     =#
 end
 
-# As we have one process now, we don't need to check for id == 0:
+# Print out basic information about the run (that is common to all radii):
 inputTGLFEP = arrTGLFEP[1]
 io2 = open("out.TGLFEP", "w")
 println(io2, "process_in = ", inputTGLFEP.PROCESS_IN)
@@ -260,6 +274,8 @@ close(io2)
 
 # Lastly is the printing of the density threshold:
 #local buf_factor::Vector{Float64} = fill(NaN, 1)
+
+# Now continue on to radii-dependent part:
 if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
     # Threads Process won't happen until later:
 
@@ -289,6 +305,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
 
     if (inputTGLFEP.THRESHOLD_FLAG == 0)
         # Threads Correct:
+        # Set the returned guesses for "f_guess" as SFmin[i]:
         for i = 1:n_ir
             SFmin[i] = arrTGLFEP[i].FACTOR_IN
         end
@@ -311,47 +328,84 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
         println(io3, "SFmin")
         
         # Next is TGLFEP_complete_output(SFmin, SFmin_out, ir_min, ir_max, l_accept_profile)
+        # This function's goal is to determine whether each radial location is being saved in the interpolation
+        # and then interpolates the remaining values.
+
         SFmin, SFmin_out, ir_min, ir_max, l_accept_profile = tjlfep_complete_output(SFmin, inputTGLFEP, inputMTGLF)
         println(io3, SFmin, " SFmin after buf and coutput") # after comp.out
+
         #println(io3, inputTGLFEP.FACTOR_MAX_PROFILE)
+
+        # We've received the altered profile (interpolated and accepted or not).
+        # If the minimum radius is not the first one...
         if ((ir_min-inputTGLFEP.IRS+1) > 1)
+            # Originally, this had no concern for accessing out-of-range values;
+            # it does now.
+
+            # Set any scans before this point's factor values to the factor_max_profile values respectively (?? Why so physically)
             if (ir_min-inputTGLFEP.IRS > inputTGLFEP.SCAN_N)
                 SFmin[1:inputTGLFEP.SCAN_N] = inputTGLFEP.FACTOR_MAX_PROFILE[1:inputTGLFEP.SCAN_N]
-            else
+            else # original alone:
                 SFmin[1:ir_min-inputTGLFEP.IRS] = inputTGLFEP.FACTOR_MAX_PROFILE[1:ir_min-inputTGLFEP.IRS]
             end
+
+            # If the starting radius is greater than 1, set the values before it in the interpolated profile to
+            # the first value of the max_profile
             if (inputTGLFEP.IRS > 1) SFmin_out[1:inputTGLFEP.IRS-1] .= inputTGLFEP.FACTOR_MAX_PROFILE[1] end
 
+            # This one doesn't look right...
+            # This says that in the interpolated profile, you should set any values from the initial to the first point (minus 1)
+            # to the same factor_max_profile. But this factor_max_profile is not an interpolation...
+            # Is this being done as a default value? FACTOR_MAX_PROFILE if just scan_n of the same value for the case I've been testing
+            # hence it's return of 1.0 (*) when rejected. The problem is that this doesn't make much sense for SFmin_out...
+
+            # The problem is that this ignores defaults again. If factor_max_profile is accessed outside of scan_n, they should be set to 0...
             if (ir_min-inputTGLFEP.IRS > inputTGLFEP.SCAN_N)
                 # The +1 on SFmin_out exists because the original is keeping a spacing of 1 between the two...
                 SFmin_out[inputTGLFEP.IRS:inputTGLFEP.SCAN_N+1] = inputTGLFEP.FACTOR_MAX_PROFILE[1:inputTGLFEP.SCAN_N]
+
+                # This is a test input:
+                # SFmin_out[inputTGLFEP.SCAN_N+1:ir_min-inputTGLFEP.IRS] = 0.0
             else
                 SFmin_out[inputTGLFEP.IRS:ir_min-1] = inputTGLFEP.FACTOR_MAX_PROFILE[1:ir_min-inputTGLFEP.IRS]
             end
         end
+
+        # Perform a similar maneuver for above the maximum:
         if ((ir_max-inputTGLFEP.IRS+1) < inputTGLFEP.SCAN_N)
             SFmin[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N] = inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
             if (inputTGLFEP.IRS+inputTGLFEP.SCAN_N-1 < inputMTGLF.NR) SFmin_out[inputTGLFEP.IRS+inputTGLFEP.SCAN_N:inputMTGLF.NR] .= inputTGLFEP.FACTOR_MAX_PROFILE[inputTGLFEP.SCAN_N] end
             SFmin_out[ir_max+1:inputTGLFEP.IRS+inputTGLFEP.SCAN_N-1] = inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
         end
+
         println(io3, SFmin, " SFmin after Max assign")
+
         for i = 1:inputTGLFEP.SCAN_N
             if (l_accept_profile[i])
                 println(io3, SFmin[i])
             else
                 println(io3, SFmin_out[i+inputTGLFEP.IRS-1], "   (*)")
             end
+            println(io3, "--------------------------------------------------------------")
+            println(io3, l_accept_profile)
+            println(io3, ir_min, " : ", ir_max)
         end
 
+        # Calculate the density critical gradient at each of the scanned radii.
         if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
             dndr_crit .= 10000.0
             for i = 1:inputTGLFEP.SCAN_N
+                # If SFmin[i] is not the default non-rejected value, multiply the scalefactor by the density and the density gradient at that point 
+                # for the energetic ion. 
+                # If SFmin[i] is the default or >= 9k, check if it is one of the factor_max_profile ones, and if so, calculate it with that.
+                # otherwise, leave it at 10k.
                 if (SFmin[i] < 9000.0)
-                    dndr_crit[i] = SFmin[i]*ni[inputTGLFEP.IS_EP][Int(inputTGLFEP.IR_EXP[i])]*dlnnidr[inputTGLFEP.IS_EP][Int(inputTGLFEP.IR_EXP[i])]
+                    dndr_crit[i] = SFmin[i]*ni[Int(inputTGLFEP.IR_EXP[i])]*dlnnidr[Int(inputTGLFEP.IR_EXP[i])]
                 elseif ((i < ir_min-inputTGLFEP.IRS+1) || (i > ir_max-inputTGLFEP.IRS+1))
-                    dndr_crit[i] = inputTGLFEP.FACTOR_MAX_PROFILE[i]*ni[inputTGLFEP.IS_EP][Int(inputTGLFEP.IR_EXP[i])]*dlnnidr[inputTGLFEP.IS_EP][Int(inputTGLFEP.IR_EXP[i])]
+                    dndr_crit[i] = inputTGLFEP.FACTOR_MAX_PROFILE[i]*ni[Int(inputTGLFEP.IR_EXP[i])]*dlnnidr[Int(inputTGLFEP.IR_EXP[i])]
                 end
             end
+            # Interpolate and accept are reject needed values of this profile:
             dndr_crit, dndr_crit_out, ir_dum_1, ir_dum_2, l_accept_profile = tjlfep_complete_output(dndr_crit, inputTGLFEP, inputMTGLF)
             io4 = open("alpha_dndr_crit.input", "w")
             println(io4, "Density critical gradient (10^19/m^4)")
@@ -361,7 +415,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
 
         if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
             dpdr_crit .= 10000.0
-            dpdr_EP[:] .= ni[inputTGLFEP.IS_EP][:].*Ti[inputTGLFEP.IS_EP][:].*(dlnnidr[inputTGLFEP.IS_EP][:].+dlntidr[inputTGLFEP.IS_EP][:]).*0.16022
+            dpdr_EP[:] .= ni[:].*Ti[:].*(dlnnidr[:].+dlntidr[:]).*0.16022
             for i = 1:inputTGLFEP.SCAN_N
                 if (SFmin[i] < 9000.0)
                     if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
@@ -369,8 +423,8 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
                         if (case == 1)
                             dpdr_scale = SFmin[i]
                         elseif (case == 2)
-                            dpdr_scale = ((SFmin[i]*dlnnidr[inputTGLFEP.IS_EP][inputTGLFEP.IR_EXP[i]]+dlntidr[inputTGLFEP.IS_EP][inputTGLFEP.IR_EXP[i]]) /
-                            (dlnnidr[inputTGLFEP.IS_EP][inputTGLFEP.IR_EXP[i]]+dlntidr[inputTGLFEP.IS_EP][inputTGLFEP.IR_EXP[i]]))
+                            dpdr_scale = ((SFmin[i]*dlnnidr[inputTGLFEP.IR_EXP[i]]+dlntidr[inputTGLFEP.IR_EXP[i]]) /
+                            (dlnnidr[inputTGLFEP.IR_EXP[i]]+dlntidr[inputTGLFEP.IR_EXP[i]]))
                         end
                         dpdr_crit[i] = dpdr_scale*dpdr_EP[inputTGLFEP.IR_EXP[i]]
                     end # 4 || 5

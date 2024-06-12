@@ -1,0 +1,2 @@
+This directory is a test of is_EP = 3 and L_QL_RATIO is set by each set of modes
+. This is represented by L_QL_RATIO .= true.

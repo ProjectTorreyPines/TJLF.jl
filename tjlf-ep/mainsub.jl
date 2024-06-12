@@ -1,7 +1,5 @@
-function mainsub(inputsEP::InputTJLFEP, inputsPR::profile)
+function mainsub(inputsEP::InputTJLFEP, inputsPR::profile, printout::Bool = true)
     x = inputsEP.PROCESS_IN
-    #println("PROCESS_IN = ")
-    #println(x)
     if (x == 1)
         msg = "No"
         return msg
@@ -12,21 +10,21 @@ function mainsub(inputsEP::InputTJLFEP, inputsPR::profile)
         msg = "No"
         return msg
     elseif (x == 4)
-        # Will actually be done
         msg = "No"
         return msg
     elseif (x == 5)
-        # Actively working on
         inputsEP.WIDTH_IN_FLAG = false
         inputsEP.MODE_IN = 2
         inputsEP.KY_MODEL = 3
 
-        println(inputsEP.MODE_IN)
+        if (printout)
+            println(inputsEP.MODE_IN)
+        end
 
-        growthrate, inputsEP, inputsPR = kwscale_scan(inputsEP, inputsPR)
+        growthrate, inputsEP, inputsPR = kwscale_scan(inputsEP, inputsPR, printout)
         return growthrate, inputsEP, inputsPR
     elseif (x == 6)
         msg = "No"
-        return msg # There will be a specific return statement for each process_in case.
+        return msg 
     end
 end

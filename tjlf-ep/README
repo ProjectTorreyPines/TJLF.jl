@@ -1,0 +1,78 @@
+# TJLF-EP
+
+TGLF in Julia Learned from Fortran - Energetic Particles
+
+# Brief Introduction
+
+TJLF-EP is a wrapper code for TJLF that allows for the calculation of a critical gradient profile for a given
+inputted profile (original format input.gacode), expro profile (from expro package of gacode), and control parameter sequence (input.TGLFEP).
+
+# How to Run
+
+TJLF-EP can be ran in two different ways:
+
+1. Directly from a local directory for given input.MTGLF, input.TGLFEP, and input.EXPRO files placed within said directory.
+2. From the main.jl with the function run___() given the locations of the afformentioned files.
+
+Both of these methods can be done with one of two parallelization schemes:
+    - MPI
+    - Threads
+(See more about this in the [MPI vs. Threads](#mpi-vs-threads) section)
+
+Using MPI follows directly from the original translation of this wrapper from the original Fortran version of the code, TGLF-EP, which is a
+part of the gacode_add repository. Threads follows a much more dynamic scheme and is a Julia-specific advantage.
+
+Two of the inputs mentioned--input.MTGLF and input.EXPRO--derive from the original TGLF-EP code. In order to obtain these inputs for a 
+specified input.gacode. The Fortran version located within the tjlf-ep directory should be run first. The reason for this complication is 
+due to the dependence of certain required values for TJLF-EP depending on the expro functions from the f2py package in gacode. The       
+input.TGLFEP file should be identical to the Fortran version, including formatting, for parsing purposes. 
+
+TJLF-EP will return a scalefactor printout for each of the tested gradient scalefactors in the scan for each radius, a wavefunction 
+corresponding to an accurate scalefactor for each radius, an interpolated profile for the critical gradient in density and pressure, and a 
+summary file called out.TGLFEP which summarized the found critical gradient for each radius. These all are returned to the working directory,
+so when working in the main.jl, these files, if produced, will show up in the TJLF.JL directory rather than a remote directory.
+
+# MPI vs. Threads
+
+As previously mentioned, there are two parallelization schemes to work with in tjlf-ep. MPI, being a format which is a direct translation and
+is less commonly used now, is located in a separate directory within TJLF.JL called tjlf-ep-mpi. The Threads format is seen as the default 
+here and is thus called tjlf-ep. 
+
+## MPI
+
+MPI stands for Message Passing Interface and is a very direct communication method between parallel processes. The original Fortran uses this
+parallelization scheme; each radial location that is tested is allotted its own group, and processes are alloted between these groups. The results
+are then communicated back to all of the processes in that group once the work has been done in each process. This allows for very fast 
+computation of a problem that doesn't depend on previously calculated values. 
+
+## Threads
+
+Threads is a macro specifically in Julia that parallelizes a chosen loop in a very fluid manner. The macros allows for the optimization of the loop
+itself, creating a more seamless process for parallelization.
+
+# Current Inconsistencies
+
+There are a few important inconsistencies to take note of when looking at the code for the first time. 
+
+First: 
+The Fortran version of this
+code has many assumed values which I attempted to take care of. When the value imark_ref+1 is set to 11, the code attempts to access the 
+vector "factor", which holds the scalefactor values that are being tested in that specific scan (run of k in kwscale_scan.jl), at this value.
+This vector, however, is by definition only 10 long as nfactor is. When prompted with an out-of-bounds access attempt, Julia will return an error,
+but the Fortran does not, and returns a default value. For this specific case, this can be predicted well, but other parts of the scan struggle
+with this distinction much more, e.g. gamma_g2.
+
+Second:
+The Fortran version of this
+code has one flag that allots the entire set of modes to be rejected if only one of the modes in the set satisfies the condition.
+Even within the Fortran, this is inconsistent with all other flags that are tested; when correcting for this, the results do seem to match
+better with the Julia version.
+
+These together make up the most likely sources of error currently within the project (as of 6/11/24).
+
+
+
+
+
+
+

@@ -1,11 +1,11 @@
-# More temp calls yay:
+# More temp calls:
 #include("../tjlf-ep/TJLFEP.jl")
 #using .TJLFEP
 #using .TJLFEP: convert_input
 #using MPI
 
-function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, str_wf_file::String, l_wavefunction_out::Int) #, factor_in::Int64, kyhat_in::Int64, width_in::Int64)
-    #println(str_wf_file, " ", l_wavefunction_out)
+function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, str_wf_file::String, l_wavefunction_out::Int, printout::Bool = true) #, factor_in::Int64, kyhat_in::Int64, width_in::Int64)
+
     # Temp Defs:
     
     #color = 0
@@ -22,19 +22,19 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     #inputsEP.KY_MODEL = 3
 
     #========================================#
+
     inputTJLF = TJLF_map(inputsEP, inputsPR)
 
     #println("GradBFactor:")
     #println(inputTJLF.GRADB_FACTOR)
 
-    inputTJLF.USE_TRANSPORT_MODEL = false # this will just run a single ky. This could very well be another part of the struct
+    inputTJLF.USE_TRANSPORT_MODEL = false # this will just run a single ky
     #println(inputTJLF.USE_TRANSPORT_MODEL)
     if (inputsEP.PROCESS_IN == 0)
-        # I probably won't use this process_in value
+        # See TGLF-EP if needed.
     end
     
     inputTJLF.KYGRID_MODEL = 0
-    # the ky_in is set more fluidly here. Setting this part is mostly for if you're using process_in == 0
 
     inputTJLF.NMODES = inputsEP.NMODES
 
@@ -45,15 +45,9 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
 
     inputTJLF.WIDTH = inputsEP.WIDTH_IN
     inputTJLF.FIND_WIDTH = false
-    #inputTJLF.USE_AVE_ION_GRID = 
-    #a = inputTJLF
-    # Next is the TJLF call
-    # I legit have no clue why this is so finnicky, making sure all the represented functions are available :(
-    #typeof(inputTJLF)
-
-    #include("../src/TJLF.jl")
 
     # Corrections for TJLF specifically: (see main.jl after mainsub call)
+
     inputTJLF.USE_AVE_ION_GRID = false
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH # see tjlf_read_input.jl from TJLF.jl.
     #println("WIDTH_SPECTRUM: ", inputTJLF.WIDTH_SPECTRUM)
@@ -64,25 +58,24 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     inputTJLF.DAMP_PSI = 0.0 # in all inputs for tjlf this is set to 0.0
     inputTJLF.DAMP_SIG = 0.0 # in all inputs for tjlf this is set to 0.0
     inputTJLF.WDIA_TRAPPED = 0.0
+
     if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3 # From read_input, which is skipped over in this path of running TJLF
         inputTJLF.UNITS = "CGYRO"
         ### WTF
         inputTJLF.XNU_MODEL = 3
         inputTJLF.WDIA_TRAPPED = 1.0
     end
+
     inputTJLF.KX0_LOC = 0.0
     #println("inputTJLF: ")
     #println(typeof(inputTJLF))
+
     convInput = convert_input(inputTJLF, inputTJLF.NS, inputTJLF.NKY)
     #println("convInput: ")
     #println(typeof(convInput))
-    #run_TJLF requires a using .TJLF statment...
-    #This does in fact make sense. The problem is, I don't know if this will work until
-    #I test it from main.jl because that is where I will be running everything. Not from tjlfep_ky.jl or the TWO in-between files kwscale_scan and mainsub.
-    #mainsub isn't really a problem but kwscale_scan is because I haven't done much in there yet. I can try to get it to call everything up to the ky scan I suppose.
-   
-    #println("pre-run")
 
+
+    # A few test print statements which most likely aren't needed anymore:
     #=
     if (inputsEP.IR == 101)
         io78 = open("run.out.second", "a")
@@ -121,10 +114,14 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     #    println(convInput.IBRANCH)
     #    println(convInput.WIDTH)
     #end
+
+    # Run TJLF and return QLweight and eigenvalues:
     gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams, nmodes_out = TJLF.run(convInput)
+
     #println(typeof(field_weight_out))
     #println(typeof(satParams.y))
-    if (inputsEP.IR == 101)
+
+    if (inputsEP.IR == 101 && printout)
         io77 = open("run.out.second", "a")
         println(io77, gamma_out)
         println(io77, "--------------------------------------")
@@ -137,7 +134,6 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     
     # Next is the get_growthrate stuff. I now need to make sure that run_TJLF is giving me all the information I need to continue this.
 
-    # OK, yes. The output for run_TJLF contains already the frequency and growthrate info I want.
     g = fill(NaN, inputTJLF.NMODES)
     f = fill(NaN, inputTJLF.NMODES)
     for n = 1:inputTJLF.NMODES
@@ -156,7 +152,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     end
 
 
-    if (inputsEP.IR == 101)
+    if (inputsEP.IR == 101 && printout)
         io78 = open("run.out.second", "a")
         fieldnames_in = fieldnames(typeof(convInput))
         for field in fieldnames_in
@@ -164,8 +160,6 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         end
         println("----------")
         
-
-
         #println(satParams.y)
         #println(satParams.theta)
         #println("----------")
@@ -173,11 +167,10 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         #println("nbasis: ",inputsEP.N_BASIS)
         #println("==========")
 
-
         close(io78)
     end
 
-    # I tried my best... Let's see if it was good enough for a first try lol. Probably not but I'mma see.
+    # This function was translated within TJLF so as to get the wavefunction.
     wavefunction, angle, nplot, nmodes, nmodes_out = TJLF.get_wavefunction(convInput, satParams, field_weight_out, nmodes_out)
 
     inputsEP.LTEARING .= false
@@ -213,7 +206,13 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         println("===nmodes_out===")
         println(nmodes_out)
     end=#
-    for n = 1:inputsEP.NMODES # not sure about nmodes_out. Fortran does some assuming that Julia doesn't.
+
+    for n = 1:inputsEP.NMODES
+        # The use of NMODES here is slightly confusing but needed as the Fortran uses assumed values for modes
+        # which did not satisfy the criteria (nmodes_out). This means that the loop must continue for
+        # those past nmodes_out so as to be consistent with the flags. This is why n <= nmodes_out is used
+        # multiple times in this loop.
+
         #nul = abswavefunction
         wave_max = maximum(abs.(wavefunction[n,1,:]))+1.0E-3
         wave_max_loc = argmax(abs.(wavefunction[n,1,:]))
@@ -221,7 +220,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         i_mid_plot = floor(Int, (max_plot-1)/2+1) # 145
         inputsEP.L_MAX_OUTER_PANEL[n] = (wave_max_loc < (i_mid_plot-n_balloon_pi)) || (wave_max_loc > (i_mid_plot+n_balloon_pi))
         # So long as wave_max_loc is between 113 and 177, this isn't rejected for this.
-        if (inputsEP.IR == 101 && n == 4)
+        if (inputsEP.IR == 101 && n == 4 && printout)
             println("wave_max: ", wave_max)
             println("wave_max_loc: ", wave_max_loc)
             println("mode: ", n)
@@ -284,11 +283,13 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         if (chi_e[n] < 0.0) inputsEP.L_E_PINCH[n] = true end
         if (chi_th[n] < 0.0) inputsEP.L_TH_PINCH[n] = true end
         if (DEP[n] < 0.0) inputsEP.L_EP_PINCH[n] = true end
-        if (QL_flux_ratio[n] < inputsEP.QL_THRESH_RATIO) inputsEP.L_QL_RATIO .= true end
+        if (QL_flux_ratio[n] < inputsEP.QL_THRESH_RATIO) inputsEP.L_QL_RATIO[n] = true end
     end
+
     #=if (testid)
         println(chi_th)
     end=#
+    
     # Runs over all modes (4) for the lkeep vector and checks if each flag is false. If lkeep false, all will be false. 
     # If lkeep is true, if the flag is false, lkeep will stay true; if lkeep is true and the flag is true, lkeep will be turned back to false
     # This essentiall means that if the rejection flag is turned on, anything marked for rejection will be rejected.

@@ -1,37 +1,3 @@
-# I need to create a struct for the TGLF input so I can then call it
-# from TJLF.
-# I also need a struct for the inputs .profile and .TGLFEP.
-
-# In order to call tjlf_read_input, I actually am going to need to 
-# produce an input.tglf file for a given input .profile and .TGLFEP.
-# Then I can directly call tjlf_read_input function on the new file and
-# I won't even have to transfer any of that. 
-
-# I could also try to devise a way to transfer the information
-# directly from the gacode and TGLFEP files.
-
-# Lastly, I could also try to follow more in the exact footsteps
-# of tglf-ep, but I honestly think that will take more time in execution
-# of the code.
-
-# I need to determine what needs to go into the tglf file first and then
-# print the inputs that I get from either the TGLFEP or gacode (or profile)
-# 
-
-# Would it be easier to try to transfer direct information into an InputTJLF
-# struct instead? I would need to make a new readGAInput function or 
-# readEPInput or something. Then it could be called as in TJLF.
-# The issue I'm thinking of with trying to write a new input.tglf is that
-# I'm going to have to scan through the gacode and/or TGLFEP files anyways
-# so why not directly translate them into TJLF? That is what it seems
-# TJLF is doing from the input.tglf files. It is a direct translation
-# and wouldn't require any extra calls to TJLF, even if it wouldn't be too
-# much of a pain.
-
-# In that case, I do want to create both a read__Input function and a TJLF 
-# input struct:
-
-
 mutable struct InputTJLF{T<:Real}
 
     UNITS::Union{String,Missing}
@@ -165,8 +131,6 @@ mutable struct InputTJLF{T<:Real}
     end
 
 end
-
-# When adjusting a module, you need to restart your REPL even though it is mutable.
 
 mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortran, essentially. It reads the TGLFEP file
 

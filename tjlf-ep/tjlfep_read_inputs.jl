@@ -50,8 +50,6 @@ function readMTGLF(filename::String)
         twoName = ["OMEGA_TAE", "RHO_STAR", "S_ZETA", "S_DELTA", "S_KAPPA", "P_PRIME", "Q_PRIME", "B_UNIT", "IR_EXP"]
         delFields = ["IR"]
         if (check == true) # Matrix values
-            # For now, this is not the best way to allocate anything whatsoever. VPar and VPAR_SHEAR are 0 at all points, so
-            # that is certainly a waste. I will adjust this later when I have a clearer path to optimize.
             val = parse(Float64, line[2])
             line = split(line[1], "_")
             for i in 1:3
@@ -325,17 +323,11 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
 
     inputsEP.FACTOR_IN = round(100000*inputsEP.FACTOR_IN)/100000
 
+    # Factor_in is used to scale only the ion after the energetic species:
     if (inputsEP.SCAN_METHOD == 1)
         inputTJLF.AS[is] = inputsPR.AS[ir, is]*inputsEP.FACTOR_IN
     end
-
-    # Things to print for formality:
-    # is
-    # inputsEP.FACTOR_MAX
-    # sum0 (after)
-    # AS
-
-
+    # I believe this is a correction for quasineutrality? AS is the ratio of density of the species to the electron
 
     sum0 = 0.0
     for i = 2:ns
@@ -398,7 +390,7 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
         inputTJLF.FILTER = 0.0
     end
 
-    if (inputsEP.SCAN_METHOD == 2)
+    if (inputsEP.SCAN_METHOD == 2) # SCAN_METHOD 1 or 2 is chosen for whether you are applying the scaling to the density gradient or the density.
         inputTJLF.RLNS[is] = inputsEP.FACTOR_IN*inputsPR.RLNS[ir, is]
     end
 
@@ -477,8 +469,8 @@ end
 readEXPRO function is a temporary function just used to define any EXPRO constants that are needed.
 It is not going to be used in driver or mainsub or such.
 """
-function readEXPRO()
-    filename = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.EXPRO"
+function readEXPRO(filename::String, is_EP::Int64)
+    #filename = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.EXPRO"
     open(filename)
 
     lines = readlines(filename)
@@ -557,5 +549,17 @@ function readEXPRO()
         end
     end
     
-    return ni1, ni2, ni3, ni4, Ti1, Ti2, Ti3, Ti4, dlnnidr1, dlnnidr2, dlnnidr3, dlnnidr4, dlntidr1, dlntidr2, dlntidr3, dlntidr4, cs, rmin_ex
+    # Diverge 4 is_EP values for each quatnity:
+    if (is_EP == 1)
+        return ni1, Ti1, dlnnidr1, dlntidr1, cs, rmin_ex
+    elseif (is_EP == 2)
+        return ni2, Ti2, dlnnidr2, dlntidr2, cs, rmin_ex
+    elseif (is_EP == 3)
+        return ni3, Ti3, dlnnidr3, dlntidr3, cs, rmin_ex
+    elseif (is_EP == 4)
+        return ni4, Ti4, dlnnidr4, dlntidr4, cs, rmin_ex
+    else
+        println("is_EP not within range. Check input.TGLFEP input")
+        return 1
+    end
 end 

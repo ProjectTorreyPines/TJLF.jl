@@ -1,4 +1,4 @@
-function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
+function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, printout::Bool = true)
     # These are for testing purposes:
     #baseDirectory = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.MTGLF"
     #inputsPR = readMTGLF(baseDirectory)
@@ -178,7 +178,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 (ikyhat == ikyhat_write) &&
                 (iefwid == iefwid_write) &&
                 (ifactor == ifactor_write) &&
-                (k == k_max))
+                (k == k_max) && printout)
                 l_wavefunction_out = 1
                 #println(str_sf, " for round ", k, ", id & ir: ", id, " ", inputsEP.IR)
             end
@@ -212,7 +212,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 #println("============== Iter: ", i)
             end
 
-            gamma_out, freq_out, inputTJLF = TJLFEP_ky(inputsEP, inputsPR, str_wf_file, l_wavefunction_out)
+            gamma_out, freq_out, inputTJLF = TJLFEP_ky(inputsEP, inputsPR, str_wf_file, l_wavefunction_out, printout)
             
             #=if (id == 0 && inputsEP.IR == 201 && k == 1)
                 println("After ky: ", inputsEP.L_TH_PINCH, " : ", i, " : ", k, " : ", id)
@@ -267,7 +267,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             #println(growthrate)
             #println("Iteration ", i, ", id ", id)
 
-            if (inputsEP.IR == 101)
+            if (inputsEP.IR == 101 && printout)
                 println("============== Iter: ", i)
                 #println("growthrate, l_max_outer_panel_i at: [", ikyhat, ", ", iefwid, ", ", ifactor, "]")
                 #println(growthrate[ikyhat, iefwid, ifactor, :])
@@ -322,6 +322,14 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         #if (id == 0)
         #    println(imark, " imark at id: ", id)
         #end
+
+        # The following loop sets the matrix imark finds the first mode for a specific ikyhat, iefwid, ifactor combination
+        # that is set to be kept in lkeep_i. This mode is thus representing that specific ifactor value for the run
+        # and imark is set to ifactor for that ikyhat and iefwid. The same is also done for the factor values as once the first non-zeros
+        # growthrate is found along the factor spectrum, we return back to the next width run. Essentially, we are trying to find
+        # all of the first non-zero growthrates at each kyhat, width combo; these are then allotted to the imark matrix which
+        # describes whether a kyhat, width combo even has a non-zero growthrate, and if it does, where in the scan did it find that.
+
         for ikyhat = 1:nkyhat
             for iefwid = 1:nefwid
                 for ifactor = 1:nfactor
@@ -346,6 +354,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         #if (id == 0)
         #    println(imark, " imark at id: ", id)
         #end =#
+
         # This loop searches for the lowest value of imark for a specific
         # round of K.
         imark_min = nfactor + 1
@@ -357,10 +366,16 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         #if (id == 0)
         #    println(imark_min, " imark_min at id ", id)
         #end
-        # These parts are relatively easy to translate but less so to
-        # both understand easily and run fluidly. There's a lot that
-        # needs to be defined by the MPI processes. Running it at one ky
-        # would probably help with the single process.
+
+        # Next we are going to set:
+        # fmark - 
+        # gmark - 
+        # f_guess_mark -
+        # gamma_mark_i_1 -
+        # gamma_mark_i_2 -
+        # f_mark_i - 
+        # lkeep_ref - 
+        
         fmark = 1.0e20
         gmark = 0.0
         f_guess_mark = 1.0e20
@@ -368,22 +383,24 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         gamma_mark_i_2 = fill(NaN, (nkyhat, nefwid))
         f_mark_i = fill(NaN, (nkyhat, nefwid))
         lkeep_ref = fill(false, (nkyhat, nefwid))
-        # this section has some issues that I really need to address:
-        # if imark_min = nfactor, then imark's lowest value is 10.
-        # This means when it goes down the first else path here, it
-        # sets imark_ref to 9. I'm getting an issue where imark_ref is being
-        # set to 10 (???), so imark_ref+1 is 11 and not accessible.
-        # The problem is that imark_min may be 10, but a lot of the others in
-        # imark are 11, so they still get through this and go down the else path.
-        # This makes imark_ref 10, which is nonsensical.
+
+
+        # if there are any unstable modes:
         if (imark_min <= nfactor)
             
+            # default the marked values as the last ones
             ikyhat_mark = nkyhat
             iefwid_mark = nefwid
+
+            # loop all combos of kyhat, width in imark:
             for ikyhat = 1:nkyhat
                 for iefwid = 1:nefwid
                     imark_ref = nfactor-1 # ? What is the point ?
                     #println("pass 1: ", imark_ref)
+                    
+                    # if imark is not the final one of the factor spectrum, set the reference to imark
+                    # and set it as kept; otherwise, if it's the last one, set the reference to imark-1
+                    # (9) and set as kept, and if it's a default value of 11, set reference to 10.
                     if (imark[ikyhat, iefwid] < nfactor) # < 10
                         imark_ref = imark[ikyhat, iefwid]
                         #println("route 1: ", imark_ref)
@@ -395,14 +412,23 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                             lkeep_ref[ikyhat,iefwid] = true
                         end
                     end
-                    f_g1 = factor[imark_ref] # for imark_ref = 10, f_g1 = 1.0 on first round
+                    # Now we set the f_g1 and f_g2 values, which allows us to guess the
+                    # value of f_guess based on this equation. This equation is not clear yet to me.
+                    f_g1 = factor[imark_ref]
+                    # Set possible default values (as Fortran accesses it despite not being allotted):
                     if (imark_ref+1 < 11)
                         f_g2 = factor[imark_ref+1]
                     else
                         f_g2 = 0
                     end
+
+                    # This is the portion that is NOT consistent with the Fortran and is
+                    # causing problems due to default values:
                     gamma_g1 = -2.0
                     gamma_g2 = -1.0
+                    
+                    # For all modes, set gamma_g1 to the maximum growthrate of kept modes at this point of ikyhat, iefwid, and imark_ref
+                    # This also sets gamma_g2 to the maximum neighboring factor value of growthrate (imark_ref+1).
                     for n = 1:inputsEP.NMODES
                         if (lkeep_i[ikyhat, iefwid, imark_ref, n])
                             gamma_g1 = max((growthrate[ikyhat, iefwid, imark_ref, n]), gamma_g1)
@@ -412,7 +438,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                                 gamma_g2 = max((growthrate[ikyhat, iefwid, imark_ref+1, n]), gamma_g2)
                             end
                         end
-                        if (imark_ref+1 == 11 && n == 4)
+                        if (imark_ref+1 == 11 && n == 4 && printout)
                             println("ikyhat, iefwid: ", ikyhat, " ", iefwid)
                             println("imarkref+1=11 : f_g1 & f_g2: ", f_g1, " ", f_g2)
                             println("imarkref+1=11 : gamma_g1 & gamma_g2: ", gamma_g1, " ", gamma_g2)
@@ -431,11 +457,18 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             #println("Round: ", k)
             #println("=================")
 
+            # Now we scan across imark again, looking for modes that are:
+            # kept; have a max growthrate along the modes that is less than 95% of the neighboring maximum; have a factor value that is 
+            # less than or equal to the current maximum... (starts at 1e20)
+            # then if these are satisfied, find modes that:
+            # have a growthrate that is larger than the current maximum (starts at 0) or
+            # have a factor that is smaller than the max
             for ikyhat = 1:nkyhat
                 for iefwid = 1:nefwid
                     if ((lkeep_ref[ikyhat, iefwid]) && (gamma_mark_i_1[ikyhat, iefwid] < 0.95*gamma_mark_i_2[ikyhat, iefwid]) &&
                         (f_mark_i[ikyhat, iefwid] <= fmark))
                         if ((gamma_mark_i_1[ikyhat, iefwid] > gmark) || (f_mark_i[ikyhat,iefwid] < fmark))
+                            # If all of these are satisfied, set new marks away from default:
                             ikyhat_mark = ikyhat
                             ikyhat_write = ikyhat
                             iefwid_mark = iefwid
@@ -448,9 +481,14 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                                 #println(f_mark_i[ikyhat,iefwid], " ", gmark, " ", fmark)
                             end
 
+                            # then set new maximums (fmark and gmark)
+                            # and set f_guess_mark which corresponds to a maximized growthrate and
+                            # minimized factor.
                             gmark = gamma_mark_i_1[ikyhat, iefwid]
                             fmark = f_mark_i[ikyhat, iefwid]
                             f_guess_mark = f_guess[ikyhat, iefwid]
+
+                            # This loops over all combos of kyhat and width to find a single guess for "f"
                             
                             if (inputsEP.IR == 101)
                                 #println("update: ", gmark, " : ", fmark, " : ", f_guess_mark)
@@ -485,7 +523,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         # via a batch file or some execution command for TJLF-EP. Running by REPL
         # does create these files, but it places them in the TJLF.JL directory,
         # which isn't where I will want to store them in the end.
-        if (l_write_out)
+        if (l_write_out && printout)
             filename = "out.scalefactor"*inputsEP.SUFFIX
             iexist = isfile(filename)
             if (iexist)
@@ -566,7 +604,12 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             end # ifactor
             close(io)
         end 
+
+        # After printing the info just calculated, if fmark is already significantly small, adjust 
+        # ranges within the range, otherwise, move to a new order of 10 in the factor.
         if (fmark < 1.0e10)
+            # If in the first scan round, set the new max factor to the minimized factor, otherwise, do
+            # some more specific things to hone in each round (including in kyhat and width)
             if (k == 1)
                 f1 = fmark
                 f0 = 0.0
@@ -617,21 +660,38 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         end
 
     end # end of k
-    println(imark_min)
+    #println(imark_min)
+    
+    # After the fourth round, if no unstable modes have been found, default the scalefactor which will be used In
+    # the calculation in the driver to 10k, the width to its default (I think around 100) and same for kyhat.
+    # Otherwise, set the factor to the best guess at ikyhat_mark, iefwid_mark and their corresponding width and kyhat
+    # to those marks.
     if (imark_min > nfactor)
         # If, over the scan of k, there's no unstable modes, set each to lowest.
         inputsEP.FACTOR_IN = 10000
         inputsEP.WIDTH_IN = efwid[1]
         inputsEP.KYMARK = kyhat[1]
-        println("imark_min > nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
+
+        if (printout)
+            println("imark_min > nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
+        end
     else
         # If, over the scan of k, there's an unstable mode, set each to each marked point.
         inputsEP.FACTOR_IN = f_guess[ikyhat_mark, iefwid_mark]
         inputsEP.WIDTH_IN = efwid[iefwid_mark]
         inputsEP.KYMARK = kyhat[ikyhat_mark]
-        println("imark_min <= nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
+
+        if (printout)
+            println("imark_min <= nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
+        end
     end
 
-    println("ir: ", inputsEP.IR, " iefwid_mark: ", iefwid_mark, " ikyhat_mark: ", ikyhat_mark)
+    if (printout)
+        println("ir: ", inputsEP.IR, " iefwid_mark: ", iefwid_mark, " ikyhat_mark: ", ikyhat_mark)
+    end
+
+    # Return to the driver these values and the final growthrate values of the last scan.
     return growthrate, inputsEP, inputsPR
+
+    # This function will be done for however many radii you are testing. These values do not interact in the driver. 
 end
