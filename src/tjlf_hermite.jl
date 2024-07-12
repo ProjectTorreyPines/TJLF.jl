@@ -1,5 +1,5 @@
 """
-    function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
+    gauss_hermite(inputs::InputTJLF{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl

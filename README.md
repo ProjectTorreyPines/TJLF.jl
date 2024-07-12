@@ -116,3 +116,8 @@ For SAT0, TM() does not return the value of QL_weights (aka "QL_flux_spectrum_ou
 The name of the SaturationParameters struct is probably not a great struct name since it doesn't really relate to the saturation rules at all and instead are more related to the Miller Geometry, not sure what a better name would be since OutputGeometry is already used.
 
 Currently, InputTJLF's IFLUX parameter tells the code whether it is going to calculate eigenvectors. This is bad and I should probably change it into a local variable instead of a struct parameter. Ran into an issue multithreading with onePass() since it changes IFLUX in the middle of its function. The code is currently fixed with an extra "find_eigenvector" variable, but this should just be the standard IMO. I will try and implement this before I leave and delete the IFLUX parameter, but if this is still in the README I have not done it yet.
+
+## Online documentation
+For more details, see the [online documentation](https://projecttorreypines.github.io/TJLF.jl/dev).
+
+![Docs](https://github.com/ProjectTorreyPines/TJLF.jl/actions/workflows/make_docs.yml/badge.svg)

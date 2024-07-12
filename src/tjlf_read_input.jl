@@ -1,5 +1,5 @@
 """
-    function readInput(baseDirectory::String)
+    readInput(baseDirectory::String)
 
 parameter:
     baseDirectory::String - string of the directory (include a '\\' at the end) of input.tglf (NOT input.tglf.gen)
@@ -146,7 +146,7 @@ end
 
 
 """
-    function checkInput(inputTJLF::InputTJLF)
+    checkInput(inputTJLF::InputTJLF)
 
 description:
     check that the InputTJLF struct is properly populated

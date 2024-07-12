@@ -1,5 +1,5 @@
 """
-    function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky::T, vexb_shear_s::T, ky_index::Int) where T<:Real
+    tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, ky::T, vexb_shear_s::T, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl

@@ -1,5 +1,5 @@
 """
-    function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, most_unstable_gamma::AbstractArray{T}) where T<:Real
+    get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, most_unstable_gamma::AbstractArray{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -162,16 +162,8 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
 
 end
 
-
-
-
-
-
-
-
-
 """
-    function mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where T<:Real
+    mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where T<:Real
 
 description:
     helper function that returns either the smaller value if x is less than, larger value if x is greater than, 
@@ -191,7 +183,7 @@ function mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where 
 end
 
 """
-    function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
+    linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
 
 description:
     helper function that returns either the linear interpolated y value
@@ -206,18 +198,8 @@ function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
 
 end
 
-
-
-
-
-
-
-
-
-
-
 """
-    function intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
+    intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -731,7 +713,7 @@ function intensity_sat(
 end
 
 """
-    function flux_integrals(inputs::InputTJLF, QL::Array{T,5}, QL_flux_out::Array{T,3},q_low_out::Matrix{T},i::Int,ky::T,dky0::T,dky1::T) where T <: Real
+    flux_integrals(inputs::InputTJLF, QL::Array{T,5}, QL_flux_out::Array{T,3},q_low_out::Matrix{T},i::Int,ky::T,dky0::T,dky1::T) where T <: Real
 
 description:
     helper function that calculates the flux integrals given the index,
@@ -766,11 +748,8 @@ function flux_integrals(inputs::InputTJLF, QL::Array{T,5}, QL_flux_out::Array{T,
     return QL_flux_out, q_low_out
 end
 
-
-
-
 """
-    function sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Matrix{T},QL::Array{T,5})where T <: Real
+    sum_ky_spectrum(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Matrix{T},QL::Array{T,5})where T <: Real
 
 parameters:
     inputs              - InputTJLF struct constructed using the input.TGLF file

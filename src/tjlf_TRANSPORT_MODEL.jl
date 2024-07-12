@@ -1,5 +1,5 @@
 """
-    function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
+    tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -16,7 +16,6 @@ description:
     Main transport model function.
     Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity, and fluxes.
 """
-
 function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
 
     alpha_quench_in = inputs.ALPHA_QUENCH
@@ -90,7 +89,7 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 
 """
-    function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},vexb_shear_s::T,eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
+    onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},vexb_shear_s::T,eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -181,7 +180,7 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 """
-    function firstPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
+    firstPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -229,7 +228,7 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 """
-    function widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
+    widthPass(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -298,8 +297,9 @@ end
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------------------------------------------
+
 """
-    function secondPass!(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},kx0_e::T,firstPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
+    secondPass!(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T},kx0_e::T,firstPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -387,5 +387,4 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
     # gamma_out[1] = gmax
     # freq_out[1] = fmax
     # inputs.NEW_EIKONAL = true  # reset default for next call to tjlf_TM
-
 end

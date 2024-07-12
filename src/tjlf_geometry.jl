@@ -1,5 +1,5 @@
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};small::T=0.00000001)
+    xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};small::T=0.00000001)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -77,7 +77,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
 end
 
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, ky_index::Int; kx0_e::T=NaN, ms::Int=128)
+    xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, ky_index::Int; kx0_e::T=NaN, ms::Int=128)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -360,13 +360,8 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
 end
 
 
-
-
-
-
-
 """
-    function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
+    get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -380,8 +375,8 @@ description:
 location:
     tjlf_geometry.jl
 """
-#### LINES 220-326, 478 in tglf_geometry.f90
 function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
+    #### LINES 220-326, 478 in tglf_geometry.f90
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC

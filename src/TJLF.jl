@@ -30,4 +30,7 @@ export readInput
 export gauss_hermite, get_sat_params, get_ky_spectrum, get_ky_spectrum_size, tjlf_TM
 export sum_ky_spectrum, xgrid_functions_geo
 
+const document = Dict()
+document[Symbol(@__MODULE__)] = [name for name in Base.names(@__MODULE__, all=false, imported=false) if name != Symbol(@__MODULE__)]
+
 end

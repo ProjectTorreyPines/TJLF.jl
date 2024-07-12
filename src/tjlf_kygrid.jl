@@ -1,5 +1,5 @@
 """
-    function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:Real
+    get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -246,7 +246,7 @@ end
 
 
 """
-    function get_ky_spectrum_size(nky::Int,kygrid_model::Int)::Int
+    get_ky_spectrum_size(nky::Int,kygrid_model::Int)::Int
 
 parameters:
     nky::Int                            - nky from input file

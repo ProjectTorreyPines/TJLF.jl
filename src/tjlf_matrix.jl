@@ -1,5 +1,5 @@
 """
-    function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,ky_index::Int)
+    get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,ky_index::Int)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl

@@ -1,6 +1,7 @@
 const l = ReentrantLock()
+
 """
-    function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T;kx0_e::T = NaN,gamma_reference_kx0::Vector{T} = T[],freq_reference_kx0::Vector{T} = T[],outputGeo::Union{OutputGeometry{T},Missing} = missing) where T <: Real
+    tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T;kx0_e::T = NaN,gamma_reference_kx0::Vector{T} = T[],freq_reference_kx0::Vector{T} = T[],outputGeo::Union{OutputGeometry{T},Missing} = missing) where T <: Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -411,7 +412,7 @@ end
 #--------------------------------------------------------------
 
 """
-    function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, kp::T, gp::T) where T<:Real
+    get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, kp::T, gp::T) where T<:Real
 
 description:
     helper function to get intensity coefficent given the saturation rule
@@ -496,7 +497,7 @@ end
 #--------------------------------------------------------------
 
 """
-    function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T}, ky::T, nbasis::Int, eigenvalue::K, v::Vector{K}) where T<:Real where K<:Complex
+    get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T}, ky::T, nbasis::Int, eigenvalue::K, v::Vector{K}) where T<:Real where K<:Complex
 
 description:
     helper function to compute the quasilinear weights for a single eigenmode with eigenvector v.
