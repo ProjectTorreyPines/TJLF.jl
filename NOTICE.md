@@ -4,13 +4,13 @@ The purpose of this NOTICE file is to provide legal notices and acknowledgments 
 
 ## Development Attribution
 
-TJLF.jl was originally developed under the FUSE project by the Magnetic Fusion Energy group at General Atomics.
+TJLF.jl was originally developed under the GA Theory division of the Magnetic Fusion Energy group at General Atomics. This work is supported by the U.S. DOE under DE-FG02-95ER54309 (GA Theory) and the DOE Office of Workforce Development for Teachers and Scientists (WDTS) under the Science Undergraduate Laboratory Internships (SULI) program and used computational resources of NERSC (DOE-AC02-05CH11231).
 
 ## Citation
 
 If this software contributes to an academic publication, please cite it as follows:
 
-> O. Meneghini, T. Slendebroek, B.C. Lyons, K. McLaughlin, J. McClenaghan, L. Stagner, J. Harvey, T.F. Neiser, A. Ghiozzi, G. Dose, J. Guterl, A. Zalzali, T. Cote, N. Shi, D. Weisberg, S.P. Smith, B.A. Grierson, _FUSE: A next generation framework for integrated design of fusion pilot plants_, Proceedings of the IAEA FEC 2023 Conference, (2023)
+> T.F. Neiser, D. Sun, B. Agnew, T. Slendebroek, O. Meneghini, B.C. Lyons, A. Ghiozzi, J. McClenaghan, G. Staebler and J. Candy, _TJLF: The quasi-linear model of gyrokinetic transport TGLF translated to Julia_, APS Meeting Abstracts (2024)
 
 ## Trademark Notice
 
