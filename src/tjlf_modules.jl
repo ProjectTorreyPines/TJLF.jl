@@ -177,12 +177,6 @@ end
 
 
 
-
-
-
-
-
-
 mutable struct InputTJLF{T<:Real}
 
     UNITS::Union{String,Missing}
@@ -282,6 +276,34 @@ mutable struct InputTJLF{T<:Real}
 
     USE_TRANSPORT_MODEL::Union{Bool, Missing}
 
+    #MXH params
+    SHAPE_COS0::Union{T,Missing}
+    SHAPE_COS1::Union{T,Missing}
+    SHAPE_COS2::Union{T,Missing}
+    SHAPE_COS3::Union{T,Missing}
+    SHAPE_COS4::Union{T,Missing}
+    SHAPE_COS5::Union{T,Missing}
+    SHAPE_COS6::Union{T,Missing}
+
+    SHAPE_SIN3::Union{T,Missing}
+    SHAPE_SIN4::Union{T,Missing}
+    SHAPE_SIN5::Union{T,Missing}
+    SHAPE_SIN6::Union{T,Missing}
+
+    SHAPE_S_COS0::Union{T,Missing}
+    SHAPE_S_COS1::Union{T,Missing}
+    SHAPE_S_COS2::Union{T,Missing}
+    SHAPE_S_COS3::Union{T,Missing}
+    SHAPE_S_COS4::Union{T,Missing}
+    SHAPE_S_COS5::Union{T,Missing}
+    SHAPE_S_COS6::Union{T,Missing}
+
+    SHAPE_S_SIN3::Union{T,Missing}
+    SHAPE_S_SIN4::Union{T,Missing}
+    SHAPE_S_SIN5::Union{T,Missing}
+    SHAPE_S_SIN6::Union{T,Missing}
+
+
     function InputTJLF()
         return InputTJLF{Float64}()
     end
@@ -295,7 +317,9 @@ mutable struct InputTJLF{T<:Real}
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
             missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-            missing,missing,missing,missing)
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
+            missing,missing,missing,missing,missing,missing)
     end
 
     #For list-format inputs:
@@ -315,7 +339,7 @@ mutable struct InputTJLF{T<:Real}
         NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
         NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-        NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13,true)
+        NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13,true, 0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0)
     end
 
     # create InputTJLF struct given a InputTGLF struct
@@ -1064,47 +1088,3 @@ mutable struct AveGradB{T<:Real}
     end
 end
 
-mutable struct Shape{T<:Real}
-    cos0::T
-    cos1::T
-    cos2::T
-    cos3::T
-    cos4::T
-    cos5::T
-    cos6::T
-
-    s_cos0::T
-    s_cos1::T
-    s_cos2::T
-    s_cos3::T
-    s_cos4::T
-    s_cos5::T
-    s_cos6::T
-
-    sin3::T
-    sin4::T
-    sin5::T
-    sin6::T
-
-    s_sin3::T
-    s_sin4::T
-    s_sin5::T
-    s_sin6::T
-
-    function Shape{T}(i1) where {T<:Real}
-        
-        if (i1)
-            new(2.90045e-2, 1.44864e-2, -2.97601e-3, -1.05672e-3, 2.63407e-4,
-            -7.27970e-6, 0.0, 1.17396e-2, 2.81148e-2, -1.03346e-2, 
-            -4.60873e-3, -1.13297e-3, -9.45857e-4, 0.0, 1.14492e-3,
-            1.09027e-3, 5.65009e-4, 0.0, 1.09027e-3, 3.95187e-3,
-            2.57056e-3, 0.0)
-        else # Default:
-            new(0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0)
-        end
-    end
-end
