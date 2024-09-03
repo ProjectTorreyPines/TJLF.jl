@@ -22,8 +22,8 @@ program TGLFEP_driver
   integer :: TGLFEP_COMM_IN
 
   logical :: iexist, factor_in_profile
-  integer :: i,ii,i_r,j
-  real, allocatable, dimension(:) :: factor, width, kymark_out, SFmin, SFmin_out
+  integer :: i,ii,i_r
+  real,allocatable,dimension(:) :: factor, width, kymark_out, SFmin, SFmin_out
   real, allocatable, dimension(:) :: dndr_crit, dndr_crit_out, dpdr_crit, dpdr_crit_out
   real :: dpdr_scale
   real,allocatable,dimension(:) :: SFmin_out_n
@@ -69,7 +69,7 @@ program TGLFEP_driver
     if (id .eq. 0) print *, 'Read process_in = ', process_in
 
     if(process_in .le. 1) read(22,'(I1)') mode_in
-    if ((process_in .eq. 4).or.(process_in.eq.5)) then
+    if ((process_in .eq. 4).or.(process_in.eq.5).or.(process_in.eq.6)) then
       read(22,'(I1)') threshold_flag
       read(22,'(I2)') n_basis
       read(22,'(I1)') scan_method
@@ -78,8 +78,10 @@ program TGLFEP_driver
       read(22,'(I1)') reject_th_pinch_flag
       read(22,'(I1)') reject_EP_pinch_flag
       read(22,'(I1)') reject_tearing_flag
-      read(22,'(I1)') reject_max_outer_panel_flag
+      read(22,'(I1)') rotational_suppression_flag
+!      read(22,'(I1)') reject_max_outer_panel_flag
       read(22,*) QL_ratio_thresh
+      read(22,*) theta_sq_thresh
       read(22,*) q_scale
     endif
 
@@ -151,360 +153,12 @@ program TGLFEP_driver
     case (1)                                      !
       call read_input_profile                     !
     case (2)                                      !
-      call TGLFEP_read_EXPRO                      !
+      call TGLFEP_read_EXPRO
+    case (3)                                      !
+      call TGLFEP_generate_input                  !
     case default                                  !
       call read_input_profile                     !
   end select                                      !
-
-!  This is the actual location I need to put all my print statements, unfortunately. Not in read_EXPRO, because if I am interested in converting the input.profile
-
-!  file into an input.MTGLF, I should also be able to do it here.
-
-  open(unit=124, file='input.MTGLF', status='replace')
-
-  !  Writing the file:
-  
-    write(124,'(A15, I2)') 'ROTATION_FLAG=', rotation_flag
-  
-    write(124,'(A15, F20.10)') 'SIGN_BT=', sign_bt
-  
-    write(124,'(A15, F20.10)') 'SIGN_IT=', sign_it
-  
-    write(124,'(A15, I3)') 'NR=', nr
-  
-    write(124,'(A15, I1)') 'NS=', ns
-  
-    write(124,'(A15, I2)') 'GEOMETRY_FLAG=', geometry_flag
-  
-    !skipping f_real for now as TGLFEP doesn't account for a case without it being 1.0? I cannot find l_real_units changed
-  
-    write(124,'(A15, I2)') 'TGLFEP_NION=', TGLFEP_nion ! This will be cross-translated (it's in both InputTJLFEP and profile structs)
-  
-    do i = 1, ns
-  
-      write(124, '(A15, I3, A1, F20.10)') 'ZS_', i, '=', zs(i)
-  
-    end do
-  
-    do i = 1, ns
-  
-      write(124, '(A15, I3, A1, F20.10)') 'MASS_', i, '=', mass(i)
-  
-    end do
-  
-    do i = 1, ns
-  
-      do j = 1, nr
-  
-        write(124,'(A15, I3, A1, I1, A1, F20.10)') 'AS_', j, '_', i, '=', as(j, i)
-  
-      end do 
-  
-    end do
-  
-    do i = 1, ns
-  
-      do j = 1, nr
-  
-        write(124,'(A15, I3, A1, I1, A1, F20.10)') 'TAUS_', j, '_', i, '=', taus(j, i)
-  
-      end do 
-  
-    end do
-  
-    do i = 1, ns
-  
-      do j = 1, nr
-  
-        write(124,'(A15, I3, A1, I1, A1, F20.10)') 'RLNS_', j, '_', i, '=', rlns(j, i)
-  
-      end do 
-  
-    end do
-  
-    do i = 1, ns
-  
-      do j = 1, nr
-  
-        write(124,'(A15, I3, A1, I1, A1, F20.10)') 'RLTS_', j, '_', i, '=', rlts(j, i)
-  
-      end do 
-  
-    end do
-  
-    do i = 1, ns
-  
-      do j = 1, nr
-  
-        write(124,'(A15, I3, A1, I1, A1, F20.10)') 'VPAR_', j, '_', i, '=', vpar(j, i)
-  
-      end do 
-  
-    end do
-  
-    do i = 1, ns
-  
-      do j = 1, nr
-  
-        write(124,'(A15, I3, A1, I1, A1, F20.10)') 'VPAR_SHEAR_', j, '_', i, '=', vpar_shear(j, i)
-  
-      end do 
-  
-    end do
-  
-    ! RMIN:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'RMIN_', i, '=', rmin(i)
-  
-    end do
-  
-    ! RMAJ:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'RMAJ_', i, '=', rmaj(i)
-  
-    end do
-  
-    ! Q:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'Q_', i, '=', q(i)
-  
-    end do
-  
-    ! SHEAR:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'SHEAR_', i, '=', shear(i)
-  
-    end do
-  
-    ! Q_PRIME:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'Q_PRIME_', i, '=', q_prime(i)
-  
-    end do
-  
-    ! P_PRIME:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'P_PRIME_', i, '=', p_prime(i)
-  
-    end do
-  
-    ! KAPPA:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'KAPPA_', i, '=', kappa(i)
-  
-    end do
-  
-    ! S_KAPPA:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'S_KAPPA_', i, '=', s_kappa(i)
-  
-    end do
-  
-    ! SHIFT:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'SHIFT_', i, '=', shift(i)
-  
-    end do
-  
-    ! DELTA:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'DELTA_', i, '=', delta(i)
-  
-    end do
-  
-    ! S_DELTA:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'S_DELTA_', i, '=', s_delta(i)
-  
-    end do
-  
-    ! ZETA:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'ZETA_', i, '=', zeta(i)
-  
-    end do
-  
-    ! S_ZETA:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'S_ZETA_', i, '=', s_zeta(i)
-  
-    end do
-  
-    ! ZEFF:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'ZEFF_', i, '=', zeff(i)
-  
-    end do
-  
-    ! BETAE:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'BETAE_', i, '=', betae(i)
-  
-    end do
-  
-    ! RHO_STAR:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'RHO_STAR_', i, '=', rho_star(i)
-  
-    end do
-  
-    ! OMEGA_TAE:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'OMEGA_TAE_', i, '=', omega_TAE(i)
-  
-    end do
-  
-    ! B_UNIT:
-  
-    do i = 1, nr
-  
-      write(124, '(A15, I3, A1, F20.10)') 'B_UNIT_', i, '=', rmin(i)
-  
-    end do
-  
-    write(124, '(A15, I1)') 'IS=', is
-  
-    write(124, '(A15, I1)') 'IRS=', irs
-  
-    write(124, '(A15, F20.10)') 'A_QN=', a_qn
-
-    write(124, '(A15, I3)') 'IR=', ir
-
-  close(124)
-
-  open(301, file='input.EXPRO', status='replace')
-    ! EXPRO_ni where is_EP = 2 or 3:
-    do i = 1, nr
-        
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_ni_', 1, '_', i, '=', EXPRO_ni(1, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_ni_', 2, '_', i, '=', EXPRO_ni(2, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_ni_', 3, '_', i, '=', EXPRO_ni(3, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_ni_', 4, '_', i, '=', EXPRO_ni(4, i)
-
-    end do
-    ! EXPRO_Ti where is_EP = 2 or 3:
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_Ti_', 1, '_', i, '=', EXPRO_Ti(1, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_Ti_', 2, '_', i, '=', EXPRO_Ti(2, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_Ti_', 3, '_', i, '=', EXPRO_Ti(3, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_Ti_', 4, '_', i, '=', EXPRO_Ti(4, i)
-
-    end do
-    ! EXPRO_dlnnidr where is_EP = 2 or 3:
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_dlnnidr_', 1, '_', i, '=', EXPRO_dlnnidr(1, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_dlnnidr_', 2, '_', i, '=', EXPRO_dlnnidr(2, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_dlnnidr_', 3, '_', i, '=', EXPRO_dlnnidr(3, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_dlnnidr_', 4, '_', i, '=', EXPRO_dlnnidr(4, i)
-
-    end do
-    ! EXPRO_dlntidr where is_EP = 2 or 3:
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_dlntidr_', 1, '_', i, '=', EXPRO_dlntidr(1, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_dlntidr_', 2, '_', i, '=', EXPRO_dlntidr(2, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_dlntidr_', 3, '_', i, '=', EXPRO_dlntidr(3, i)
-
-    end do
-    do i = 1, nr
-      
-      write(301, '(A15, I4, A1, I4, A1, F20.10)') 'EXPRO_dlntidr_', 4, '_', i, '=', EXPRO_dlntidr(4, i)
-
-    end do
-    do i = 1, nr
-
-      write(301, '(A15, I3, A1, F20.10)') 'EXPRO_cs_', i, '=', EXPRO_cs(i)
-
-    enddo
-    do i = 1, nr
-    ! This is after EXPRO_rmin is adjusted for 0 division.
-      write(301, '(A15, I3, A1, F20.10)') 'EXPRO_rmin_', i, '=', EXPRO_rmin(i)
-
-    enddo
-
-  close(301)
-  
-  
 
 ! EMB 5-26-2021
 ! For experimental profiles, adjust max scale factor to be constant across the domain. 
@@ -540,7 +194,7 @@ program TGLFEP_driver
     n_toroidal = 3
   endif
 
-  if ((process_in .eq. 4).or.(process_in .eq. 5)) then
+  if ((process_in .eq. 4).or.(process_in .eq. 5).or.(process_in .eq. 6)) then
     if(threshold_flag .eq. 0) then
       nn = 5
 !      nn = 10
@@ -552,13 +206,8 @@ program TGLFEP_driver
   endif
 
   !run mainsub
-  !print *, 'key before rounding: ', id / (scan_n), ' for id = ', id
   key = id / (scan_n)
-  !print *, 'key: ', key, ' for id = ', id
-  !print *, 'color before rounding: ', id-key*(scan_n), ' for id = ', id
   color = id - key*(scan_n)
- ! print *, 'color: ', color, ' for id = ', id
-!  print *, 'before - color: ', color, ', id: ', id
   call MPI_COMM_SPLIT(MPI_COMM_WORLD,color,key,TGLFEP_COMM_IN,ierr)
 
 !  if (id .EQ. 0) print *, 'MPI communicator split.'
@@ -569,7 +218,6 @@ program TGLFEP_driver
   else
     ir = color + irs
   endif
-!  print *, 'after - color: ', color, ', id: ', id, ', ir: ', ir
   str_r = achar(ir/100+iachar("0"))//achar(mod(ir,100)/10+iachar("0"))//achar(mod(ir,10)+iachar("0"))
   write (suffix,'(A2,A3)') '_r', str_r
 
@@ -614,7 +262,7 @@ program TGLFEP_driver
     write(18,*) 'process_in = ',process_in
 
     if(process_in .le. 1) write(18,*) 'mode_in = ',mode_in
-    if ((process_in .eq. 4) .or. (process_in .eq. 5)) write(18,*) 'threshold_flag = ',threshold_flag
+    if ((process_in .eq. 4) .or. (process_in .eq. 5) .or. (process_in .eq. 6)) write(18,*) 'threshold_flag = ',threshold_flag
 
     write(18,*) 'ky_model = ',ky_model
 
@@ -653,7 +301,7 @@ program TGLFEP_driver
 
   endif
 
-  if ((process_in .eq. 4).or.(process_in .eq. 5)) then !print out 'density threshold'
+  if ((process_in .eq. 4).or.(process_in .eq. 5).or.(process_in .eq. 6)) then !print out 'density threshold'
     if(id .eq. 0) then
       open(unit=11,file='out.TGLFEP',status='old',position='append')
       write(11,*) '**************************************************************'
@@ -769,6 +417,22 @@ program TGLFEP_driver
           write(22,10) dpdr_crit_out
           close(22)
         endif
+
+        if (input_profile_method .eq. 3) then
+          open(unit=22,file='out.TGLFEP.generate',status='replace')
+          write(22,*) 'a/Ln_j, a/LT_j, j=1,ns ;    ns=', ns
+          write(22,*) 'rmin/a, rmaj/a, q, s_hat, dR/dr, kappa, s_kappa, delta, s_delta, zeta, s_zeta, betae:  '
+          write(22,*) '(a/ne)*dn_EP/dr_crit'
+          do i_r = 1, scan_n
+            do i = 1, ns
+              write(22,'(2E13.6)') rlns(i_r,i), rlts(i_r,i)
+            enddo
+            write(22,'(12E13.6,A3)') rmin(i_r), rmaj(i_r), q(i_r), shear(i_r), shift(i_r), kappa(i_r), s_kappa(i_r), delta(i_r), s_delta(i_r), zeta(i_r), s_zeta(i_r), betae(i_r), ' : '
+            write(22,'(E13.6)') SFmin(i_r)*as(i_r,ns)*rlns(i_r,ns)
+          enddo
+          close(22)
+        endif
+
         deallocate(dpdr_EP)
 
         write(11,*) '--------------------------------------------------------------'
@@ -831,7 +495,7 @@ program TGLFEP_driver
 
   endif       ! process_in = 4 or 5
 
-  if ((process_in .eq. 6) .and. (id .eq. 0)) then
+  if ((process_in .eq. 7) .and. (id .eq. 0)) then
     open (unit=6,file='out.DEP_trace',status='replace')
     write(6,*) '( Trace DEP [m^2/s], chi_eff [m^2/s], DEP/chi_eff )'
     do jtscale = 1, jtscale_max
@@ -855,13 +519,13 @@ program TGLFEP_driver
     close (unit=6)
   endif
 
-  if ((process_in .eq. 4) .or. (process_in .eq. 5)) deallocate(factor_out)
+  if ((process_in .eq. 4) .or. (process_in .eq. 5) .or. (process_in .eq. 6)) deallocate(factor_out)
   deallocate(width)
   deallocate(kymark_out)
   deallocate(factor)
   deallocate(factor_max_profile)
 
-  if (process_in .eq. 6) then
+  if (process_in .eq. 7) then
     deallocate(DEP_trace)
     deallocate(QL_ratio)
     deallocate(DEP_trace_complete)

@@ -5,19 +5,19 @@
 !  Calculate the growth rate and frequency spectra
 !  Print out the fluxes if needed
 !------------------------------------------------------------
-module ky_spectrumm
+module TGLFEP_ky_spectrum
 
   integer,parameter :: nky=30
   real,parameter :: ky=0.15
 
-end module ky_spectrumm
+end module TGLFEP_ky_spectrum
 
 subroutine TGLFEP_TM
 
   use mpi
   use tglf_interface
   use TGLFEP_interface
-  use ky_spectrumm
+  use TGLFEP_ky_spectrum
 
   implicit none
   integer :: id,np,ierr,STATUS(MPI_STATUS_SIZE)
@@ -46,7 +46,7 @@ subroutine TGLFEP_TM
   tglf_find_width_in = .false.
   
   call tglf_run_mpi
-  !print *, "tglf_run_mpi called: TGLFEP_TM.f90"
+
   if(id .eq. 0) then
 
     call write_eigenvalue_spectrum
@@ -68,7 +68,7 @@ subroutine write_eigenvalue_spectrum
 
   use tglf_pkg
   use TGLFEP_interface
-  use ky_spectrumm
+  use TGLFEP_ky_spectrum
 
   implicit none
   character(17) :: str_file
@@ -100,7 +100,7 @@ subroutine write_flux_spectrum
 
   use tglf_pkg
   use TGLFEP_interface
-  use ky_spectrumm
+  use TGLFEP_ky_spectrum
 
   implicit none
   character(11) :: str_file
@@ -160,7 +160,7 @@ subroutine write_potential_spectrum
 
   use tglf_pkg
   use TGLFEP_interface
-  use ky_spectrumm
+  use TGLFEP_ky_spectrum
 
   implicit none
   character(16) :: str_file

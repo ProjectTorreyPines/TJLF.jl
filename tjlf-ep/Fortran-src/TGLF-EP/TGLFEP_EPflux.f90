@@ -60,7 +60,7 @@ subroutine TGLFEP_EPflux
   tglf_rlts_in(2) = (jtscale*tscale_interval)*tglf_rlts_in(2)  ! up to jtscale_max*tscale_interval 
 
   call tglf_run
-  !print *, "tglf_run called: TGLFEP_EPflux.f90"
+
   do n=1,nmodes
     g(n) = get_growthrate(n)
     f(n) = get_frequency(n)

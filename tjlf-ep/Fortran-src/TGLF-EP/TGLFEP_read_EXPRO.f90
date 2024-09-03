@@ -38,7 +38,7 @@ subroutine TGLFEP_read_EXPRO
   EXPRO_ctrl_quasineutral_flag = 0
 !  EXPRO_ctrl_n_ion = 3     ! Thermal+Carbon+beam, not used with EXPRO_ctrl_density_method=2
 
-  rotation_flag = 0 !
+  rotation_flag = 0
 !  rotation_flag = 1
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -51,9 +51,9 @@ subroutine TGLFEP_read_EXPRO
   if (id==0) call expro_write('dump.gacode')
 !  print *, 'After calling EXPRO_pread.'
 
-  sign_bt = -1.0 !
-  sign_it = -1.0 !
-  nr = EXPRO_n_exp !
+  sign_bt = -1.0
+  sign_it = -1.0
+  nr = EXPRO_n_exp
 !  ns = EXPRO_n_ion - 1 + 1   ! Less carbon and add elctron
 !  ns = 3     ! Harcoded ions, electrons, EPs
   if (TGLFEP_nion .gt. expro_n_ion) then
@@ -88,6 +88,7 @@ subroutine TGLFEP_read_EXPRO
   allocate(vpar_shear(nr,ns))
   allocate(a_qn_rho(nr))
   allocate(sum0(nr))
+
 
 ! Quasineutrality logic is added here, enforced among ions i<=TGLFEP_nion  
   sum0(:) = 0.0
@@ -188,6 +189,9 @@ subroutine TGLFEP_read_EXPRO
 
   allocate(rho_star(nr))
   allocate(omega_TAE(nr))
+  allocate(omega_GAM(nr))
+  allocate(gamma_E(nr))
+  allocate(gamma_p(nr))
   allocate(B_unit(nr))
 
   rmin(:) = EXPRO_rmin(:)/a_meters
@@ -209,5 +213,10 @@ subroutine TGLFEP_read_EXPRO
   zeff(:) = EXPRO_z_eff(:)
   betae(:) = beta_unit(:)*(1.6022*1.0E3*EXPRO_ne(:)*EXPRO_te(:)/EXPRO_ptot(:))
   rho_star(:) = EXPRO_rhos(:)/a_meters
+
   omega_TAE(:) = (2./betae(:))**0.5/2./q(:)/rmaj(:)
+  omega_GAM(:) = (1./rmaj(:))*(1.+taus(:,2))**0.5/(1.+1./(2.*q(:)))
+  gamma_E(:) = (a_meters/expro_cs(:))*expro_gamma_E(:)
+  gamma_p(:) = (a_meters/expro_cs(:))*expro_gamma_p(:)
+
 end

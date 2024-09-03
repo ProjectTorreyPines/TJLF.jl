@@ -135,10 +135,12 @@ subroutine TGLFEP_mainsub(COMM_IN)
       call MPI_SEND(factor_in,1,MPI_DOUBLE_PRECISION,0,id,COMM_IN,STATUS,ierr)
     endif
 
-  case(5)
+  case(5:6)
 
     width_in_flag = .false.
-    mode_in = 2
+    if (process_in .eq. 5) mode_in = 2                      
+    if (process_in .eq. 6) mode_in = 4
+    process_in = 5
     ky_model = 3
     call TGLFEP_kwscale_scan
 !    if(id .eq. 0) then
@@ -156,7 +158,7 @@ subroutine TGLFEP_mainsub(COMM_IN)
 !      call MPI_SEND(factor_in,1,MPI_DOUBLE_PRECISION,0,id,COMM_IN,STATUS,ierr)
 !    endif
 
-  case(6)
+  case(7)
 
     allocate(DEP_trace(nr))
     allocate(QL_ratio(nr))

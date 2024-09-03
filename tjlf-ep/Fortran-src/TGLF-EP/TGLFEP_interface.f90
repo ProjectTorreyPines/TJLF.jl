@@ -50,8 +50,9 @@ module TGLFEP_interface
   real, dimension(10) :: q_i  = 1.0
 !  real :: q_EP = 1.0
 
-  real,parameter :: freq_cutoff = -0.2
+  real,parameter :: freq_cutoff = -0.35
   real :: freq_AE_upper
+  real :: gamma_thresh
 
   integer :: nn
   real,allocatable,dimension(:) :: factor_out
@@ -70,8 +71,10 @@ module TGLFEP_interface
   integer :: reject_th_pinch_flag
   integer :: reject_EP_pinch_flag
   integer :: reject_tearing_flag
-  integer :: reject_max_outer_panel_flag
+  integer :: rotational_suppression_flag
+!  integer :: reject_max_outer_panel_flag
   real :: QL_ratio_thresh
+  real :: theta_sq_thresh
   real :: q_scale
 
   logical, dimension(4) :: lkeep
@@ -81,7 +84,8 @@ module TGLFEP_interface
   logical, dimension(4) :: l_e_pinch
   logical, dimension(4) :: l_EP_pinch
   logical, dimension(4) :: l_QL_ratio
-  logical, dimension(4) :: l_max_outer_panel
+!  logical, dimension(4) :: l_max_outer_panel
+  logical, dimension(4) :: l_theta_sq
 
   integer :: l_real_units = 0
   real, allocatable, dimension(:) :: f_real

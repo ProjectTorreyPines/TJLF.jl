@@ -34,11 +34,13 @@ OBJECTS = TGLFEP_interface.o\
           TGLFEP_interpolate.o\
           TGLFEP_complete_output.o\
           TGLFEP_EPflux.o\
+	  TGLFEP_generate_input.o\
           TGLFEP_mainsub.o 
 
 .SUFFIXES : .o .f90 .f
 
 all: $(LLIB).a $(EXEC)
+#	rm ${GACODE_ROOT}/modules/TGLFEP*.mod
 
 $(EXEC): $(LLIB).a $(EXEC).o ${EXTRA_LIBS}
 	$(FC) $(FFLAGS) -o $(EXEC) $(EXEC).o $(LLIB).a $(EXTRA_LIBS) ${LMATH} $(NN_LIB)
