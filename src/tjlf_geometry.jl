@@ -1,5 +1,5 @@
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};small::T=0.00000001)
+    xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};small::T=0.00000001)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -77,7 +77,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
 end
 
 """
-    function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, ky_index::Int; kx0_e::T=NaN, ms::Int=128)
+    xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T}, ky::T, ky_index::Int; kx0_e::T=NaN, ms::Int=128)
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -366,7 +366,7 @@ end
 
 
 """
-    function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
+    get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -380,8 +380,8 @@ description:
 location:
     tjlf_geometry.jl
 """
-#### LINES 220-326, 478 in tglf_geometry.f90
 function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
+#### LINES 220-326, 478 in tglf_geometry.f90
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
@@ -727,7 +727,9 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 end
 
 
-function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128, mxh_cond::Bool=false)  where T<:Real
+function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where T<:Real
+
+    ## Modified 8/2024 to include Miller eXtended Harmonic (MXH) parameterization (Arbon et al PPCF 2021)
 
     rmin_loc = inputs.RMIN_LOC
     rmaj_loc = inputs.RMAJ_LOC
@@ -941,20 +943,6 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128, mxh_con
     # grad_r_out = zeros(Float64, ms + 1)
     B_unit = NaN
     for m in 1:ms+1
-        # I presume here is where I will be implementing the extended MXH geometry:
-        # theta_R = theta + c_0(r) + sum(c_n(r)*cos(n*theta)+s_n(r)*sin(n(theta)))
-        # We do have the theta grid, so that is easy. c_n and s_n are harder.
-        # I think I need  abetter understanding of other implementations of this
-        # method to know what to do here, to be honest. I will look at CGYRO
-
-        # Here, there could be some flag that allows the choice of MXH or standard:
-
-        # Shaping conditions will be held in a new struct. Where they will be set is not going to be determined here yet.
-        
-        # For some condition that mxh is being used (mxh_cond), arg_r is set
-        # in a different manner.
-        #mxh_cond = false # for now
-
         theta = t_s[m]
         arg_z = theta
         darg_z = 1.0
@@ -1015,7 +1003,6 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128, mxh_con
         Z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z # dZ/dtheta
         l_t = √(R_t^2 + Z_t^2) # dl/dtheta
 
-        # dR/dr - uses Shape struct if mxh_cond
         R_r = drmajdx_loc + drmindx_loc*cos(arg_r) - sin(arg_r)*(sh_s_cos0 + sh_s_cos1*cos(theta) +
                                                                      sh_s_cos2*cos(2*theta) + sh_s_cos3*cos(3*theta) +
                                                                      sh_s_cos4*cos(4*theta) + sh_s_cos5*cos(5*theta) +
