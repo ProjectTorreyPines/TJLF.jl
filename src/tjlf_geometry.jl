@@ -134,7 +134,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     grad_r0_out = satParams.grad_r0
 
     f = satParams.Bt0 * inputs.RMAJ_LOC # Bt0_out = f/rmaj_input defined
-
+    
     kx0 = inputs.KX0_LOC/ky
     if(alpha_quench_in==0.0 && !isnan(kx0_e))
         if(inputs.UNITS=="GYRO")
@@ -360,6 +360,11 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
 end
 
 
+
+
+
+
+
 """
     get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 
@@ -376,7 +381,7 @@ location:
     tjlf_geometry.jl
 """
 function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
-    #### LINES 220-326, 478 in tglf_geometry.f90
+#### LINES 220-326, 478 in tglf_geometry.f90
 
     ### different for different geometries!!!
     rmaj_s = inputs.RMAJ_LOC
@@ -724,6 +729,8 @@ end
 
 function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where T<:Real
 
+    ## Modified 8/2024 to include Miller eXtended Harmonic (MXH) parameterization (Arbon et al PPCF 2021)
+
     rmin_loc = inputs.RMIN_LOC
     rmaj_loc = inputs.RMAJ_LOC
 
@@ -738,6 +745,31 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     drmajdx_loc = inputs.DRMAJDX_LOC #These two I might want to ask about
     drmindx_loc = inputs.DRMINDX_LOC
 
+    sh_cos0 = inputs.SHAPE_COS0
+    sh_cos1 = inputs.SHAPE_COS1
+    sh_cos2 = inputs.SHAPE_COS2
+    sh_cos3 = inputs.SHAPE_COS3
+    sh_cos4 = inputs.SHAPE_COS4
+    sh_cos5 = inputs.SHAPE_COS5
+    sh_cos6 = inputs.SHAPE_COS6
+
+    sh_sin3 = inputs.SHAPE_SIN3
+    sh_sin4 = inputs.SHAPE_SIN4
+    sh_sin5 = inputs.SHAPE_SIN5
+    sh_sin6 = inputs.SHAPE_SIN6
+
+    sh_s_cos0 = inputs.SHAPE_S_COS0
+    sh_s_cos1 = inputs.SHAPE_S_COS1
+    sh_s_cos2 = inputs.SHAPE_S_COS2
+    sh_s_cos3 = inputs.SHAPE_S_COS3
+    sh_s_cos4 = inputs.SHAPE_S_COS4
+    sh_s_cos5 = inputs.SHAPE_S_COS5
+    sh_s_cos6 = inputs.SHAPE_S_COS6
+
+    sh_s_sin3 = inputs.SHAPE_S_SIN3
+    sh_s_sin4 = inputs.SHAPE_S_SIN4
+    sh_s_sin5 = inputs.SHAPE_S_SIN5
+    sh_s_sin6 = inputs.SHAPE_S_SIN6
 
     ### these are set to 0.0 despite having definitions in the inputs
     zmaj_loc = 0.0
@@ -752,17 +784,40 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     Z = zeros(T,ms+1)
     Bp = zeros(T,ms+1)
 
-
+    
     if(rmin_loc<0.00001) rmin_loc=0.00001 end
     #
     # compute the arclength around the flux surface
     #
     x_delta = asin(delta_loc)
     theta = 0.0
-    arg_r = theta + x_delta*sin(theta)
-    darg_r = 1.0 + x_delta*cos(theta)
-    arg_z = theta + zeta_loc*sin(2.0*theta)
-    darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
+    arg_r = theta + sh_cos0 +
+        sh_cos1*cos(theta) +
+        sh_cos2*cos(2*theta) + 
+        sh_cos3*cos(3*theta) +
+        sh_cos4*cos(4*theta) + 
+        sh_cos5*cos(5*theta) +
+        sh_cos6*cos(6*theta) + 
+        x_delta*sin(theta) -
+        zeta_loc*sin(2*theta) +
+        sh_sin3*sin(3*theta) +
+        sh_sin4*sin(4*theta) +
+        sh_sin5*sin(5*theta) +
+        sh_sin6*sin(6*theta)
+    darg_r = 1.0 - sh_cos1*sin(theta) -
+                     2*sh_cos2*sin(2*theta) - 
+                     3*sh_cos3*sin(3*theta) - 
+                     4*sh_cos4*sin(4*theta) - 
+                     5*sh_cos5*sin(5*theta) - 
+                     6*sh_cos6*sin(6*theta) + 
+                     x_delta*cos(theta) - 
+                     2*zeta_loc*cos(2*theta) +
+                     3*sh_sin3*cos(3*theta) +
+                     4*sh_sin4*cos(4*theta) +
+                     5*sh_sin5*cos(5*theta) +
+                     6*sh_sin6*cos(6*theta)
+    arg_z = theta
+    darg_z = 1.0
     r_t = -rmin_loc*sin(arg_r)*darg_r
     z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
     l_t = √(r_t^2 + z_t^2)
@@ -780,12 +835,36 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
             theta = 2π
         end
 
-        arg_r = theta + x_delta*sin(theta)
-        darg_r = 1.0 + x_delta*cos(theta) # d(arg_r)/dtheta
+        arg_r = theta + sh_cos0 +
+                    sh_cos1*cos(theta) +
+                    sh_cos2*cos(2*theta) + 
+                    sh_cos3*cos(3*theta) +
+                    sh_cos4*cos(4*theta) + 
+                    sh_cos5*cos(5*theta) +
+                    sh_cos6*cos(6*theta) + 
+                    x_delta*sin(theta) -
+                    zeta_loc*sin(2*theta) +
+                    sh_sin3*sin(3*theta) +
+                    sh_sin4*sin(4*theta) +
+                    sh_sin5*sin(5*theta) +
+                    sh_sin6*sin(6*theta)
+            # in cgyro, this is "a_t":
+        darg_r = 1.0 - sh_cos1*sin(theta) -
+                     2*sh_cos2*sin(2*theta) - 
+                     3*sh_cos3*sin(3*theta) - 
+                     4*sh_cos4*sin(4*theta) - 
+                     5*sh_cos5*sin(5*theta) - 
+                     6*sh_cos6*sin(6*theta) + 
+                     x_delta*cos(theta) - 
+                     2*zeta_loc*cos(2*theta) +
+                     3*sh_sin3*cos(3*theta) +
+                     4*sh_sin4*cos(4*theta) +
+                     5*sh_sin5*cos(5*theta) +
+                     6*sh_sin6*cos(6*theta)
         r_t = -rmin_loc*sin(arg_r)*darg_r # dR/dtheta
 
-        arg_z = theta + zeta_loc*sin(2.0*theta)
-        darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta) # d(arg_z)/dtheta
+        arg_z = theta
+        darg_z = 1.0
 
         z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z # dZ/dtheta
         l_t = √(r_t^2 + z_t^2) # dl/dtheta
@@ -797,7 +876,6 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
         l_t1 = l_t
     end
-
     ds = arclength/ms
 
     # Find the theta points which map to an equally spaced s-grid of ms points along the arclength
@@ -810,11 +888,35 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     # make a first guess based on theta=0.0
     theta = 0.0
 
-    for m in 1:round(Integer, ms/2)+1
-        arg_r = theta + x_delta*sin(theta)
-        darg_r = 1.0 + x_delta*cos(theta)
-        arg_z = theta + zeta_loc*sin(2.0*theta)
-        darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
+    for m in 1:ms+1
+        arg_r = theta + sh_cos0 +
+                    sh_cos1*cos(theta) +
+                    sh_cos2*cos(2*theta) + 
+                    sh_cos3*cos(3*theta) +
+                    sh_cos4*cos(4*theta) + 
+                    sh_cos5*cos(5*theta) +
+                    sh_cos6*cos(6*theta) + 
+                    x_delta*sin(theta) -
+                    zeta_loc*sin(2*theta) +
+                    sh_sin3*sin(3*theta) +
+                    sh_sin4*sin(4*theta) +
+                    sh_sin5*sin(5*theta) +
+                    sh_sin6*sin(6*theta)
+            # in cgyro, this is "a_t":
+        darg_r = 1.0 - sh_cos1*sin(theta) -
+                     2*sh_cos2*sin(2*theta) - 
+                     3*sh_cos3*sin(3*theta) - 
+                     4*sh_cos4*sin(4*theta) - 
+                     5*sh_cos5*sin(5*theta) - 
+                     6*sh_cos6*sin(6*theta) + 
+                     x_delta*cos(theta) - 
+                     2*zeta_loc*cos(2*theta) +
+                     3*sh_sin3*cos(3*theta) +
+                     4*sh_sin4*cos(4*theta) +
+                     5*sh_sin5*cos(5*theta) +
+                     6*sh_sin6*cos(6*theta)
+        arg_z = theta
+        darg_z = 1.0
         r_t = -rmin_loc*sin(arg_r)*darg_r
         z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z
         l_t = √(r_t^2 + z_t^2)
@@ -828,38 +930,89 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
         end
         l_t1 = l_t
     end
-
     # distribute endpoint error over interior points
-    dtheta = (t_s[round(Int, ms/2+1)]+π) / (ms/2)
+    dtheta = (t_s[ms+1]+2*π) /ms
 
-    for m in 2:round(Integer, ms/2)+1
+    for m in 2:ms+1
         t_s[m] = t_s[m] - (m-1)*dtheta
-        t_s[ms-m+2] = -2π - t_s[m]
     end
 
-    # Loop to compute most geometrical quantities needed for Mercie-Luc expansion
+    # Loop to compute most geometrical quantities needed for Mercier-Luc expansion
     # R, Z, R*Bp on flux surface s-grid
     B_unit_out = zeros(T, ms + 1)
     # grad_r_out = zeros(Float64, ms + 1)
     B_unit = NaN
     for m in 1:ms+1
         theta = t_s[m]
-        arg_r = theta + x_delta*sin(theta)
-        darg_r = 1.0 + x_delta*cos(theta)
-        arg_z = theta + zeta_loc*sin(2.0*theta)
-        darg_z = 1.0 + zeta_loc*2.0*cos(2.0*theta)
+        arg_z = theta
+        darg_z = 1.0
+
+        
+        # in cgyro, this is "a":
+        arg_r = theta + sh_cos0 +
+                sh_cos1*cos(theta) +
+                sh_cos2*cos(2*theta) + 
+                sh_cos3*cos(3*theta) +
+                sh_cos4*cos(4*theta) + 
+                sh_cos5*cos(5*theta) +
+                sh_cos6*cos(6*theta) + 
+                x_delta*sin(theta) -
+                zeta_loc*sin(2*theta) +
+                sh_sin3*sin(3*theta) +
+                sh_sin4*sin(4*theta) +
+                sh_sin5*sin(5*theta) +
+                sh_sin6*sin(6*theta)
+        # in cgyro, this is "a_t":
+        darg_r = 1.0 - sh_cos1*sin(theta) -
+                2*sh_cos2*sin(2*theta) - 
+                3*sh_cos3*sin(3*theta) - 
+                4*sh_cos4*sin(4*theta) - 
+                5*sh_cos5*sin(5*theta) - 
+                6*sh_cos6*sin(6*theta) + 
+                x_delta*cos(theta) - 
+                2*zeta_loc*cos(2*theta) +
+                3*sh_sin3*cos(3*theta) +
+                4*sh_sin4*cos(4*theta) +
+                5*sh_sin5*cos(5*theta) +
+                6*sh_sin6*cos(6*theta)       
+        # in cgyro, this is "a_tt": this is irrelevant for TJLF (?)
+        ddarg_r = -sh_cos1*cos(theta) -
+                4*sh_cos2*cos(2*theta) -
+                9*sh_cos3*cos(3*theta) -
+                16*sh_cos4*cos(4*theta) - 
+                25*sh_cos5*cos(5*theta) -
+                36*sh_cos6*cos(6*theta) -
+                x_delta*sin(theta) +
+                4*zeta_loc*sin(2*theta) -
+                9*sh_sin3*sin(3*theta) -
+                16*sh_sin4*sin(4*theta) -
+                25*sh_sin5*sin(5*theta) -
+                36*sh_sin6*sin(6*theta)
 
         R[m] = rmaj_loc + rmin_loc*cos(arg_r) # R(theta)
         Z[m] = zmaj_loc + kappa_loc*rmin_loc*sin(arg_z) # Z(theta)
+
+        # Each should have ms+1 points.
+        if (m == ms+1 && false)
+            println("t: ", t_s)
+            println("R: ", R)
+            println("Z: ", Z)
+        end
 
         R_t = -rmin_loc*sin(arg_r)*darg_r # dR/dtheta
         Z_t = kappa_loc*rmin_loc*cos(arg_z)*darg_z # dZ/dtheta
         l_t = √(R_t^2 + Z_t^2) # dl/dtheta
 
-        # dR/dr
-        R_r = drmajdx_loc + drmindx_loc*cos(arg_r) - sin(arg_r)*s_delta_loc*sin(theta)/√(1.0 - delta_loc^2)
-        # dZ/dr
-        Z_r = dzmajdx_loc + kappa_loc*sin(arg_z)*(drmindx_loc +s_kappa_loc) + kappa_loc*cos(arg_z)*s_zeta_loc*sin(2.0*theta)
+        R_r = drmajdx_loc + drmindx_loc*cos(arg_r) - sin(arg_r)*(sh_s_cos0 + sh_s_cos1*cos(theta) +
+                                                                     sh_s_cos2*cos(2*theta) + sh_s_cos3*cos(3*theta) +
+                                                                     sh_s_cos4*cos(4*theta) + sh_s_cos5*cos(5*theta) +
+                                                                     sh_s_cos6*cos(6*theta) + s_delta_loc*sin(theta)/cos(x_delta) -
+                                                                     s_zeta_loc*sin(2*theta) + sh_s_sin3*sin(3*theta) +
+                                                                     sh_s_sin4*sin(4*theta) + sh_s_sin5*sin(5*theta) +
+                                                                     sh_s_sin6*sin(6*theta))
+        
+        # dZ/dr 
+        Z_r = dzmajdx_loc + kappa_loc*sin(arg_z)*(drmindx_loc +s_kappa_loc)
         # Jacobian
         det = R_r*Z_t - R_t*Z_r
 
