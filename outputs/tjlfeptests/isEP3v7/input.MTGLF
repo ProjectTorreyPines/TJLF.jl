@@ -4,7 +4,7 @@
             NR=201
             NS=4
  GEOMETRY_FLAG= 1
-   TGLFEP_NION= 3
+   N_ION= 3
             ZS_  1=       -1.0000000000
             ZS_  2=        1.0000000000
             ZS_  3=        1.0000000000

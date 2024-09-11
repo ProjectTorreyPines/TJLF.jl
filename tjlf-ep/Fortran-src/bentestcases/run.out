@@ -1,0 +1,21 @@
+ Read process_in =            5
+ Read ky_model =            2
+ Read scan_n =            3
+ Read irs =            2
+ Read factor_in_profile =  F
+ Read factor_in =    1.00000000000000     
+ Read width_in_flag =  F
+ Read width_min =    1.00000000000000     
+ Read width_max =    2.00000000000000     
+ Read input_profile_method =            2
+Before expro_read at 14:16:22
+After expro_read, before TGLFEP_scalefactor at 14:16:22
+ masses:  2.724436950000000E-004   1.00000000000000        1.50000000000000     
+   2.00000000000000     
+ charges:  -1.00000000000000        1.00000000000000     
+   1.00000000000000        2.00000000000000     
+ Finished TGLFEP_mainsub.
+ Run time:            0 :           0 :          27
+ After second allocation series.
+ Before MPI_RECV for factor_in.
+ After MPI_RECV for factor_in.

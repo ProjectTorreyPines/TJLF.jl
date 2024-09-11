@@ -17,5 +17,5 @@ module swap env/gcc8.x env/intel2020
 
 env > env.txt
 
-mpirun -n 3 /home/towlej/TJLF.jl/tjlf-ep/Fortran-src/TGLF-EP/TGLFEP_driver
+mpirun -n 3 /home/towlej/.julia/dev/TJLF.jl/tjlf-ep/Fortran-src/TGLF-EP/TGLFEP_driver
 
