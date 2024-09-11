@@ -25,7 +25,9 @@ dlnnidr = TJLFEP.exproConst.dlnnidr
 dlntidr = TJLFEP.exproConst.dlntidr
 cs = TJLFEP.exproConst.cs
 rmin_ex = TJLFEP.exproConst.rmin_ex
-
+omegaGAM = TJLFEP.exproConst.omegaGAM
+gammaE = TJLFEP.exproConst.gammaE
+gammap = TJLFEP.exproConst.gammap
 # These should be set from the working directory, but these test cases are good for now:
 
 homedir = pwd()
@@ -44,9 +46,9 @@ iEXPexist = isfile(homedir*"/input.EXPRO")
 @assert iMPexist != false "MTGLF input file not found in directory"
 @assert iEXPexist != false "EXPRO input file not found in directory"
 
-inputEPfile = homedir*"/input.TGLFEP"
-inputMPfile = homedir*"/input.MTGLF"
-inputEXPfile = homedir*"/input.EXPRO"
+inputEPfile = homedir*"/../outputs/tjlfeptests/isEP3v6/input.TGLFEP"
+inputMPfile = homedir*"/../outputs/tjlfeptests/isEP3v6/input.MTGLF"
+inputEXPfile = homedir*"/../outputs/tjlfeptests/isEP3v6/input.EXPRO"
 
 #inputEPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.TGLFEP"
 #inputMPfile = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.MTGLF"
@@ -60,8 +62,10 @@ ir_exp = prof[2]
 inputTGLFEP = TJLFEP.readTGLFEP(inputEPfile, ir_exp)
 
 # Set up EXPRO constants:
-ni, Ti, dlnnidr, dlntidr, cs, rmin_ex = TJLFEP.readEXPRO(inputEXPfile, inputTGLFEP.IS_EP)
-
+ni, Ti, dlnnidr, dlntidr, cs, rmin_ex, gammaE, gammap, omegaGAM = TJLFEP.readEXPRO(inputEXPfile, inputTGLFEP.IS_EP)
+# inputMTGLF.gammaE = gammaE
+# inputMTGLF.gammap = gammap
+# inputMTGLF.omegaGAM = omegaGAM
 #inputTGLFEP.FACTOR_MAX_PROFILE
 dpdr_EP = fill(NaN, inputMTGLF.NR)
 if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
@@ -236,7 +240,7 @@ io2 = open("out.TGLFEP", "w")
 println(io2, "process_in = ", inputTGLFEP.PROCESS_IN)
 
 if (inputTGLFEP.PROCESS_IN <= 1) println(io2, "mode_in = ", inputTGLFEP.MODE_IN) end
-if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5)) println(io2, "threshold_flag = ", inputTGLFEP.THRESHOLD_FLAG) end
+if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5) || (inputTGLFEP.PROCESS_IN == 6 )) println(io2, "threshold_flag = ", inputTGLFEP.THRESHOLD_FLAG) end
 
 println(io2, "ky_mode = ", inputTGLFEP.KY_MODEL)
 println(io2, "--------------------------------------------------------------")
@@ -276,7 +280,7 @@ close(io2)
 #local buf_factor::Vector{Float64} = fill(NaN, 1)
 
 # Now continue on to radii-dependent part:
-if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
+if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5) || (inputTGLFEP.PROCESS_IN == 6 ))
     # Threads Process won't happen until later:
 
 
@@ -418,7 +422,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             dpdr_EP[:] .= ni[:].*Ti[:].*(dlnnidr[:].+dlntidr[:]).*0.16022
             for i = 1:inputTGLFEP.SCAN_N
                 if (SFmin[i] < 9000.0)
-                    if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
+                    if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5) || (inputTGLFEP.PROCESS_IN == 6 ))
                         case = inputTGLFEP.SCAN_METHOD
                         if (case == 1)
                             dpdr_scale = SFmin[i]

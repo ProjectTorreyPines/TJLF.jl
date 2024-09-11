@@ -14,7 +14,9 @@ dlnnidr = TJLFEP.exproConst.dlnnidr
 dlntidr = TJLFEP.exproConst.dlntidr
 cs = TJLFEP.exproConst.cs
 rmin_ex = TJLFEP.exproConst.rmin_ex
-
+omegaGAM = TJLFEP.exproConst.omegaGAM
+gammaE = TJLFEP.exproConst.gammaE
+gammap = TJLFEP.exproConst.gammap
 # These should be set from the working directory, but these test cases are good for now:
 
 homedir = pwd()
@@ -52,12 +54,15 @@ ir_exp = prof[2]
 inputTGLFEP = TJLFEP.readTGLFEP(inputEPfile, ir_exp)
 
 # Set up EXPRO constants:
-ni, Ti, dlnnidr, dlntidr, cs, rmin_ex = TJLFEP.readEXPRO(inputEXPfile, inputTGLFEP.IS_EP)
+ni, Ti, dlnnidr, dlntidr, cs, rmin_ex, gammaE, gammap, omegaGAM = TJLFEP.readEXPRO(inputEXPfile, inputTGLFEP.IS_EP)
+# inputMTGLF.gammaE = gammaE
+# inputMTGLF.gamm_p = gammap
+# inputMTGLF.omegaGAM = omegaGAM
 
 dpdr_EP = fill(NaN, inputMTGLF.NR)
 if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
     for i in eachindex(dpdr_EP)
-        dpdr_EP[i] = ni[i]*Ti[i]*(dlnnidr[i]+dlntidr[i])
+        dpdr_EP[i] = ni[i]*Ti[i]*(dlnnidr[i]+dlntidr[i])# This has some small changes from old main
     end
     #println(inputTGLFEP.FACTOR)
     dpdr_EP_abs = abs.(dpdr_EP)

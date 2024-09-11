@@ -2,7 +2,9 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
     # These are for testing purposes:
     #baseDirectory = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.MTGLF"
     #inputsPR = readMTGLF(baseDirectory)
+
     
+
     nfactor = 10
     nefwid = 10
     nkyhat = 5
@@ -21,8 +23,14 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
     # the k loop needs to happen sequentially, but the 1:500 inner one doesn't.
     # That one will be using a thread.
 
+
     kyhat_min = 0.0
     kyhat_max = 1.0
+
+    # ikymin = 0
+    # ikymax =0
+    # iefwmin =0
+    # iefwmax =0
 
     growthrate = zeros(Float64, nkyhat, nefwid, nfactor, inputsEP.NMODES)
     growthrate_out = 0.0
@@ -35,8 +43,13 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
     l_i_pinch_i = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
     l_e_pinch_i = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
     l_EP_pinch_i = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
-    l_max_outer_panel_i = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
+    #l_max_outer_panel_i = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
     l_QL_ratio_i = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
+    l_theta_sq_i = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
+    l_theta_sq_i_out = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
+    #this variable was not in the code, but used later per the commit
+    l_QL_ratio_i_out = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
+    l_QL_ratio_i_ = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
 
     f0 = 0.0
     f1 = inputsEP.FACTOR_IN # 1 for first round
@@ -72,10 +85,15 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         end
         for i = 1:nefwid
-            efwid[i] = ((w1-w0)/nefwid)*i+w0
+            efwid[i] = ((w1-w0)/(nefwid-1))*(i-1)+w0
         end
         for i = 1:nkyhat
-            kyhat[i] = ((kyhat1-kyhat0)/nkyhat)*i+kyhat0
+            if kyhat0 == 0.0
+                kyhat[i]= ((kyhat1-kyhat0)/nkyhat)*i + kyhat0
+            else 
+                kyhat[i]= ((kyhat1-kyhat0)/(nkyhat-1))*(i-1)+kyhat0
+            end
+            #kyhat[i] = ((kyhat1-kyhat0)/nkyhat)*i+kyhat0
         end
         #MPI.Barrier(TJLFEP_COMM)
         #println(np_local)
@@ -113,7 +131,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 #println("=== efwid : iefwid : efwid[iefwid] ===")
                 #println(efwid, " : ", iefwid, " : ", efwid[iefwid])
             end
-
+            println(kyhat)
             inputsEP.FACTOR_IN = factor[ifactor] # Just used in mapping
             inputsEP.KYHAT_IN = kyhat[ikyhat] # Set equal to ky_in
             inputsEP.WIDTH_IN = efwid[iefwid]
@@ -188,7 +206,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 println(inputsEP.PROCESS_IN)
                 println(inputsEP.THRESHOLD_FLAG)
                 println(inputsEP.SCAN_METHOD)
-                println(inputsEP.QL_THRESH_RATIO)
+                println(inputsEP.QL_RATIO_THRESH)
                 println(inputsEP.Q_SCALE)
                 println(inputsEP.KY_MODEL)
                 println(inputsEP.FACTOR_IN)
@@ -261,7 +279,9 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 l_i_pinch_i[ikyhat,iefwid,ifactor,n] = inputsEP.L_I_PINCH[n]
                 l_e_pinch_i[ikyhat,iefwid,ifactor,n] = inputsEP.L_E_PINCH[n]
                 l_EP_pinch_i[ikyhat,iefwid,ifactor,n] = inputsEP.L_EP_PINCH[n]
-                l_max_outer_panel_i[ikyhat,iefwid,ifactor,n] = inputsEP.L_MAX_OUTER_PANEL[n]
+
+                l_theta_sq_i[ikyhat,iefwid,ifactor,n] = inputsEP.L_THETA_SQ[n]
+                #l_max_outer_panel_i[ikyhat,iefwid,ifactor,n] = inputsEP.L_MAX_OUTER_PANEL[n]
                 l_QL_ratio_i[ikyhat,iefwid,ifactor,n] = inputsEP.L_QL_RATIO[n]
             end
             #println(growthrate)
@@ -301,7 +321,11 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         #MPI.Allreduce!(l_th_pinch_i, MPI.LOR, TJLFEP_COMM)
         #MPI.Allreduce!(l_i_pinch_i, MPI.LOR, TJLFEP_COMM)
         #MPI.Allreduce!(l_e_pinch_i, MPI.LOR, TJLFEP_COMM)
-        #MPI.Allreduce!(l_max_outer_panel_i, MPI.LOR, TJLFEP_COMM)
+
+        #MPI.Allreduce!(l_QL_ratio_i, l_QL_ratio_i_out)
+        #MPI.Allreduce!(l_theta_sq_i, l_theta_sq_i_out)
+        ##MPI.Allreduce!(l_max_outer_panel_i, MPI.LOR, TJLFEP_COMM)
+
         #MPI.Allreduce!(l_QL_ratio_i, MPI.LOR, TJLFEP_COMM)
         #if (id == 0)
         #    println("growthrate for id = 0 and ir = ", inputsEP.IR, growthrate[1, 1, :, :])
@@ -406,7 +430,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                         #println("route 1: ", imark_ref)
                         lkeep_ref[ikyhat, iefwid] = true
                     else # 10 or 11
-                        imark_ref = imark[ikyhat, iefwid] - 1
+                        #imark_ref = imark[ikyhat, iefwid] - 1
                         #println("route 2: ", imark_ref)
                         if (imark[ikyhat, iefwid] == nfactor) # == 10
                             lkeep_ref[ikyhat,iefwid] = true
@@ -424,8 +448,8 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
 
                     # This is the portion that is NOT consistent with the Fortran and is
                     # causing problems due to default values:
-                    gamma_g1 = -2.0
-                    gamma_g2 = -1.0
+                    gamma_g1 = 0.0 #-2.0
+                    gamma_g2 = 100.0 #-1.0
                     
                     # For all modes, set gamma_g1 to the maximum growthrate of kept modes at this point of ikyhat, iefwid, and imark_ref
                     # This also sets gamma_g2 to the maximum neighboring factor value of growthrate (imark_ref+1).
@@ -444,10 +468,14 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                             println("imarkref+1=11 : gamma_g1 & gamma_g2: ", gamma_g1, " ", gamma_g2)
                         end
                     end
-                    f_guess[ikyhat, iefwid] = (gamma_g1*f_g2-gamma_g2*f_g1)/(gamma_g1-gamma_g2)
+                    f_guess[ikyhat, iefwid] = f_g1 + (inputsEP.GAMMA_THRESH-gamma_g1)*(f_g2-f_g1)/(gamma_g2-gamma_g1)
                     gamma_mark_i_1[ikyhat, iefwid] = gamma_g1
                     gamma_mark_i_2[ikyhat, iefwid] = gamma_g2
-                    f_mark_i[ikyhat, iefwid] = f_g1
+                    if imark[ikyhat, iefwid] < nfactor 
+                        f_mark_i[ikyhat, iefwid] = f_g1
+                    else
+                        f_mark_i[ikyhat,iefwid] = f_g2
+                    end
                 end # iefwid
             end # ikyhat
             # This next one seems to only happen on the lower of the TWO
@@ -463,37 +491,50 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
             # then if these are satisfied, find modes that:
             # have a growthrate that is larger than the current maximum (starts at 0) or
             # have a factor that is smaller than the max
+            ikymin =nkyhat
+            ikymax = 1
+            iefwmin = nefwid
+            iefwmax = 1
             for ikyhat = 1:nkyhat
                 for iefwid = 1:nefwid
-                    if ((lkeep_ref[ikyhat, iefwid]) && (gamma_mark_i_1[ikyhat, iefwid] < 0.95*gamma_mark_i_2[ikyhat, iefwid]) &&
-                        (f_mark_i[ikyhat, iefwid] <= fmark))
-                        if ((gamma_mark_i_1[ikyhat, iefwid] > gmark) || (f_mark_i[ikyhat,iefwid] < fmark))
+                    if (lkeep_ref[ikyhat, iefwid] && f_mark_i[ikyhat, iefwid] <= fmark)
+                        if f_mark_i[ikyhat, iefwid] < fmark
                             # If all of these are satisfied, set new marks away from default:
-                            ikyhat_mark = ikyhat
                             ikyhat_write = ikyhat
-                            iefwid_mark = iefwid
                             iefwid_write = iefwid
-                            
-                            if (inputsEP.IR == 101)
+                            fmark = f_mark_i[ikyhat,iefwid]
+                            ikymin = nkyhat
+                            ikymax = 1
+                            iefwmin = nefwid
+                            iefwmax = 1
+                            f_guess_mark = 1.0E20
+                            ikyhat_mark = ikyhat
+                            iefwid_mark = iefwid
+                        end
+                        ikymin = min(ikyhat,ikymin)
+                        ikymax = max(ikyhat,ikymax)
+                        iefwmin = min(iefwid,iefwmin)
+                        iefwmax = max(iefwid,iefwmax)
+                        f_guess_mark = min(f_guess[ikyhat,iefwid],f_guess_mark)
+                            #if (inputsEP.IR == 101)
                                 #println("Marks set: ", iefwid_mark, " : ", ikyhat_mark)
                                 #println("conds: lkeep, gamma_mark_i_1, 0.95*gamma_mark_i_2, f_mark_i, gmark, fmark")
                                 #println(lkeep_ref[ikyhat,iefwid], " ", gamma_mark_i_1[ikyhat, iefwid], " ", 0.95*gamma_mark_i_2[ikyhat,iefwid])
                                 #println(f_mark_i[ikyhat,iefwid], " ", gmark, " ", fmark)
-                            end
+                            
 
                             # then set new maximums (fmark and gmark)
                             # and set f_guess_mark which corresponds to a maximized growthrate and
                             # minimized factor.
-                            gmark = gamma_mark_i_1[ikyhat, iefwid]
-                            fmark = f_mark_i[ikyhat, iefwid]
-                            f_guess_mark = f_guess[ikyhat, iefwid]
+ 
+                            
 
                             # This loops over all combos of kyhat and width to find a single guess for "f"
                             
-                            if (inputsEP.IR == 101)
-                                #println("update: ", gmark, " : ", fmark, " : ", f_guess_mark)
-                                #println("===========")
-                            end
+                            # if (inputsEP.IR == 101)
+                            #     #println("update: ", gmark, " : ", fmark, " : ", f_guess_mark)
+                            #     #println("===========")
+                            # end
 
                             #=if (id == 0)
                                 println("Statements set! for id & ir and k: ", id, " ", inputsEP.IR, " ", k)
@@ -506,7 +547,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                                 println("kywrite, wdwrite: ", ikyhat_mark, " ", iefwid_mark)
                                 println("After: ", fmark, ", ", gmark, ", ", f_guess_mark)
                             end=#
-                        end
+                        
                     else
                         #println("Statements NOT set! for id & ir: ", id, " ", inputsEP.IR)
                     end
@@ -536,11 +577,19 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 if (inputsEP.REJECT_I_PINCH_FLAG == 1) println(io, "           'Pi' rejected for ion pinch") end
                 if (inputsEP.REJECT_E_PINCH_FLAG == 1) println(io, "           'Pe' rejected for electron pinch") end
                 if (inputsEP.REJECT_TH_PINCH_FLAG == 1) println(io, "           'Pth' rejected for thermal pinch") end
-                if (inputsEP.REJECT_EP_PINCH_FLAG == 1) println(io, "           'PEP' rejected for EP pinch") end
-                if (inputsEP.REJECT_MAX_OUTER_PANEL_FLAG == 1) println(io, "           'OP' rejected for ballooning-space max outside first panel") end
-                println(io, "           'QLR' rejected for QL ratio EP/|chi_i| < ", inputsEP.QL_THRESH_RATIO)
+                # if (inputsEP.REJECT_EP_PINCH_FLAG == 1) println(io, "           'PEP' rejected for EP pinch") end
+                println(io, "           'QLR' rejected for QL ratio EP/|chi_i| < ", inputsEP.QL_RATIO_THRESH)
                 println(io, "           'F' rejected for non-AE frequency > ", inputsEP.F_REAL[inputsEP.IR]*inputsEP.FREQ_AE_UPPER, " kHz")
-                if (inputsEP.REAL_FREQ == 1) println(io, "Frequencies in real units, plasma frame [kHz]") end
+                # Corresponding print statements
+                println(io, "           'TH2' rejected for <theta^2>  > ", inputsEP.THETA_SQ_THRESH)
+                println(io, "           'F'   rejected for non-AE frequency > ", f_real[ir] * freq_AE_upper, " kHz")
+                println(io, "           'BT'  mode growth rate is below threshold GAMMA_THRESH = ", f_real[ir] * GAMMA_THRESH, " kHz")
+                println(io, "omega_TAE = ", f_real[ir] * omega_TAE[ir], " ;  omegaGAM = ", -f_real[ir] * omegaGAM[ir])
+
+                # Check if the condition is true
+                if l_real_units == 1
+                    println(io, "Frequencies in real units, plasma frame [kHz] ; (c_s/a)/(2*pi) = ", f_real[ir], " kHz")
+                end
             end
             
             ky_write = kyhat[ikyhat_write]*inputTJLF.ZS[inputsEP.IS_EP+1]/sqrt(inputTJLF.MASS[inputsEP.IS_EP+1]*inputTJLF.TAUS[inputsEP.IS_EP+1])
@@ -560,6 +609,9 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                     if (lkeep_i[ikyhat,iefwid,ifactor,n])
                         keep_label[n] = " K  "
                         testlabel = testlabel*" K "
+                    elseif growthrate_out[ikyhat, iefwid, ifactor, n] < GAMMA_THRESH 
+                        keep_label[n] = " BT  "
+                        testlabel = testlabel*" BT "
                     elseif (ltearing_i[ikyhat,iefwid,ifactor,n])
                         keep_label[n] = " T  "
                         testlabel = testlabel*" T "
@@ -575,12 +627,15 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                     elseif (l_EP_pinch_i[ikyhat,iefwid,ifactor,n])
                         keep_label[n] = " PEP"
                         testlabel = testlabel*" PEP "
-                    elseif (l_max_outer_panel_i[ikyhat,iefwid,ifactor,n])
-                        keep_label[n] = " OP"
-                        testlabel = testlabel*" OP "
+                    # elseif (l_max_outer_panel_i[ikyhat,iefwid,ifactor,n])
+                    #     keep_label[n] = " OP"
+                    #     testlabel = testlabel*" OP "
                     elseif (l_QL_ratio_i[ikyhat,iefwid,ifactor,n])
                         keep_label[n] = " QLR"
                         testlabel = testlabel*" QLR "
+                    elseif l_theta_sq_i_out(ikyhat, iefwid, ifactor, n)
+                        keep_label[n] = " TH2"
+                        testlabel = testlabel*" TH2 "
                     elseif (frequency[ikyhat,iefwid,ifactor,n] > inputsEP.FREQ_AE_UPPER)
                         keep_label[n] = " F  "
                         testlabel = testlabel*" F "
@@ -607,52 +662,76 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
 
         # After printing the info just calculated, if fmark is already significantly small, adjust 
         # ranges within the range, otherwise, move to a new order of 10 in the factor.
-        if (fmark < 1.0e10)
-            # If in the first scan round, set the new max factor to the minimized factor, otherwise, do
-            # some more specific things to hone in each round (including in kyhat and width)
-            if (k == 1)
-                f1 = fmark
-                f0 = 0.0
-                #println("fmark > 1e10 : Pass ", k)
-            else
-                delf = (f1-f0)/3
-                #=if (id == 0 && inputsEP.IR == 201)
-                    println("delf, f1, f0 for id = 0: ", delf, ", ", f1, ", ", f0)
-                end
-                MPI.Barrier(TJLFEP_COMM)
-                if (id == 1 && inputsEP.IR == 201)
-                    println("delf, f1, f0 for id = 1: ", delf, ", ", f1, ", ", f0)
-                end=#
-                f1 = fmark + delf
-                f0 = fmark - delf
-                if (f0 < 0.0) 
-                    f0 = 0.0 
-                end
-                delw = (w1-w0)/4.0
-                w1 = efwid[iefwid_mark] + delw
-                w0 = efwid[iefwid_mark] - delw
-                if (w1 > inputsEP.WIDTH_MAX)
-                    w0 = w0 - (w1-inputsEP.WIDTH_MAX)
-                    w1 = inputsEP.WIDTH_MAX
-                elseif (w0 < inputsEP.WIDTH_MIN)
-                    w1 = w1 + (inputsEP.WIDTH_MIN-w0)
-                    w0 = inputsEP.WIDTH_MIN
-                end
-                #println(iefwid_mark, " iefwid_mark")
-                #println(efwid, " efwid")
-                #println("out: (w1, w0) : delw = (", w1, ", ", w0, ") : ", delw)
-                #println("fmark > 1e10 : Pass ", k)
-                delky = (kyhat1-kyhat0)/4
-                kyhat1 = kyhat[ikyhat_mark] + delky
-                kyhat0 = kyhat[ikyhat_mark] - delky
-                if (kyhat1 > kyhat_max)
-                    kyhat0 = kyhat0 - (kyhat1-kyhat_max)
-                    kyhat1 = kyhat_max
-                elseif (kyhat0 < kyhat_min)
-                    kyhat1 = kyhat1 + (kyhat_min-kyhat0)
-                    kyhat0 = kyhat_min
-                end
-            end # k > 1
+        # if (fmark < 1.0e10)
+        #     # If in the first scan round, set the new max factor to the minimized factor, otherwise, do
+        #     # some more specific things to hone in each round (including in kyhat and width)
+        if fmark < 1.0E10  # accepted mode with all constraints
+            f1 = 2.0 * fmark
+            f0 = 0.0
+            delw = (w1 - w0) / (nefwid - 1)
+        
+            w1 = efwid[iefwmax] + delw
+            w0 = efwid[iefwmin] - delw
+            if w1 > inputsEP.WIDTH_MAX
+                w1 =inputsEP.WIDTH_MAX
+            end
+            if w0 < inputsEP.WIDTH_MIN
+                w0 = inputsEP.WIDTH_MIN
+            end
+        
+            delky = (kyhat1 - kyhat0) / nkyhat
+            kyhat1 = kyhat[ikymax] + delky
+            kyhat0 = kyhat[ikymin] - delky
+            if kyhat1 > kyhat_max
+                kyhat1 = kyhat_max
+            end
+            if kyhat0 < kyhat_min
+                kyhat0 = kyhat_min
+            end
+        
+            # if (k == 1)
+        #         f1 = fmark
+        #         f0 = 0.0
+        #         #println("fmark > 1e10 : Pass ", k)
+        #     else
+        #         delf = (f1-f0)/3
+        #         #=if (id == 0 && inputsEP.IR == 201)
+        #             println("delf, f1, f0 for id = 0: ", delf, ", ", f1, ", ", f0)
+        #         end
+        #         MPI.Barrier(TJLFEP_COMM)
+        #         if (id == 1 && inputsEP.IR == 201)
+        #             println("delf, f1, f0 for id = 1: ", delf, ", ", f1, ", ", f0)
+        #         end=#
+        #         f1 = fmark + delf
+        #         f0 = fmark - delf
+        #         if (f0 < 0.0) 
+        #             f0 = 0.0 
+        #         end
+        #         delw = (w1-w0)/4.0
+        #         w1 = efwid[iefwid_mark] + delw
+        #         w0 = efwid[iefwid_mark] - delw
+        #         if (w1 > inputsEP.WIDTH_MAX)
+        #             w0 = w0 - (w1-inputsEP.WIDTH_MAX)
+        #             w1 = inputsEP.WIDTH_MAX
+        #         elseif (w0 < inputsEP.WIDTH_MIN)
+        #             w1 = w1 + (inputsEP.WIDTH_MIN-w0)
+        #             w0 = inputsEP.WIDTH_MIN
+        #         end
+        #         #println(iefwid_mark, " iefwid_mark")
+        #         #println(efwid, " efwid")
+        #         #println("out: (w1, w0) : delw = (", w1, ", ", w0, ") : ", delw)
+        #         #println("fmark > 1e10 : Pass ", k)
+        #         delky = (kyhat1-kyhat0)/4
+        #         kyhat1 = kyhat[ikyhat_mark] + delky
+        #         kyhat0 = kyhat[ikyhat_mark] - delky
+        #         if (kyhat1 > kyhat_max)
+        #             kyhat0 = kyhat0 - (kyhat1-kyhat_max)
+        #             kyhat1 = kyhat_max
+        #         elseif (kyhat0 < kyhat_min)
+        #             kyhat1 = kyhat1 + (kyhat_min-kyhat0)
+        #             kyhat0 = kyhat_min
+        #         end
+        #     end # k > 1
         else
             f0 = f1
             f1 = 10.0*f1
@@ -671,24 +750,24 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         inputsEP.FACTOR_IN = 10000
         inputsEP.WIDTH_IN = efwid[1]
         inputsEP.KYMARK = kyhat[1]
-
-        if (printout)
-            println("imark_min > nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
-        end
+    
+        # if (printout)
+        #     println("imark_min > nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
+        
     else
         # If, over the scan of k, there's an unstable mode, set each to each marked point.
         inputsEP.FACTOR_IN = f_guess[ikyhat_mark, iefwid_mark]
         inputsEP.WIDTH_IN = efwid[iefwid_mark]
         inputsEP.KYMARK = kyhat[ikyhat_mark]
 
-        if (printout)
-            println("imark_min <= nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
-        end
+        # if (printout)
+        #     println("imark_min <= nfactor ", inputsEP.FACTOR_IN, " ", inputsEP.WIDTH_IN, " ", inputsEP.KYMARK)
+        # end
     end
 
-    if (printout)
-        println("ir: ", inputsEP.IR, " iefwid_mark: ", iefwid_mark, " ikyhat_mark: ", ikyhat_mark)
-    end
+    # if (printout)
+    #     println("ir: ", inputsEP.IR, " iefwid_mark: ", iefwid_mark, " ikyhat_mark: ", ikyhat_mark)
+    # end
 
     # Return to the driver these values and the final growthrate values of the last scan.
     return growthrate, inputsEP, inputsPR

@@ -14,7 +14,7 @@ function mainsub(inputsEP::InputTJLFEP, inputsPR::profile, printout::Bool = true
         return msg
     elseif (x == 5)
         inputsEP.WIDTH_IN_FLAG = false
-        inputsEP.MODE_IN = 2
+        # inputsEP.MODE_IN = 2
         inputsEP.KY_MODEL = 3
 
         if (printout)

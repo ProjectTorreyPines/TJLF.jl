@@ -1,7 +1,8 @@
 # calls the fortran code as an executable
-path = "/Users/benagnew/TJLF.jl/src/Fortran/tglf"
-baseDirectory = "-e /Users/benagnew/TJLF.jl/outputs/testB/tglf01"
-run(`$(path) $(baseDirectory)`) 
+##path = "/Users/benagnew/TJLF.jl/src/Fortran/tglf"
+##baseDirectory = "-e /Users/benagnew/TJLF.jl/outputs/testB/tglf01"
+##run(`$(path) $(baseDirectory)`) 
+
 
 using Revise
 include("../src/TJLF.jl")

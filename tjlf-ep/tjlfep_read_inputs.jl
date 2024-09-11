@@ -188,6 +188,7 @@ function readTGLFEP(filename::String, ir_exp::Vector{Int64})
     inputTJLFEP = InputTJLFEP{Float64}(nscan_in, widthin, nn, nr, jtscale_max, nmodes)
     inputTJLFEP.IR_EXP = ir_exp
     inputTJLFEP.NMODES = nmodes
+   
 
 
     for line in lines[1:length(lines)]
@@ -201,7 +202,6 @@ function readTGLFEP(filename::String, ir_exp::Vector{Int64})
         # Now I will have all input parameters I want. A space must exist between the fields. It is better if it is just one space but can be UP TO a tab (3 spaces in VSCode where I am editing this).
         
         vecFields = ["WIDTH", "FACTOR"] # For now...
-
         if line[2] ∈ vecFields 
             #if ()
             field = Symbol(line[2])
@@ -215,9 +215,14 @@ function readTGLFEP(filename::String, ir_exp::Vector{Int64})
             else
                 val = parse(Float64, line[1])
             end
-            
+
             try
-                setfield!(inputTJLFEP, field, val)
+                println("field: $field $(contains(string(field),"THETA_2_THRESH"))")
+                if contains(string(field),"THETA_2_THRESH")
+                    setfield!(inputTJLFEP, Symbol("THETA_SQ_THRESH"), val)
+                else
+                    setfield!(inputTJLFEP, field, val)
+                end
             catch
                 println(field)
                 println(val)
@@ -278,6 +283,9 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
     inputsEP.MODE_IN = 2
     inputsEP.KY_MODEL = 3
     =#
+    inputsEP.MODE_IN = 2
+    inputsEP.KY_MODEL = 3
+
     # Okay finally I can do this lol:
     inputTJLF = InputTJLF{Float64}(inputsPR.NS, 12, true) # It is being set to the default...
     if (inputsEP.IR < 1 || inputsEP.IR > inputsPR.NR)
@@ -423,6 +431,7 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
             sum1 = sum1 + inputsPR.AS[ir, i]*inputsPR.TAUS[ir, i]*(inputsPR.RLNS[ir, i]+inputsPR.RLTS[ir, i])
         end
         inputTJLF.P_PRIME_LOC = inputsPR.P_PRIME[ir]*sum0/sum1
+        
     end
 
     if (inputsPR.ROTATION_FLAG == 1)
@@ -449,6 +458,11 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
     end
 
     kym = inputsEP.KY_MODEL
+    println("kym: $kym")
+    println("input KYHAT_IN", inputsEP.KYHAT_IN)
+    println("input mass", inputTJLF.MASS[is])
+    println("input TAUS", inputTJLF.TAUS[is])
+    println("input ZS",inputTJLF.ZS[is])
     if (kym == 0)
         inputTJLF.KY = 0.01*inputsEP.NTOROIDAL
     elseif (kym == 1)
@@ -461,8 +475,43 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
     end
 
     # This is one of the only things that is ran to for inputTJLF:
-    inputsEP.FREQ_AE_UPPER = inputsEP.FREQ_CUTOFF*abs(inputsPR.OMEGA_TAE[ir])
-    
+    inputsEP.FREQ_AE_UPPER = -abs(TJLFEP.exproConst.omegaGAM[ir])
+    if inputsEP.ROTATIONAL_SUPPRESSION_FLAG == 1
+        inputsEP.GAMMA_THRESH_MAX = abs(TJLFEP.exproConst.gammap[ir]) * 2.0 * (min(1.0 - inputsPR.RMIN[ir], inputsPR.RMIN[ir]) / inputsPR.RMAJ[ir])
+        inputsEP.GAMMA_THRESH = 0.15 * abs(TJLFEP.exproConst.gammaE[ir] / inputsPR.SHEAR[ir])   # Bass PoP 2017 flow-shear suppression of AEs
+        inputsEP.GAMMA_THRESH = min(inputsEP.GAMMA_THRESH, inputsEP.GAMMA_THRESH_MAX)
+    else
+        
+        inputsEP.GAMMA_THRESH = 1.0e-7
+        inputsEP.GAMMA_THRESH_MAX = 1.0e-7
+    end
+
+    # println("gammaE", inputsPR.gammaE)
+    # println("Gamma Thresh MAX", inputsEP.GAMMA_THRESH_MAX)
+    for field in fieldnames(typeof(inputsEP))
+        value = getfield(inputsEP, field)
+        println("$field: $value")
+        # println(fieldnames(inputTJLF))
+        # println(fieldnames(InputTJLF))
+        # if value[1] ==NaN
+        #     value = 0
+        # elseif value[1]  ==missing
+        #     value[1] == coalesce(input.TJLF, false)
+    end
+# Create an instance of your struct (replace with your actual struct's name)
+
+    # for field in fieldnames(typeof(inputTJLF))
+
+        # if inputTJLF.field[1]== NaN
+        #     inputTJLF.field=tesinput.field
+        
+        # end
+
+    # for field in fieldnames(typeof(inputTJLF))
+    #     value = getfield(inputTJLF, field)
+    #     println("$field: $value")
+        
+    # end
     return inputTJLF
 end
 """
@@ -493,6 +542,9 @@ function readEXPRO(filename::String, is_EP::Int64)
     dlntidr4::Vector{Float64} = fill(NaN, 201)
     cs::Vector{Float64} = fill(NaN, 201)
     rmin_ex::Vector{Float64} = fill(NaN, 201)
+    gammaE::Vector{Float64} = fill(NaN, 201)
+    gammap::Vector{Float64} = fill(NaN, 201)
+    omegaGAM::Vector{Float64} = fill(NaN, 201)
 
     for line in lines[1:length(lines)]
         line = split(line, "=")
@@ -546,20 +598,32 @@ function readEXPRO(filename::String, is_EP::Int64)
             cs[index] = parse(Float64, String(val))
         elseif (name == "rmin")
             rmin_ex[index] = parse(Float64, String(val))
+        elseif (name == "gammaE")
+            gammaE[index] = parse(Float64, String(val))
+        elseif (name == "gammap")
+            gammap[index] = parse(Float64, String(val))
+        elseif (name == "omegaGAM")
+            omegaGAM[index] = parse(Float64, String(val))
         end
     end
-    
+    println("gammaE", gammaE)
+    println("gammap", gammap)
+    println("omegaGAM", omegaGAM)
+    println("cs", cs)
+    println("rmin", rmin_ex)
     # Diverge 4 is_EP values for each quatnity:
+
     if (is_EP == 1)
-        return ni1, Ti1, dlnnidr1, dlntidr1, cs, rmin_ex
+        return ni1, Ti1, dlnnidr1, dlntidr1, cs, rmin_ex, gammaE, gammap, omegaGAM
     elseif (is_EP == 2)
-        return ni2, Ti2, dlnnidr2, dlntidr2, cs, rmin_ex
+        return ni2, Ti2, dlnnidr2, dlntidr2, cs, rmin_ex, gammaE, gammap, omegaGAM
     elseif (is_EP == 3)
-        return ni3, Ti3, dlnnidr3, dlntidr3, cs, rmin_ex
+        return ni3, Ti3, dlnnidr3, dlntidr3, cs, rmin_ex, gammaE, gammap, omegaGAM
     elseif (is_EP == 4)
-        return ni4, Ti4, dlnnidr4, dlntidr4, cs, rmin_ex
+        return ni4, Ti4, dlnnidr4, dlntidr4, cs, rmin_ex, gammaE, gammap, omegaGAM
     else
         println("is_EP not within range. Check input.TGLFEP input")
         return 1
     end
+
 end 

@@ -1,5 +1,5 @@
 module TJLFEP
-
+using Revise
 using Base.Threads
 using LinearAlgebra # Don't really need this for tjlf-ep
 using SparseArrays
@@ -15,11 +15,15 @@ include("conv_input.jl")
 include("tjlfep_complete_output.jl")
 include("run_tjlfep.jl")
 
+include("tjlfep_generate_input.jl")
+
 
 export profile, InputTJLF, InputTJLFEP
 export readMTGLF, readTGLFEP, TJLF_map, readEXPRO
 export convert_input, revert_input
 export tjlfep_complete_output
 export runTHD, runTHDs
+
+export TJLFEP_generate_input, readline_values
 
 end 

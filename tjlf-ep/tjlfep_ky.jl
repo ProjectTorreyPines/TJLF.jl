@@ -46,6 +46,8 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     inputTJLF.WIDTH = inputsEP.WIDTH_IN
     inputTJLF.FIND_WIDTH = false
 
+
+
     # Corrections for TJLF specifically: (see main.jl after mainsub call)
 
     inputTJLF.USE_AVE_ION_GRID = false
@@ -58,6 +60,11 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     inputTJLF.DAMP_PSI = 0.0 # in all inputs for tjlf this is set to 0.0
     inputTJLF.DAMP_SIG = 0.0 # in all inputs for tjlf this is set to 0.0
     inputTJLF.WDIA_TRAPPED = 0.0
+
+   
+    # n_out::Int
+    # EP_QL_e_flux::Float32
+    # ef_phi_norm::Float32
 
     if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3 # From read_input, which is skipped over in this path of running TJLF
         inputTJLF.UNITS = "CGYRO"
@@ -148,7 +155,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
 
     for n = 1:inputTJLF.NMODES
         inputsEP.LKEEP[n] = (f[n] < inputsEP.FREQ_AE_UPPER)
-        inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && (g[n] > 1.0e-7))
+        inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && (g[n] > inputsEP.GAMMA_THRESH))
     end
 
 
@@ -178,7 +185,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     inputsEP.L_E_PINCH .= false
     inputsEP.L_TH_PINCH .= false
     inputsEP.L_QL_RATIO .= false
-    inputsEP.L_MAX_OUTER_PANEL .= false
+    # inputsEP.L_MAX_OUTER_PANEL .= false
     x_tear_test::Vector{Float64} = fill(0.0, 4)
     abswavefunction = abs.(wavefunction)
     absdifffunction = similar(wavefunction)
@@ -193,6 +200,8 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     i_QL_cond_flux = fill(0.0, 4)
     e_QL_cond_flux = fill(0.0, 4)
     QL_flux_ratio = fill(0.0, 4)
+    EP_conv_frac = fill(0.0, 4)
+    theta_2_moment = fill(0.0, 4)
     # TGLFEP hard-codes nmodes = 4, so that is why these are all defined like this.
     DEP = fill(NaN, 4)
     chi_th = fill(NaN, 4)
@@ -218,8 +227,11 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         wave_max_loc = argmax(abs.(wavefunction[n,1,:]))
         n_balloon_pi = floor(Int, (max_plot-1)/9) # 32
         i_mid_plot = floor(Int, (max_plot-1)/2+1) # 145
-        inputsEP.L_MAX_OUTER_PANEL[n] = (wave_max_loc < (i_mid_plot-n_balloon_pi)) || (wave_max_loc > (i_mid_plot+n_balloon_pi))
+        # inputsEP.L_MAX_OUTER_PANEL[n] = (wave_max_loc < (i_mid_plot-n_balloon_pi)) || (wave_max_loc > (i_mid_plot+n_balloon_pi))
         # So long as wave_max_loc is between 113 and 177, this isn't rejected for this.
+        theta_2_moment[n] =0.0
+        ef_phi_norm = 0.0
+
         if (inputsEP.IR == 101 && n == 4 && printout)
             println("wave_max: ", wave_max)
             println("wave_max_loc: ", wave_max_loc)
@@ -234,11 +246,17 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
             for i = 1:max_plot # Finding the maximum value of this abs value of difference div wave_max
                 absdiffwavefunction::Float64 = abs(wavefunction[n,1,i]-wavefunction[n,1,max_plot+1-i])
                 x_tear_test[n] = max(x_tear_test[n], absdiffwavefunction/wave_max)
+                ef_phi_norm += abs(wavefunction[n,1,i])
+                theta_2_moment[n] += (9 * π * (-1.0 + (2.0 * (i - 1)) / (max_plot - 1)))^2 * abs(wavefunction[n, 1, i])
             end
+            theta_2_moment[n] /= ef_phi_norm
+
             if (x_tear_test[n] > 1.0E-1)
                 inputsEP.LTEARING[n] = true
+                
             end
         end 
+        EP_QL_e_flux = 0.0
         EP_QL_flux = 0.0
         i_QL_flux = 0.0
         i_QL_cond_flux[n] = 0.0
@@ -251,6 +269,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         if (n <= nmodes_out)
             for jfields = 1:3
                 EP_QL_flux = EP_QL_flux + particle_QL_out[jfields, inputsEP.IS_EP + 1, n]
+                EP_QL_e_flux = EP_QL_e_flux + energy_QL_out[jfields, inputsEP.IS_EP + 1, n]
                 e_QL_flux = e_QL_flux + energy_QL_out[jfields, 1, n]
                 e_QL_cond_flux[n] = e_QL_cond_flux[n] + energy_QL_out[jfields, 1, n] - 1.5*inputTJLF.TAUS[1]*particle_QL_out[jfields, 1, n]
                 for j_ion = 2:inputsEP.IS_EP
@@ -274,7 +293,9 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         chi_th[n] = th_QL_flux / th_eff_grad
 
         if (n <= nmodes_out) 
-            QL_flux_ratio[n] = (EP_QL_flux/inputTJLF.AS[inputsEP.IS_EP+1])/(abs(i_QL_cond_flux[n])/(inputTJLF.AS[1]-inputTJLF.AS[inputsEP.IS_EP+1]))
+            # QL_flux_ratio[n] = (EP_QL_flux/inputTJLF.AS[inputsEP.IS_EP+1])/(abs(i_QL_cond_flux[n])/(inputTJLF.AS[1]-inputTJLF.AS[inputsEP.IS_EP+1]))
+            QL_flux_ratio[n] = EP_QL_e_flux / abs(i_QL_cond_flux[n])
+            EP_conv_frac[n] = EP_QL_flux * 1.5 * inputTJLF.TAUS[inputsEP.IS_EP+1] / EP_QL_e_flux
         else
             QL_flux_ratio[n] = 1e20
         end
@@ -283,7 +304,10 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         if (chi_e[n] < 0.0) inputsEP.L_E_PINCH[n] = true end
         if (chi_th[n] < 0.0) inputsEP.L_TH_PINCH[n] = true end
         if (DEP[n] < 0.0) inputsEP.L_EP_PINCH[n] = true end
-        if (QL_flux_ratio[n] < inputsEP.QL_THRESH_RATIO) inputsEP.L_QL_RATIO[n] = true end
+        if (QL_flux_ratio[n] < inputsEP.QL_RATIO_THRESH) inputsEP.L_QL_RATIO[n] = true end
+        if (theta_2_moment[n] > inputsEP.THETA_SQ_THRESH) inputsEP.L_THETA_SQ[n] = true end
+        
+       
     end
 
     #=if (testid)
@@ -299,8 +323,9 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         if (inputsEP.REJECT_E_PINCH_FLAG == 1) inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_E_PINCH[n]) end
         if (inputsEP.REJECT_TH_PINCH_FLAG == 1) inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_TH_PINCH[n]) end
         if (inputsEP.REJECT_EP_PINCH_FLAG == 1) inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_EP_PINCH[n]) end
-        if (inputsEP.REJECT_MAX_OUTER_PANEL_FLAG == 1) inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_MAX_OUTER_PANEL[n]) end
+        # if (inputsEP.ROTATIONAL_SUPPRESSION_FLAG == 1) inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_MAX_OUTER_PANEL[n]) end
         inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_QL_RATIO[n])
+        inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_THETA_SQ[n])
     end
 
     # Next is writing the wavefunction files themselves:
@@ -319,8 +344,11 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         println(io6, "i_QL_cond_flux: ", i_QL_cond_flux)
         println(io6, "e_QL_cond_flux: ", e_QL_cond_flux)
         println(io6, "QL_ratio: ", QL_flux_ratio)
+        println(io6, "EP QL convection fracton: ", EP_conv_frac)
+        println(io6, "<theta^2>: ", theta_2_moment)
         println(io6, "lkeep: ", inputsEP.LKEEP)
         # Renormalize and adjust phases:
+        n_out = 0
         for n = 1:nmodes_out
             max_phi = maximum(abswavefunction[n,1,:])
             max_apar = maximum(abswavefunction[n,2,:])
@@ -330,6 +358,13 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
                 z = 0+1im
                 wavefunction[n,jfields,:] .= wavefunction[n,jfields,:]/(max_field*exp(z*phase))
             end
+            if n_out == 0 && lkeep(n)
+                n_out = n
+            end
+        end
+        if n_out == 0
+            n_out = 1
+            println("No kept modes at nominal write parameters. Showing leading mode.")
         end
         #Write renormalized, re-phased eigenfunctions out to str_wf_file.
         for i = 1:max_plot
@@ -347,9 +382,8 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
             println(io6, angle[i], " ", real(wavefunction[1,1,i]), " ", imag(wavefunction[1,1,i]), " ",
                     real(wavefunction[1,2,i]), " ", imag(wavefunction[1,2,i]))
         end
-
         close(io6)
-    end
+    end      
     # This is the end of ky.jl. Returning values will likely need to be changed later.
     return gamma_out, freq_out, inputTJLF
 end
