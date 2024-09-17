@@ -74,7 +74,7 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
 
     inputs.EIGEN_SPECTRUM .= firstPass_eigenvalue[1,:,1].+firstPass_eigenvalue[1,:,2].*im
     if inputs.SAT_RULE == 0
-        @warn "Using SAT0 means the return value of TM is not the QL weights, but actually flux_spectrum_out = QL_weights * phi_bar_out. notice difference near LS return statement"
+        @debug "Using SAT0 means the return value of TM is not the QL weights, but actually flux_spectrum_out = QL_weights * phi_bar_out. notice difference near LS return statement"
     end
 
     return QL_weights, firstPass_eigenvalue
