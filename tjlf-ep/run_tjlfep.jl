@@ -172,6 +172,7 @@ if (!inputTGLFEP.WIDTH_IN_FLAG)
     for i = 1:n_ir
         width[i] = arrTGLFEP[i].WIDTH_IN
         kymark_out[i] = arrTGLFEP[i].KYMARK
+        
     end
 
     # Original MPI:

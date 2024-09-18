@@ -33,9 +33,10 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
     # iefwmax =0
 
     growthrate = zeros(Float64, nkyhat, nefwid, nfactor, inputsEP.NMODES)
-    growthrate_out = 0.0
+    growthrate_out = zeros(Float64, nkyhat, nefwid, nfactor, inputsEP.NMODES)
+
     frequency = zeros(Float64, nkyhat, nefwid, nfactor, inputsEP.NMODES)
-    frequency_out = 0.0
+    frequency_out = zeros(Float64, nkyhat, nefwid, nfactor, inputsEP.NMODES)
     
     lkeep_i = fill(true, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
     ltearing_i = fill(false, (nkyhat, nefwid, nfactor, inputsEP.NMODES))
@@ -87,6 +88,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         for i = 1:nefwid
             efwid[i] = ((w1-w0)/(nefwid-1))*(i-1)+w0
         end
+        
         for i = 1:nkyhat
             if kyhat0 == 0.0
                 kyhat[i]= ((kyhat1-kyhat0)/nkyhat)*i + kyhat0
@@ -564,6 +566,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
         # via a batch file or some execution command for TJLF-EP. Running by REPL
         # does create these files, but it places them in the TJLF.JL directory,
         # which isn't where I will want to store them in the end.
+        println("printout, l_write_out",printout, l_write_out)
         if (l_write_out && printout)
             filename = "out.scalefactor"*inputsEP.SUFFIX
             iexist = isfile(filename)
@@ -582,14 +585,14 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                 println(io, "           'F' rejected for non-AE frequency > ", inputsEP.F_REAL[inputsEP.IR]*inputsEP.FREQ_AE_UPPER, " kHz")
                 # Corresponding print statements
                 println(io, "           'TH2' rejected for <theta^2>  > ", inputsEP.THETA_SQ_THRESH)
-                println(io, "           'F'   rejected for non-AE frequency > ", f_real[ir] * freq_AE_upper, " kHz")
-                println(io, "           'BT'  mode growth rate is below threshold GAMMA_THRESH = ", f_real[ir] * GAMMA_THRESH, " kHz")
-                println(io, "omega_TAE = ", f_real[ir] * omega_TAE[ir], " ;  omegaGAM = ", -f_real[ir] * omegaGAM[ir])
+                println(io, "           'F'   rejected for non-AE frequency > ", inputsEP.F_REAL[inputsEP.IR] * inputsEP.FREQ_AE_UPPER, " kHz")
+                println(io, "           'BT'  mode growth rate is below threshold GAMMA_THRESH = ", inputsEP.F_REAL[inputsEP.IR] * inputsEP.GAMMA_THRESH, " kHz")
+                println(io, "omega_TAE = ", inputsEP.F_REAL[inputsEP.IR] * inputsPR.OMEGA_TAE[inputsEP.IR], " ;  omegaGAM = ", -inputsEP.F_REAL[inputsEP.IR] * inputsPR.omegaGAM[inputsEP.IR])
 
                 # Check if the condition is true
-                if l_real_units == 1
-                    println(io, "Frequencies in real units, plasma frame [kHz] ; (c_s/a)/(2*pi) = ", f_real[ir], " kHz")
-                end
+                # if l_real_units == 1
+                #     println(io, "Frequencies in real units, plasma frame [kHz] ; (c_s/a)/(2*pi) = ", f_real[ir], " kHz")
+                # end
             end
             
             ky_write = kyhat[ikyhat_write]*inputTJLF.ZS[inputsEP.IS_EP+1]/sqrt(inputTJLF.MASS[inputsEP.IS_EP+1]*inputTJLF.TAUS[inputsEP.IS_EP+1])
@@ -609,22 +612,22 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                     if (lkeep_i[ikyhat,iefwid,ifactor,n])
                         keep_label[n] = " K  "
                         testlabel = testlabel*" K "
-                    elseif growthrate_out[ikyhat, iefwid, ifactor, n] < GAMMA_THRESH 
+                    elseif growthrate[ikyhat, iefwid, ifactor, n] < inputsEP.GAMMA_THRESH 
                         keep_label[n] = " BT  "
                         testlabel = testlabel*" BT "
-                    elseif (ltearing_i[ikyhat,iefwid,ifactor,n])
+                    elseif ((ltearing_i[ikyhat,iefwid,ifactor,n]) && (inputsEP.REJECT_TEARING_FLAG == 1))
                         keep_label[n] = " T  "
                         testlabel = testlabel*" T "
-                    elseif (l_i_pinch_i[ikyhat,iefwid,ifactor,n])
+                    elseif ((l_i_pinch_i[ikyhat,iefwid,ifactor,n]) && (inputsEP.REJECT_I_PINCH_FLAG == 1))
                         keep_label[n] = " Pi "
                         testlabel = testlabel*" Pi "
-                    elseif (l_e_pinch_i[ikyhat,iefwid,ifactor,n])
+                    elseif ((l_e_pinch_i[ikyhat,iefwid,ifactor,n]) && (inputsEP.REJECT_E_PINCH_FLAG == 1))
                         keep_label[n] = " Pe "
                         testlabel = testlabel*" Pe "
-                    elseif (l_th_pinch_i[ikyhat,iefwid,ifactor,n])
+                    elseif ((l_th_pinch_i[ikyhat,iefwid,ifactor,n]) && (inputsEP.REJECT_TH_PINCH_FLAG == 1))
                         keep_label[n] = " Pth"
                         testlabel = testlabel*" Pth "
-                    elseif (l_EP_pinch_i[ikyhat,iefwid,ifactor,n])
+                    elseif ((l_EP_pinch_i[ikyhat,iefwid,ifactor,n]) && (inputsEP.REJECT_EP_PINCH_FLAG == 1))
                         keep_label[n] = " PEP"
                         testlabel = testlabel*" PEP "
                     # elseif (l_max_outer_panel_i[ikyhat,iefwid,ifactor,n])
@@ -633,7 +636,7 @@ function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}
                     elseif (l_QL_ratio_i[ikyhat,iefwid,ifactor,n])
                         keep_label[n] = " QLR"
                         testlabel = testlabel*" QLR "
-                    elseif l_theta_sq_i_out(ikyhat, iefwid, ifactor, n)
+                    elseif l_theta_sq_i_out[ikyhat, iefwid, ifactor, n]
                         keep_label[n] = " TH2"
                         testlabel = testlabel*" TH2 "
                     elseif (frequency[ikyhat,iefwid,ifactor,n] > inputsEP.FREQ_AE_UPPER)

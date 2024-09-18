@@ -25,7 +25,7 @@ begin
     exprofilepath = homedirectory*"/../outputs/tjlfeptests/isEP3v6/input.EXPRO"
 
     # This now works after a brief debugging:
-    runTHD(tglfepfilepath, mtglffilepath, exprofilepath)
+    runTHD(tglfepfilepath, mtglffilepath, exprofilepath, printout = true)
 end
 # I will now run runTHDs on two examples:
 #=

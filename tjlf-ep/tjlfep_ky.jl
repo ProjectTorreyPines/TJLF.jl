@@ -180,6 +180,10 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     # This function was translated within TJLF so as to get the wavefunction.
     wavefunction, angle, nplot, nmodes, nmodes_out = TJLF.get_wavefunction(convInput, satParams, field_weight_out, nmodes_out)
 
+
+   
+    
+
     inputsEP.LTEARING .= false
     inputsEP.L_I_PINCH .= false
     inputsEP.L_E_PINCH .= false
@@ -188,7 +192,10 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     # inputsEP.L_MAX_OUTER_PANEL .= false
     x_tear_test::Vector{Float64} = fill(0.0, 4)
     abswavefunction = abs.(wavefunction)
-    absdifffunction = similar(wavefunction)
+
+    
+
+    # absdiffwavefunction = similar(wavefunction)
     ms = 128
     npi = 9
     np = Int(ms/8)
@@ -224,6 +231,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
 
         #nul = abswavefunction
         wave_max = maximum(abs.(wavefunction[n,1,:]))+1.0E-3
+        
         wave_max_loc = argmax(abs.(wavefunction[n,1,:]))
         n_balloon_pi = floor(Int, (max_plot-1)/9) # 32
         i_mid_plot = floor(Int, (max_plot-1)/2+1) # 145
@@ -236,7 +244,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
             println("wave_max: ", wave_max)
             println("wave_max_loc: ", wave_max_loc)
             println("mode: ", n)
-            println("inputsEP.L_MAX_OUTER_PANEL[n]: ", inputsEP.L_MAX_OUTER_PANEL[n])
+            #println("inputsEP.L_MAX_OUTER_PANEL[n]: ", inputsEP.L_MAX_OUTER_PANEL[n])
             println("-----")
             println("wavefunction: ", abs.(wavefunction[n,1,wave_max_loc:wave_max_loc+10]))
             println("=====")
@@ -244,10 +252,11 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
 
         if (n <= nmodes_out)
             for i = 1:max_plot # Finding the maximum value of this abs value of difference div wave_max
-                absdiffwavefunction::Float64 = abs(wavefunction[n,1,i]-wavefunction[n,1,max_plot+1-i])
+                absdiffwavefunction::Float64 = abs.(wavefunction[n,1,i]-wavefunction[n,1,max_plot+1-i])
                 x_tear_test[n] = max(x_tear_test[n], absdiffwavefunction/wave_max)
                 ef_phi_norm += abs(wavefunction[n,1,i])
                 theta_2_moment[n] += (9 * π * (-1.0 + (2.0 * (i - 1)) / (max_plot - 1)))^2 * abs(wavefunction[n, 1, i])
+
             end
             theta_2_moment[n] /= ef_phi_norm
 
@@ -327,11 +336,16 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_QL_RATIO[n])
         inputsEP.LKEEP[n] = (inputsEP.LKEEP[n] && !inputsEP.L_THETA_SQ[n])
     end
+    #extra print to test variables
+
+    # println("absdiffwavefunction",absdiffwavefunction)
+    
+
 
     # Next is writing the wavefunction files themselves:
     if (l_wavefunction_out == 1) # nplot = max_plot_out; nfields = 1 by def.
         io6 = open(str_wf_file, "w")
-        println(io6, "nmodes=", nmodes_out, " nfields=3", " max_plot=", nplot)
+        println(io6, "nmodes=", nmodes_out, " nfields=2", " max_plot=", nplot)
         println(io6, "ky=", inputTJLF.KY, " width=", inputTJLF.WIDTH)
         println(io6, "theta     ", "((Re(field_i), Im(field_i),i=(1,nfields)),j=1,nmodes)")
         println(io6, "Tearing metric: ", x_tear_test)
@@ -358,10 +372,11 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
                 z = 0+1im
                 wavefunction[n,jfields,:] .= wavefunction[n,jfields,:]/(max_field*exp(z*phase))
             end
-            if n_out == 0 && lkeep(n)
+            if n_out == 0 && inputsEP.LKEEP[n]
                 n_out = n
             end
         end
+        println("LKEEP ", inputsEP.LKEEP)
         if n_out == 0
             n_out = 1
             println("No kept modes at nominal write parameters. Showing leading mode.")
