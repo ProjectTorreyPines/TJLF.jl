@@ -18,7 +18,7 @@ function mainsub(inputsEP::InputTJLFEP, inputsPR::profile, printout::Bool = true
         inputsEP.KY_MODEL = 3
 
         if (printout)
-            println(inputsEP.MODE_IN)
+            #println(inputsEP.MODE_IN)
         end
 
         growthrate, inputsEP, inputsPR = kwscale_scan(inputsEP, inputsPR, printout)

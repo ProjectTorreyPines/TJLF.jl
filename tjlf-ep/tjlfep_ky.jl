@@ -125,20 +125,17 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     # Run TJLF and return QLweight and eigenvalues:
     gamma_out, freq_out, particle_QL_out, energy_QL_out, stress_par_QL_out, exchange_QL_out, field_weight_out, satParams, nmodes_out = TJLF.run(convInput)
 
+
+
+
     #println(typeof(field_weight_out))
     #println(typeof(satParams.y))
 
-    if (inputsEP.IR == 101 && printout)
-        io77 = open("run.out.second", "a")
-        println(io77, gamma_out)
-        println(io77, "--------------------------------------")
-        println(io77, freq_out)
-        println(io77, "======================================")
-        close(io77)
-    end
 
     inputTJLF = revert_input(convInput, convInput.NS, convInput.NKY)
     
+
+
     # Next is the get_growthrate stuff. I now need to make sure that run_TJLF is giving me all the information I need to continue this.
 
     g = fill(NaN, inputTJLF.NMODES)
@@ -147,6 +144,9 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         g[n] = gamma_out[n]
         f[n] = freq_out[n]
     end
+
+    # println("before ", gamma_out)
+    #GAMMA STILL NON-ZERO UP TO HERE
 
     # Establishes the lkeep vector. LKEEP is defaulted to all true as nothing is rejected yet.
     # This states that if the frequency that came from the converted test of TJLF is less than
@@ -160,11 +160,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
 
 
     if (inputsEP.IR == 101 && printout)
-        io78 = open("run.out.second", "a")
-        fieldnames_in = fieldnames(typeof(convInput))
-        for field in fieldnames_in
-            println(io78, getfield(convInput, field), ": ", field)
-        end
+
         println("----------")
         
         #println(satParams.y)
@@ -174,15 +170,13 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         #println("nbasis: ",inputsEP.N_BASIS)
         #println("==========")
 
-        close(io78)
     end
 
     # This function was translated within TJLF so as to get the wavefunction.
+    ms = 128
+    max_plot = Int(18*ms/8+1)
     wavefunction, angle, nplot, nmodes, nmodes_out = TJLF.get_wavefunction(convInput, satParams, field_weight_out, nmodes_out)
 
-
-   
-    
 
     inputsEP.LTEARING .= false
     inputsEP.L_I_PINCH .= false
@@ -195,7 +189,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
 
     
 
-    # absdiffwavefunction = similar(wavefunction)
+    #absdiffwavefunction = similar(wavefunction)
     ms = 128
     npi = 9
     np = Int(ms/8)
@@ -250,13 +244,16 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
             println("=====")
         end
 
-        if (n <= nmodes_out)
+
+        if (n <= nmodes_out)#used to be nmodes_out
             for i = 1:max_plot # Finding the maximum value of this abs value of difference div wave_max
                 absdiffwavefunction::Float64 = abs.(wavefunction[n,1,i]-wavefunction[n,1,max_plot+1-i])
                 x_tear_test[n] = max(x_tear_test[n], absdiffwavefunction/wave_max)
                 ef_phi_norm += abs(wavefunction[n,1,i])
                 theta_2_moment[n] += (9 * π * (-1.0 + (2.0 * (i - 1)) / (max_plot - 1)))^2 * abs(wavefunction[n, 1, i])
-
+                # println("xteartest= ", x_tear_test)
+                # println("theta_2_moment = ", theta_2_moment) 
+                # println("ef_phi_norm = ", ef_phi_norm)  
             end
             theta_2_moment[n] /= ef_phi_norm
 
@@ -277,14 +274,21 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
 
         if (n <= nmodes_out)
             for jfields = 1:3
+                # println("size(particle_QL_out ", size(particle_QL_out))
                 EP_QL_flux = EP_QL_flux + particle_QL_out[jfields, inputsEP.IS_EP + 1, n]
+                # io97 = open("radius.test.out", "a")
+                # println(io97, "n = ", n)
+                # println(io97, "jfields = ", jfields)
+                # println(io97, "particle_QL_out[jfields, inputsEP.IS_EP + 1, n]= ", particle_QL_out[jfields, inputsEP.IS_EP + 1, n])
+                # println(io97, "energy_QL_out[jfields, inputsEP.IS_EP + 1, n]= ", energy_QL_out[jfields, inputsEP.IS_EP + 1, n])
+                # close(io97)
                 EP_QL_e_flux = EP_QL_e_flux + energy_QL_out[jfields, inputsEP.IS_EP + 1, n]
                 e_QL_flux = e_QL_flux + energy_QL_out[jfields, 1, n]
                 e_QL_cond_flux[n] = e_QL_cond_flux[n] + energy_QL_out[jfields, 1, n] - 1.5*inputTJLF.TAUS[1]*particle_QL_out[jfields, 1, n]
                 for j_ion = 2:inputsEP.IS_EP
                     i_QL_flux = i_QL_flux + energy_QL_out[jfields, j_ion, n]
                     i_QL_cond_flux[n] = i_QL_cond_flux[n] + energy_QL_out[jfields, j_ion, n] - 1.5*inputTJLF.TAUS[j_ion]*particle_QL_out[jfields, j_ion, n]
-                end
+                end         
             end
         end
 
@@ -302,7 +306,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         chi_th[n] = th_QL_flux / th_eff_grad
 
         if (n <= nmodes_out) 
-            # QL_flux_ratio[n] = (EP_QL_flux/inputTJLF.AS[inputsEP.IS_EP+1])/(abs(i_QL_cond_flux[n])/(inputTJLF.AS[1]-inputTJLF.AS[inputsEP.IS_EP+1]))
+                # QL_flux_ratio[n] = (EP_QL_flux/inputTJLF.AS[inputsEP.IS_EP+1])/(abs(i_QL_cond_flux[n])/(inputTJLF.AS[1]-inputTJLF.AS[inputsEP.IS_EP+1]))
             QL_flux_ratio[n] = EP_QL_e_flux / abs(i_QL_cond_flux[n])
             EP_conv_frac[n] = EP_QL_flux * 1.5 * inputTJLF.TAUS[inputsEP.IS_EP+1] / EP_QL_e_flux
         else
@@ -345,7 +349,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
     # Next is writing the wavefunction files themselves:
     if (l_wavefunction_out == 1) # nplot = max_plot_out; nfields = 1 by def.
         io6 = open(str_wf_file, "w")
-        println(io6, "nmodes=", nmodes_out, " nfields=2", " max_plot=", nplot)
+        println(io6, "nmodes=", nmodes_out, "TGLF INPUT NMODES = ",inputsEP.NMODES, " nfields=", " max_plot=", nplot)
         println(io6, "ky=", inputTJLF.KY, " width=", inputTJLF.WIDTH)
         println(io6, "theta     ", "((Re(field_i), Im(field_i),i=(1,nfields)),j=1,nmodes)")
         println(io6, "Tearing metric: ", x_tear_test)
@@ -363,7 +367,7 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
         println(io6, "lkeep: ", inputsEP.LKEEP)
         # Renormalize and adjust phases:
         n_out = 0
-        for n = 1:nmodes_out
+        for n = 1:inputsEP.NMODES
             max_phi = maximum(abswavefunction[n,1,:])
             max_apar = maximum(abswavefunction[n,2,:])
             max_field = maximum([max_phi, max_apar])
@@ -376,10 +380,11 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
                 n_out = n
             end
         end
-        println("LKEEP ", inputsEP.LKEEP)
+        #println("LKEEP ", inputsEP.LKEEP)
+        #println("n_out = " ,n_out)
         if n_out == 0
             n_out = 1
-            println("No kept modes at nominal write parameters. Showing leading mode.")
+            println(io6, "No kept modes at nominal write parameters. Showing leading mode.")
         end
         #Write renormalized, re-phased eigenfunctions out to str_wf_file.
         for i = 1:max_plot
@@ -394,8 +399,8 @@ function TJLFEP_ky(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, s
             #        wave_write[kcomp] = imag(wavefunction[n,jfields,i])
             #    end
             #end
-            println(io6, angle[i], " ", real(wavefunction[1,1,i]), " ", imag(wavefunction[1,1,i]), " ",
-                    real(wavefunction[1,2,i]), " ", imag(wavefunction[1,2,i]))
+            println(io6, angle[i], " ", real(wavefunction[n_out,1,i]), " ", imag(wavefunction[n_out,1,i]), " ",
+                    real(wavefunction[n_out,2,i]), " ", imag(wavefunction[n_out,2,i]))
         end
         close(io6)
     end      

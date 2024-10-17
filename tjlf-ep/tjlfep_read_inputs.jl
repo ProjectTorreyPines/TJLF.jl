@@ -224,8 +224,6 @@ function readTGLFEP(filename::String, ir_exp::Vector{Int64})
                     setfield!(inputTJLFEP, field, val)
                 end
             catch
-                println(field)
-                println(val)
                 throw(error(field))
             end
         end
@@ -447,6 +445,7 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
     end
 
     inputTJLF.USE_BPER = true
+    inputTJLF.USE_BPAR = false
 
     inputTJLF.BETAE = inputsPR.BETAE[ir]
     inputTJLF.XNUE = 0.0
@@ -458,11 +457,6 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
     end
 
     kym = inputsEP.KY_MODEL
-    println("kym: $kym")
-    println("input KYHAT_IN", inputsEP.KYHAT_IN)
-    println("input mass", inputTJLF.MASS[is])
-    println("input TAUS", inputTJLF.TAUS[is])
-    println("input ZS",inputTJLF.ZS[is])
     if (kym == 0)
         inputTJLF.KY = 0.01*inputsEP.NTOROIDAL
     elseif (kym == 1)
@@ -490,7 +484,7 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
     # println("Gamma Thresh MAX", inputsEP.GAMMA_THRESH_MAX)
     for field in fieldnames(typeof(inputsEP))
         value = getfield(inputsEP, field)
-        println("$field: $value")
+        #println("$field: $value")
         # println(fieldnames(inputTJLF))
         # println(fieldnames(InputTJLF))
         # if value[1] ==NaN

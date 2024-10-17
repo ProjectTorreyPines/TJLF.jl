@@ -72,4 +72,4 @@ gammaE_array = Array{Float64}(gammaE)
 # Print the arrays
 # println("gammap = ", gammap_array)
 # println("omegaGAM = ", omegaGAM_array)
-println("gammaE = ", gammaE_array)
+#println("gammaE = ", gammaE_array)

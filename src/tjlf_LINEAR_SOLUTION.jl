@@ -354,7 +354,6 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             error("This is in the Fortran, but gamma_nb_min_out should always equal gamma_out[1] so the condition should never be true")
         end
         phi_bar_out .*= reduce # this does nothing for the reason above ^^^
-
         if inputs.SAT_RULE==0 && nmodes_out > 0
             particle_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
             energy_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
