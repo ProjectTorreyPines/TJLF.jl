@@ -121,3 +121,9 @@ Currently, InputTJLF's IFLUX parameter tells the code whether it is going to cal
 For more details, see the [online documentation](https://projecttorreypines.github.io/TJLF.jl/dev).
 
 ![Docs](https://github.com/ProjectTorreyPines/TJLF.jl/actions/workflows/make_docs.yml/badge.svg)
+
+## Citation
+
+If this software contributes to an academic publication, please cite it as follows:
+
+> T.F. Neiser, D. Sun, B. Agnew, T. Slendebroek, O. Meneghini, B.C. Lyons, A. Ghiozzi, J. McClenaghan, G. Staebler and J. Candy, _TJLF: The quasi-linear model of gyrokinetic transport TGLF translated to Julia_, APS Meeting Abstracts (2024)
