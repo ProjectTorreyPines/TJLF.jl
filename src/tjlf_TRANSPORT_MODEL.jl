@@ -145,7 +145,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         # println("this is XII")
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-        ft_test,field_weight_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
+        ft_test,field_weight_out, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
 
         if(inputs.USE_INBOARD_DETRAPPED && inputs.IBRANCH==-1) # check for inward ballooning modes
             b_geo = satParams.B_geo
@@ -160,7 +160,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 # println("this is XIII")
                 nmodes_out, gamma_out, freq_out,
                 particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-                _,field_weight_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                _,field_weight_out, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
             end
         end
     end
@@ -267,7 +267,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
     # calculate the eigenvalues with no shear
     nbasis = inputs.NBASIS_MAX
     nmodes_out, gamma_out, freq_out,
-    _,_,_,_,_,ft_test,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
+    _,_,_,_,_,ft_test,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
 
     if(inputs.IBRANCH==-1) # check for inward ballooning modes
         if(inputs.USE_INBOARD_DETRAPPED) ####### find ft_test and modB_test
@@ -283,7 +283,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
                     @warn "NOT TESTED max.jl ln 302"
                     # println("this is XIII")
                     nmodes_out, gamma_out, freq_out,
-                    _,_,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                    _,_,_,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
                 end
             end
         end
@@ -352,7 +352,7 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
 
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-        _,field_weight_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
+        _,field_weight_out, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
                             kx0_e, gamma_reference_kx0, freq_reference_kx0)
 
         gamma_nb_min_out = gamma_out[1]

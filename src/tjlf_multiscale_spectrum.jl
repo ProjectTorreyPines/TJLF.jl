@@ -814,7 +814,10 @@ function sum_ky_spectrum(
         flux_spectrum[:,:,:,:,4] = QL_weights[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
         flux_spectrum[:,:,:,:,5] = QL_weights[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
     elseif sat_rule_in == 0
-        flux_spectrum .= QL_weights
+        nmodes_out, gamma_out, freq_out,particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
+        _,field_weight_out, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+
+        flux_spectrum .= (QL_weights*phi_bar_out)
     else
         throw(error("sat_rule_in must be 0,1,2,or 3, not $sat_rule_in"))
     end

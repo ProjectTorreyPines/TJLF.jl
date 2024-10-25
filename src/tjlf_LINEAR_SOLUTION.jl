@@ -348,25 +348,29 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         end
         modB_min = abs(minimum(satParams.B_geo))
         ft_test = ft_test / modB_min
-
+        
+  
         reduce = 1.0
         if false # && inputs.SAT_RULE==0 && inputs.NBASIS_MAX!=inputs.NBASIS_MIN && gamma_nb_min_out<gamma_out[1] && gamma_nb_min_out<gamma_cutoff
             error("This is in the Fortran, but gamma_nb_min_out should always equal gamma_out[1] so the condition should never be true")
         end
         phi_bar_out .*= reduce # this does nothing for the reason above ^^^
-        if inputs.SAT_RULE==0 && nmodes_out > 0
-            particle_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-            energy_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-            stress_tor_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-            stress_par_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-            exchange_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-        end
-
+        # The multiplication changes these from weights to fluxxes and then differ from the Fortran.  To print the same weights as Fortran, the multiplication 
+        # is done later in the tjlf_multiscale_spectrum.jl file under the function sum_ky_spectrum.
+        
+        # if inputs.SAT_RULE==0 && nmodes_out > 0
+        #     particle_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        #     energy_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        #     stress_tor_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        #     stress_par_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        #     exchange_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        # end
+        phi_bar_output= reshape(phi_bar_out,(1,1,nmodes_out))
         return nmodes_out, gamma_out, freq_out,
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
-        ft_test, field_weight_out
+        ft_test, field_weight_out, phi_bar_output
     end
-
+    phi_bar_output= reshape(phi_bar_out,(1,1,nmodes_out))
     particle_QL_out = fill(NaN, (3, ns, nmodes_in))
     energy_QL_out = fill(NaN, (3, ns, nmodes_in))
     stress_par_QL_out = fill(NaN, (3, ns, nmodes_in))
@@ -376,7 +380,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     return nmodes_out, gamma_out, freq_out,
     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
-    NaN, field_weight_out
+    NaN, field_weight_out, phi_bar_output
     # return  gamma_out,
     #         freq_out,
     #         v_QL_out,
