@@ -163,7 +163,7 @@ function checkInput(inputTJLF::InputTJLF)
         end
         if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:EIGEN_SPECTRUM
             for val in field_value
-                @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name = $val"
+                @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name = $field_value"
             end
         end
     end
@@ -174,23 +174,6 @@ end
 
 function checkInput(inputTJLFVector::Vector{InputTJLF})
     for inputTJLF in inputTJLFVector
-        field_names = fieldnames(InputTJLF)
-        for field_name in field_names
-            field_value = getfield(inputTJLF, field_name)
-            if typeof(field_value)<:Missing
-                @assert !ismissing(field_value) "Did not properly populate inputTJLF for $field_name = $field_value"
-            end
-            if typeof(field_value)<:Real
-                @assert !isnan(field_value) "Did not properly populate inputTJLF for $field_name = $field_value"
-            end
-            if typeof(field_value)<:Vector && field_name!=:KY_SPECTRUM && field_name!=:EIGEN_SPECTRUM
-                for val in field_value
-                    @assert !isnan(val) "Did not properly populate inputTJLF for array $field_name = $val"
-                end
-            end
-        end
-        if !inputTJLF.FIND_EIGEN
-            @assert !inputTJLF.FIND_WIDTH "If FIND_EIGEN false, FIND_WIDTH should also be false"
-        end
+        checkInput(inputTJLF)
     end
 end
