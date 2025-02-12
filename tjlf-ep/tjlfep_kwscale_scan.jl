@@ -1,4 +1,4 @@
-function kwscale_scan(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64}, printout::Bool = true)
+function kwscale_scan(inputsEP::Options{Float64}, inputsPR::profile{Float64}, printout::Bool = true)
     # These are for testing purposes:
     #baseDirectory = "/Users/benagnew/TJLF.jl/outputs/tglfep_tests/input.MTGLF"
     #inputsPR = readMTGLF(baseDirectory)

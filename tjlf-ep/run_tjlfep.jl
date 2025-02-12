@@ -25,14 +25,12 @@ iEPexist::Bool = false
 iMPexist::Bool = false
 iEXPexist::Bool = false
 
-println(homedir)
+
 
 iEPexist = isfile(tglfepfilepath)
 iMPexist = isfile(mtglffilepath)
 iEXPexist = isfile(exprofilepath)
 
-println(iEPexist)
-println(tglfepfilepath)
 
 @assert iEPexist != false "Requested TGLFEP input file path does not exist"
 @assert iMPexist != false "Requested MTGLF input file path does not exist"
@@ -48,13 +46,15 @@ inputEXPfile = exprofilepath
 # Set up profile struct:
 prof = TJLFEP.readMTGLF(inputMPfile)
 inputMTGLF = prof[1]
+# println("this is input mtglf",inputMTGLF)
 ir_exp = prof[2]
-
+# println("this is ir_exp",prof[2])
 # Set up TGLFEP struct:
 inputTGLFEP = TJLFEP.readTGLFEP(inputEPfile, ir_exp)
 
 # Set up EXPRO constants:
 ni, Ti, dlnnidr, dlntidr, cs, rmin_ex, gammaE, gammap, omegaGAM = TJLFEP.readEXPRO(inputEXPfile, inputTGLFEP.IS_EP)
+
 # inputMTGLF.gammaE = gammaE
 # inputMTGLF.gamm_p = gammap
 # inputMTGLF.omegaGAM = omegaGAM
@@ -65,20 +65,21 @@ if (inputTGLFEP.INPUT_PROFILE_METHOD == 2)
         dpdr_EP[i] = ni[i]*Ti[i]*(dlnnidr[i]+dlntidr[i])# This has some small changes from old main
     end
     #println(inputTGLFEP.FACTOR)
+    println("ir_exp ",ir_exp)
     dpdr_EP_abs = abs.(dpdr_EP)
     dpdr_EP_max = maximum(dpdr_EP_abs)
     dpdr_EP_max_loc = argmax(dpdr_EP_abs)
     n_at_max = ni[dpdr_EP_max_loc]
     if (inputTGLFEP.PROCESS_IN != 5)
         for ir = 1:inputTGLFEP.SCAN_N
-            #println(inputTGLFEP.SCAN_N)
-            inputTGLFEP.FACTOR = inputTGLFEP.FACTOR*dpdr_EP_max/dpdr_EP_abs[ir_exp[ir]]
-            #println(inputTGLFEP.FACTOR)
+            inputTGLFEP.FACTOR = inputTGLFEP.FACTOR*dpdr_EP_max/dpdr_EP_abs[ir_exp[ir]] 
+            println("dpdr_EP_abs[ir_exp[ir]]", dpdr_EP_abs[ir_exp[ir]])  
+            println("inputTGLFEP.FACTOR ",inputTGLFEP.FACTOR)
         end
     end
     inputTGLFEP.FACTOR_MAX_PROFILE .= inputTGLFEP.FACTOR
 end
-#end
+
 
 inputTGLFEP.F_REAL .= 1.0
 if (inputTGLFEP.REAL_FREQ == 1) 
@@ -139,11 +140,8 @@ for i in 1:n_ir
         arrTGLFEP[i].IR = arrTGLFEP[i].IR_EXP[i]
         #println(arrTGLFEP[i].IR)
         ir = arrTGLFEP[i].IR
-        str_r = string(Char(round(Int,ir/100) + UInt32('0'))) * 
-        string(Char(round(Int,mod(ir, 100)/10) + UInt32('0'))) * 
-        string(Char(mod(ir, 10) + UInt32('0')))
+        str_r = lpad(string(ir), 3, '0')
         arrTGLFEP[i].SUFFIX = "_r"*str_r
-        #println(arrTGLFEP[i].SUFFIX)
         arrTGLFEP[i].FACTOR_IN = arrTGLFEP[i].FACTOR[i]
         input1 = arrTGLFEP[i]
         input2 = arrMTGLF[i]
@@ -214,7 +212,7 @@ end
 
 # Print out basic information about the run (that is common to all radii):
 inputTGLFEP = arrTGLFEP[1]
-if (printout)
+if (false)#printout
     io2 = open("out.TGLFEP", "w")
     println(io2, "process_in = ", inputTGLFEP.PROCESS_IN)
 
@@ -308,7 +306,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             #println(io3, SFmin) # after buf_factor, before comp.out
             
         end=#
-        if (printout)
+        if (false)#printout
             println("After MPI.Recv! for factor_in")
             println(io3, "--------------------------------------------------------------")
             println(io3, "SFmin")
@@ -319,7 +317,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
 
         SFmin, SFmin_out, ir_min, ir_max, l_accept_profile = tjlfep_complete_output(SFmin, inputTGLFEP, inputMTGLF)
         
-        if (printout)
+        if (false)#printout
             println(io3, SFmin, " SFmin after buf and coutput") # after comp.out
         end
         #println(io3, inputTGLFEP.FACTOR_MAX_PROFILE)
@@ -367,11 +365,11 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             SFmin_out[ir_max+1:inputTGLFEP.IRS+inputTGLFEP.SCAN_N-1] = inputTGLFEP.FACTOR_MAX_PROFILE[ir_max-inputTGLFEP.IRS+2:inputTGLFEP.SCAN_N]
         end
 
-        if (printout)
+        if (false)#output
             println(io3, SFmin, " SFmin after Max assign")
         end
 
-        if (printout)
+        if (false)#output
             for i = 1:inputTGLFEP.SCAN_N
                 if (l_accept_profile[i])
                     println(io3, SFmin[i])
@@ -401,7 +399,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             # Interpolate and accept are reject needed values of this profile:
             dndr_crit, dndr_crit_out, ir_dum_1, ir_dum_2, l_accept_profile = tjlfep_complete_output(dndr_crit, inputTGLFEP, inputMTGLF)
             
-            if (printout)
+            if (false)#output
                 io4 = open("alpha_dndr_crit.input", "w")
                 println(io4, "Density critical gradient (10^19/m^4)")
                 println(io4, dndr_crit_out)
@@ -428,7 +426,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             end # over scan_n
             dpdr_crit, dpdr_crit_out, ir_dum_1, ir_dum_2, l_accept_profile = tjlfep_complete_output(dpdr_crit, inputTGLFEP, inputMTGLF)
             
-            if (printout)
+            if (false)#output
                 io5 = open("alpha_dpdr_crit.input", "w")
                 println(io5, "Pressure critical gradient (10 kPa/m)")
                 println(io5, dpdr_crit_out)
@@ -436,7 +434,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             end
         end # end prof. method 2
 
-        if (printout)
+        if (false)#output
             println(io3, "--------------------------------------------------------------")
             println(io3, "The EP density threshold n_EP/n_e (%) for gamma_AE = 0")
             for i = 1:inputTGLFEP.SCAN_N
@@ -444,7 +442,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             end
         end
         
-        if (printout)
+        if (false)#output
             println(io3, "--------------------------------------------------------------")
             println(io3, "The EP beta crit (%) = beta_e*(n_EP_th/n_e)*(T_EP/T_e)")
             for i = 1:inputTGLFEP.SCAN_N

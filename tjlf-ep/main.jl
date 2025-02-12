@@ -1,17 +1,16 @@
 using Revise
-
 using Pkg
 # Pkg.add("Revise")
 # using Revise
 # Pkg.add("Plots")
 # Pkg.add("StaticArrays")
+using Plots
 Pkg.activate("..")
-
 include("TJLFEP.jl")
+include("../src/TJLF.jl")
 using .TJLFEP
 using .TJLFEP: convert_input
 using .TJLFEP: revert_input
-include("../src/TJLF.jl")
 using .TJLF
 using Base.Threads
 using LinearAlgebra
@@ -24,8 +23,9 @@ begin
     mtglffilepath = homedirectory*"/../outputs/tjlfeptests/isEP3v6/input.MTGLF"
     exprofilepath = homedirectory*"/../outputs/tjlfeptests/isEP3v6/input.EXPRO"
 
-    # This now works after a brief debugging:
-    runTHD(tglfepfilepath, mtglffilepath, exprofilepath, printout = true)
+    # tjlf_ep_input = TJLF_EP_Input(dd)    
+
+    runTHD(tglfepfilepath, mtglffilepath, exprofilepath, printout = false)
 end
 # I will now run runTHDs on two examples:
 #=

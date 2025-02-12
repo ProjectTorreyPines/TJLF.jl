@@ -109,9 +109,9 @@ function readMTGLF(filename::String)
     return inputMTGLF, irexp
 end
 """
-readProfile is meant for the input.profile method of insertion
+readprofile is meant for the input.profile method of insertion
 """
-function readProfile(filename::String)
+function readprofile(filename::String)
 
 end
 
@@ -120,7 +120,7 @@ readTGLFEP extracts the values needed from the input.TGLFEP file
 
 Inputs: filename
 
-Outputs: InputTJLFEP struct
+Outputs: Options struct
 """
 function readTGLFEP(filename::String, ir_exp::Vector{Int64})
     open(filename)
@@ -168,15 +168,15 @@ function readTGLFEP(filename::String, ir_exp::Vector{Int64})
 
     # Now, nscan_in, widthin are assigned and ready.
 
-    # Assign nn:
-    if ((process_in == 4) || (process_in == 5))
-        if (threshold_flag == 0)
-            nn = 5
-        else
-            nn = 15
-        end
+#=  # Assign nn:
+if ((process_in == 4) || (process_in == 5))
+    if (threshold_flag == 0)
+        nn = 5
+    else
+        nn = 15
     end
-
+end
+=#
     # See TGLFEP_interface.f90:
     jtscale_max = 1
     nmodes = 4
@@ -184,8 +184,10 @@ function readTGLFEP(filename::String, ir_exp::Vector{Int64})
     # NR is derived from the profile! This means that in order to read TJLFEP in Julia, we have to call the previous inputMTGLF
     # function call's NR. It will now be a required input for this function. 
     nr = 201
-
-    inputTJLFEP = InputTJLFEP{Float64}(nscan_in, widthin, nn, nr, jtscale_max, nmodes)
+    nn = 5
+    inputTJLFEP = InputTJLFEPoption{Float64}(nscan_in, widthin, nn, nr, jtscale_max, nmodes)
+    # println("inputTJLFEP.IR_EXP = ",inputTJLFEP.IR_EXP)
+    # println("ir_exp", ir_exp)
     inputTJLFEP.IR_EXP = ir_exp
     inputTJLFEP.NMODES = nmodes
    
@@ -265,8 +267,11 @@ Outputs: InputTJLF struct ready for usage in running TJLF.
 #include("../tjlf-ep/TJLFEP.jl")
 #using .TJLFEP
 
-function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
-    #=
+function TJLF_map(inputsEP::InputTJLFEPoption{Float64}, inputsPR::profile{Float64})
+    # Access the fields like this:
+    # inputsOptions = inputsEP.Options
+    # profile = inputsEP.profile   
+     #=
     # Temp Defs:
     color = 0
     kyhat_in = 3
@@ -342,26 +347,25 @@ function TJLF_map(inputsEP::InputTJLFEP{Float64}, inputsPR::profile{Float64})
         end
     end
     if (inputsEP.IR == 2 && false)
-        println("======")
-        println(inputsPR.A_QN)
-        println(inputTJLF.ZS)
+        # println("======")
+        # println(inputsPR.A_QN)
+        # println(inputTJLF.ZS)
     end
     inputsPR.A_QN = (1.0 - inputTJLF.ZS[is]*inputTJLF.AS[is]) / sum0
 
     if (inputsEP.IR == 2 && false)
-        println(sum0)
-        println(inputsPR.A_QN)
-        println(inputTJLF.AS)
-        println("======")
+        # println(sum0)
+        # println(inputsPR.A_QN)
+        # println(inputTJLF.AS)
+        # println("======")
     end
     for i = 2:ns
         if (i != is)
             inputTJLF.AS[i] = inputsPR.A_QN*inputTJLF.AS[i]
         end
     end
-    if (inputsEP.IR == 2 && false)
-        println(inputTJLF.AS)
-    end
+    # if (inputsEP.IR == 2 && false)
+    #     println(inputTJLF.AS)
     
     #println("is, FACTOR_MAX, FACTOR_IN, sum0, AS:")
     #println(is, " ", inputsEP.FACTOR_MAX, " ", inputsEP.FACTOR_IN, " ", sum0, " ", inputTJLF.AS)
@@ -547,7 +551,7 @@ function readEXPRO(filename::String, is_EP::Int64)
         for i in eachindex(line)
             line[i] = strip(line[i])
         end
-        #println(line)
+
         exproname = line[2]
         if (length(line) == 4)
             isEPname = line[3]
@@ -600,11 +604,11 @@ function readEXPRO(filename::String, is_EP::Int64)
             omegaGAM[index] = parse(Float64, String(val))
         end
     end
-    println("gammaE", gammaE)
-    println("gammap", gammap)
-    println("omegaGAM", omegaGAM)
-    println("cs", cs)
-    println("rmin", rmin_ex)
+    # println("gammaE", gammaE)
+    # println("gammap", gammap)
+    # println("omegaGAM", omegaGAM)
+    # println("cs", cs)
+    # println("rmin", rmin_ex)
     # Diverge 4 is_EP values for each quatnity:
 
     if (is_EP == 1)

@@ -1,3 +1,4 @@
+
 mutable struct InputTJLF{T<:Real}
 
     UNITS::Union{String,Missing}
@@ -132,7 +133,7 @@ mutable struct InputTJLF{T<:Real}
 
 end
 
-mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortran, essentially. It reads the TGLFEP file
+mutable struct Options{T<:Real} # This acts as the interface module of Fortran, essentially. It reads the TGLFEP file
 
     PROCESS_IN::Union{Int, Missing} # May need to be a MODE_IN::Union{T, Missing} for PROCESS_IN <= 1
     THRESHOLD_FLAG::Union{Int, Missing}
@@ -224,7 +225,7 @@ mutable struct InputTJLFEP{T<:Real} # This acts as the interface module of Fortr
     # There is a bit of confusion on if the same goes for the FACTOR_IN_PROFILE. 
 
     # There are few things that depend on the profile reading: nr
-    function InputTJLFEP{T}(nscan_in::Int, widthin::Bool, nn::Int, nr::Int, jtscale_max::Int, nmodes::Int) where {T<:Real}
+    function Options{T}(nscan_in::Int, widthin::Bool, nn::Int, nr::Int, jtscale_max::Int, nmodes::Int) where {T<:Real}
         if(widthin)
             new(missing, missing, missing, missing, missing, missing, missing, missing, missing, missing,
             NaN, NaN, NaN, missing, missing, nscan_in, missing, missing, NaN, widthin, NaN,
@@ -257,7 +258,7 @@ mutable struct profile{T<:Real}
 
     NR::Union{Int, Missing} #
     NS::Union{Int, Missing} #
-    GEOMETRY_FLAG::Union{Int, Missing} #5
+    GEOMETRY_FLAG::Union{Int, Missing} #5   Constant 1 for TJLFEPnotanything else.
     ROTATION_FLAG::Union{Int, Missing} #
 
     ZS::Union{Vector{T}, Missing} #
@@ -300,16 +301,81 @@ mutable struct profile{T<:Real}
     A_QN::Union{T, Missing} # quasineutrality scale factor for non-EP species
     N_ION::Union{Int, Missing} #40
 
+    DENS_1::Union{Vector{T},Missing} 
+    TEMP_1::Union{Vector{T},Missing}
+    DLNNDR_1::Union{Vector{T},Missing} 
+    DLNTDR_1::Union{Vector{T},Missing} #44
+
+    DENS_2::Union{Vector{T},Missing} 
+    TEMP_2::Union{Vector{T},Missing} 
+    DLNNDR_2::Union{Vector{T},Missing} 
+    DLNTDR_2::Union{Vector{T},Missing} #48
+
+    DENS_3::Union{Vector{T},Missing} 
+    TEMP_3::Union{Vector{T},Missing}
+    DLNNDR_3::Union{Vector{T},Missing}
+    DLNTDR_3::Union{Vector{T},Missing}  #52
+
+    DENS_4::Union{Vector{T},Missing} 
+    TEMP_4::Union{Vector{T},Missing} 
+    DLNNDR_4::Union{Vector{T},Missing} 
+    DLNTDR_4::Union{Vector{T},Missing}  #56
+
+    DENS_5::Union{Vector{T},Missing} 
+    TEMP_5::Union{Vector{T},Missing} 
+    DLNNDR_5::Union{Vector{T},Missing} 
+    DLNTDR_5::Union{Vector{T},Missing}  # 60
+
+    DENS_6::Union{Vector{T},Missing} 
+    TEMP_6::Union{Vector{T},Missing} 
+    DLNNDR_6::Union{Vector{T},Missing} 
+    DLNTDR_6::Union{Vector{T},Missing}  #64
+
+    DENS_7::Union{Vector{T},Missing} 
+    TEMP_7::Union{Vector{T},Missing} 
+    DLNNDR_7::Union{Vector{T},Missing} 
+    DLNTDR_7::Union{Vector{T},Missing}  #68
+
+    DENS_8::Union{Vector{T},Missing} 
+    TEMP_8::Union{Vector{T},Missing} 
+    DLNNDR_8::Union{Vector{T},Missing} 
+    DLNTDR_8::Union{Vector{T},Missing}  #72
+
+    DENS_9::Union{Vector{T},Missing} 
+    TEMP_9::Union{Vector{T},Missing} 
+    DLNNDR_9::Union{Vector{T},Missing} 
+    DLNTDR_9::Union{Vector{T},Missing}  #76
+
+    DENS_10::Union{Vector{T},Missing} 
+    TEMP_10::Union{Vector{T},Missing} 
+    DLNNDR_10::Union{Vector{T},Missing} 
+    DLNTDR_10::Union{Vector{T},Missing}  #80
+
+    CS::Union{Vector{T},Missing}  #81
+
     # As of right now, I don't believe there needs to be parameters, but the vectors
     # are probably the most of concern there. 
     function profile{T}(nr::Int, ns::Int) where (T<:Real)
-        new(NaN, NaN, missing, missing, missing, missing, fill(NaN, ns), fill(NaN, ns),
+        new(NaN, NaN, missing, missing, 1, missing, fill(NaN, ns), fill(NaN, ns),
         fill(NaN, (nr, ns)), fill(NaN, (nr, ns)), fill(NaN, (nr, ns)), fill(NaN, (nr, ns)), 
         fill(NaN, (nr, ns)), fill(NaN, (nr, ns)), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), 
         fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), 
         fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), 
         fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(NaN, nr), fill(1.0E-7, nr), fill(NaN, nr), 
-        fill(NaN, nr), missing, missing, NaN, missing)
+        fill(NaN, nr), missing, missing, NaN, missing, fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)),
+        fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)),
+        fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)),
+        fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)),
+        fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)),
+        fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)),
+        fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)), fill(NaN,(ns)),
+        fill(NaN,(ns)), fill(NaN,(nr)))
     end
+end
+
+mutable struct InputTJLFEP{T<:Real}
+    InputTJLF::InputTJLF
+    Options::Options
+    profile::profile
 end
 
