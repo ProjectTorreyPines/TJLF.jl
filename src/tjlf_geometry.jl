@@ -536,15 +536,10 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
     r_curv = zeros(T,ms+1)
     sin_u = zeros(T,ms+1)
     for m in 1:ms + 1
-        m1 = ((ms + m - 2) % (ms+1)) + 1
-        m2 = ((ms + m - 1) % (ms+1)) + 1
-        m3 = (m % (ms+1)) + 1
-        m4 = ((m + 1) % (ms+1)) + 1
-        ### had to do this weird short-circuiting bc of weird indexing
-        m1 < ms || (m1 = ((ms + m - 3) % (ms+1)) + 1) 
-        m2 < ms+1 || (m2 = ((ms + m - 2) % (ms+1)) + 1)
-        m3 > 1 || (m3 = ((m + 1) % (ms+1)) + 1)
-        m4 > 2 || (m4 = ((m + 2) % (ms+1)) + 1)
+        m1 = ((ms + m - 2) % ms) + 1
+        m2 = ((ms + m - 1) % ms) + 1
+        m3 = ((m + 1) % ms) + 1
+        m4 = ((m + 2) % ms) + 1
 
         R_s = (R[m1] - 8.0*R[m2] + 8.0*R[m3] - R[m4])/delta_s
         Z_s = (Z[m1] - 8.0*Z[m2] + 8.0*Z[m3] - Z[m4])/delta_s
@@ -670,16 +665,10 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
     #*************************************************************
     sintheta_geo = zeros(T, ms+1)
     for m = 1:ms+1
-
-        m1 = ((ms + m - 2) % (ms+1)) + 1
-        m2 = ((ms + m - 1) % (ms+1)) + 1
-        m3 = (m % (ms+1)) + 1
-        m4 = ((m + 1) % (ms+1)) + 1
-        ### had to do this weird short-circuiting bc of weird indexing
-        m1 < ms || (m1 = ((ms + m - 3) % (ms+1)) + 1)
-        m2 < ms+1 || (m2 = ((ms + m - 2) % (ms+1)) + 1)
-        m3 > 1 || (m3 = ((m + 1) % (ms+1)) + 1)
-        m4 > 2 || (m4 = ((m + 2) % (ms+1)) + 1)
+        m1 = ((ms + m - 2) % ms) + 1
+        m2 = ((ms + m - 1) % ms) + 1
+        m3 = ((m + 1) % ms) + 1
+        m4 = ((m + 2) % ms) + 1
 
         sintheta_geo[m] = -rmaj_s*(f/(R[m]*B[m]^2)) * (B[m1]-8*B[m2]+8*B[m3]-B[m4])/(delta_s*s_p[m])
 
@@ -1026,10 +1015,9 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
         # changes q_s to q_loc
         Bp[m] = (rmin_loc/(q_loc*R[m]))*grad_r*B_unit
-        p_prime_s = p_prime_s * B_unit
-        q_prime_s = q_prime_s / B_unit
-
     end
+    p_prime_s = p_prime_s * B_unit
+    q_prime_s = q_prime_s / B_unit
     B_unit_out .= B_unit
 
     return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, ds, t_s

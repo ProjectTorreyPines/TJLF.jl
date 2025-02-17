@@ -636,7 +636,7 @@ function wd_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T}) w
 
     for is = ns0:ns
 
-        mult2!(aveWH.wdhp1p0, ave.wdh, aveH.hr11p0, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhp1p0, ave.wdh, aveH.hp1p0, Ctmp, Btmp, is)
         mult2!(aveWH.wdhr11p0, ave.wdh, aveH.hr11p0, Ctmp, Btmp, is)
         mult2!(aveWH.wdhr13p0, ave.wdh, aveH.hr13p0, Ctmp, Btmp, is)
         mult2!(aveWH.wdht1, ave.wdh, aveH.ht1, Ctmp, Btmp, is)
