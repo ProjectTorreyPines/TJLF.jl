@@ -898,9 +898,6 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
         # in cgyro, this is "a":
         arg_r = get_argR(theta, sh_cos, sh_sin)
         darg_r = get_dargR(theta, sh_cos, sh_sin)
-        # in cgyro, this is "a_tt": this is irrelevant for TJLF (?)
-
-	ddarg_r = get_ddargR(theta, sh_cos, sh_sin)
 
         R[m] = rmaj_loc + rmin_loc*cos(arg_r) # R(theta)
         Z[m] = zmaj_loc + kappa_loc*rmin_loc*sin(arg_z) # Z(theta)
@@ -997,30 +994,4 @@ function get_dargR(theta::Float64, sh_cos::Vector{Float64}, sh_sin::Vector{Float
         darg_r = darg_r - jmom*sh_cos[jmom+1]*sin(jmom*theta) + jmom*sh_sin[jmom+1]*cos(jmom*theta)
     end
     return darg_r
-end
-
-"""
-get_ddargR(theta::Float64, sh_cos::Vector{Float64}, sh_sin::Vector{Float64})
-
-parameters:
-    theta::Float64            - angle grid
-    sh_cos::Vector{Float64}   - cos moments
-    sh_sin::Vector{Float64}   - sin moments
-
-outputs:
-    arg_r
-
-description:
-    Computing moments expansion
-
-location:
-    tjlf_geometry.jl
-"""
-function get_ddargR(theta::Float64, sh_cos::Vector{Float64}, sh_sin::Vector{Float64})
-    nmom=length(sh_cos)
-    ddarg_r=0.
-    for jmom=1:nmom-1
-        ddarg_r  = ddarg_r - jmom^2*sh_cos[jmom+1]*cos(jmom*theta) - jmom^2*sh_sin[jmom+1]*sin(jmom*theta)
-    end
-    return ddarg_r
 end
