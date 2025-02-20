@@ -185,7 +185,7 @@ end
     # function call's NR. It will now be a required input for this function. 
     nr = 201
     nn = 5
-    inputTJLFEP = InputTJLFEPoption{Float64}(nscan_in, widthin, nn, nr, jtscale_max, nmodes)
+    inputTJLFEP = Options{Float64}(nscan_in, widthin, nn, nr, jtscale_max, nmodes)
     # println("inputTJLFEP.IR_EXP = ",inputTJLFEP.IR_EXP)
     # println("ir_exp", ir_exp)
     inputTJLFEP.IR_EXP = ir_exp
@@ -267,7 +267,7 @@ Outputs: InputTJLF struct ready for usage in running TJLF.
 #include("../tjlf-ep/TJLFEP.jl")
 #using .TJLFEP
 
-function TJLF_map(inputsEP::InputTJLFEPoption{Float64}, inputsPR::profile{Float64})
+function TJLF_map(inputsEP::Options{Float64}, inputsPR::profile{Float64})
     # Access the fields like this:
     # inputsOptions = inputsEP.Options
     # profile = inputsEP.profile   

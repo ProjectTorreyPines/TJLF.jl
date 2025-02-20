@@ -1,4 +1,4 @@
-function mainsub(inputsEP::InputTJLFEP, inputsPR::profile, printout::Bool = true)
+function mainsub(inputsEP::Options, inputsPR::profile, printout::Bool = true)
     x = inputsEP.PROCESS_IN
     if (x == 1)
         msg = "No"

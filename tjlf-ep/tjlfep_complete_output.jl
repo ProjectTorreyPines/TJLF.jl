@@ -10,6 +10,7 @@ profile_in takes a vector of total ir values and outputs a 201 long vector with 
 """
 function tjlfep_complete_output(profile_in::Vector{T}, inputsEP::Options{Float64}, inputsPR::profile{Float64}) where (T<:Real)
 
+    
     # Default accept all scans and allocate profile_out and ir_out:
     l_accept_profile = fill(true, inputsEP.SCAN_N)
     profile_out = fill(0.0, inputsPR.NR)

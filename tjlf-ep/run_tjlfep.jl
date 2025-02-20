@@ -399,7 +399,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             # Interpolate and accept are reject needed values of this profile:
             dndr_crit, dndr_crit_out, ir_dum_1, ir_dum_2, l_accept_profile = tjlfep_complete_output(dndr_crit, inputTGLFEP, inputMTGLF)
             
-            if (false)#output
+            if (true)#output
                 io4 = open("alpha_dndr_crit.input", "w")
                 println(io4, "Density critical gradient (10^19/m^4)")
                 println(io4, dndr_crit_out)
@@ -426,7 +426,7 @@ if ((inputTGLFEP.PROCESS_IN == 4) || (inputTGLFEP.PROCESS_IN == 5))
             end # over scan_n
             dpdr_crit, dpdr_crit_out, ir_dum_1, ir_dum_2, l_accept_profile = tjlfep_complete_output(dpdr_crit, inputTGLFEP, inputMTGLF)
             
-            if (false)#output
+            if (true)#output
                 io5 = open("alpha_dpdr_crit.input", "w")
                 println(io5, "Pressure critical gradient (10 kPa/m)")
                 println(io5, dpdr_crit_out)
