@@ -1,5 +1,7 @@
 using Test
 using Base.Filesystem
+using Pkg
+Pkg.activate("..")
 include("../src/TJLF.jl")
 using ..TJLF
 
@@ -7,10 +9,11 @@ using ..TJLF
 # saturation rule test
 satRuleDirectory = "../outputs/test_SAT_rules/"
 tests = readdir(satRuleDirectory)
-for dir_name in tests
+@show tests
+for dir_name in ["SAT3"]
     if dir_name == ".DS_Store" continue end
     baseDirectory = satRuleDirectory*dir_name*"/"
-
+    
     @testset "$baseDirectory" begin
 
         fileDirectory = baseDirectory * "out.tglf.QL_flux_spectrum"

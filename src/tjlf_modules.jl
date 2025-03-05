@@ -225,7 +225,7 @@ mutable struct InputTJLF{T<:Real}
     KY_SPECTRUM::Union{Vector{T},Missing}
     EIGEN_SPECTRUM::Union{Vector{ComplexF64},Missing}
     FIND_EIGEN::Union{Bool,Missing}
-    # NOT IN TGLF
+     # NOT IN TGLF
 
     SIGN_BT::Union{Int,Missing}
     SIGN_IT::Union{Int,Missing}

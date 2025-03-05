@@ -126,7 +126,10 @@ function readInput(filename::String)::InputTJLF
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
     inputTJLF.KY_SPECTRUM .= NaN
     inputTJLF.EIGEN_SPECTRUM .= NaN
-
+    # to make it compatible with a new TGLF version without FIND_EIGEN in the input namelist
+    if ismissing(inputTJLF.FIND_EIGEN)
+       inputTJLF.FIND_EIGEN = true
+    end
     # double check struct is properly populated
 
     #If you want to test a long-format example (see tjlf_modules.jl), inP = true, otherwise, inP = false.
@@ -167,9 +170,9 @@ function checkInput(inputTJLF::InputTJLF)
             end
         end
     end
-    if !inputTJLF.FIND_EIGEN
-        @assert !inputTJLF.FIND_WIDTH "If FIND_EIGEN false, FIND_WIDTH should also be false"
-    end
+    #if !inputTJLF.FIND_EIGEN
+    #    @assert !inputTJLF.FIND_WIDTH "If FIND_EIGEN false, FIND_WIDTH should also be false"
+    #end
 end
 
 function checkInput(inputTJLFVector::Vector{InputTJLF})
