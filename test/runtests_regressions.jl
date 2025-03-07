@@ -1,5 +1,7 @@
 using Test
 using Base.Filesystem
+using Pkg
+Pkg.activate("..")
 include("../src/TJLF.jl")
 using ..TJLF
 

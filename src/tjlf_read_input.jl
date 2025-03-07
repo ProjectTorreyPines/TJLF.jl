@@ -127,6 +127,11 @@ function readInput(filename::String)::InputTJLF
     inputTJLF.KY_SPECTRUM .= NaN
     inputTJLF.EIGEN_SPECTRUM .= NaN
 
+    if ismissing(inputTJLF.FIND_EIGEN)
+       inputTJLF.FIND_EIGEN = true
+    end
+
+
     # double check struct is properly populated
 
     #If you want to test a long-format example (see tjlf_modules.jl), inP = true, otherwise, inP = false.

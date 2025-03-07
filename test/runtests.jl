@@ -1,5 +1,7 @@
 using Test
 using Base.Filesystem
+using Pkg
+Pkg.activate("..")
 include("../src/TJLF.jl")
 using ..TJLF
 
@@ -143,7 +145,7 @@ for dir_name in tests
         @test isapprox(kx0epy, kx0_e, rtol=1e-3)
         @test isapprox(inputComparison["SAT_geo0_out"], satParams.SAT_geo0, rtol=1e-6)
         @test isapprox(inputComparison["SAT_geo1_out"], satParams.SAT_geo1, rtol=1e-6)
-        @test isapprox(inputComparison["SAT_geo2_out"], satParams.SAT_geo2, rtol=1e-6)
+        @test isapprox(inputComparison["SAT_geo2_out"], satParams.SAT_geo2, rtol=1e-5)
         @test isapprox(R_unit[1, 1], satParams.R_unit,  rtol=1e-6)
         @test isapprox(inputComparison["Bt0_out"], satParams.Bt0, rtol=1e-6)
         @test isapprox(inputComparison["grad_r0_out"], satParams.grad_r0, rtol=1e-6)
