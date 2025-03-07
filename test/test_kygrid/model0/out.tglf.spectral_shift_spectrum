@@ -1,0 +1,17 @@
+ kx spectral shift model is used when ALPHA_QUENCH=0 and ALPHA_E=1.0
+ note: the model for the spectral shift (kx_e) = <phi|kx/ky|phi>/<phi|phi>
+ depends on which staturation model is being used: SAT_RULE and UNITS settings
+ index limits: nky
+          12
+ -0.979844095475846     
+ -0.603164792047046     
+ -0.454121539649202     
+ -0.371291482027534     
+ -0.317598159412677     
+ -0.279544598259353     
+ -0.250950665600652     
+ -0.228556716910377     
+ -0.210468556911812     
+ -0.195504599824773     
+ -0.182886690193643     
+ -0.172079885213876     

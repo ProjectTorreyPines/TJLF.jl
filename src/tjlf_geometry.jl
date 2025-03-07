@@ -1026,10 +1026,9 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
         # changes q_s to q_loc
         Bp[m] = (rmin_loc/(q_loc*R[m]))*grad_r*B_unit
-        p_prime_s = p_prime_s * B_unit
-        q_prime_s = q_prime_s / B_unit
-
     end
+    p_prime_s = p_prime_s * B_unit
+    q_prime_s = q_prime_s / B_unit
     B_unit_out .= B_unit
 
     return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, ds, t_s
