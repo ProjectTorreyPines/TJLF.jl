@@ -636,7 +636,7 @@ function wd_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T}) w
 
     for is = ns0:ns
 
-        mult2!(aveWH.wdhp1p0, ave.wdh, aveH.hr11p0, Ctmp, Btmp, is)
+        mult2!(aveWH.wdhp1p0, ave.wdh, aveH.hp1p0, Ctmp, Btmp, is)
         mult2!(aveWH.wdhr11p0, ave.wdh, aveH.hr11p0, Ctmp, Btmp, is)
         mult2!(aveWH.wdhr13p0, ave.wdh, aveH.hr13p0, Ctmp, Btmp, is)
         mult2!(aveWH.wdht1, ave.wdh, aveH.ht1, Ctmp, Btmp, is)
@@ -944,9 +944,9 @@ function grad_ave_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveGrad::Ave
     Atmp = zeros(eltype(aveH.hu1), nbasis, nbasis)
     Btmp = zeros(eltype(aveH.hp1), nbasis, nbasis)
 
-    hp1inv = inv(aveH.hp1)
-
     for is = ns0:ns
+        hp1inv = inv(aveH.hp1)
+
         mult5!(aveGrad.gradhp1, ave.kpar, aveH.hp1, C1tmp, C2tmp, Btmp, is)
         mult3!(aveGrad.gradhr11, aveH.hu1, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradhr13, aveH.hu3, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
@@ -976,9 +976,9 @@ function  grad_ave_g(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveGrad::Ave
     Atmp = zeros(eltype(aveG.gu1), nbasis, nbasis)
     Btmp = zeros(eltype(aveG.gp1), nbasis, nbasis)
 
-    gp1inv = inv(aveG.gp1)
-
     for is = ns0:ns
+        gp1inv = inv(aveG.gp1)
+
         mult5!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, C2tmp, Btmp, is)
         mult3!(aveGrad.gradgr11, aveG.gu1, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradgr13, aveG.gu3, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
