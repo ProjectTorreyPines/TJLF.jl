@@ -2,7 +2,7 @@ using Test
 using TJLF
 
 # tglf regression test
-directory = joinpath(@__DIR__, "..", "outputs", "tglf_regression")
+directory = joinpath(@__DIR__, "tglf_regression")
 tests = readdir(directory)
 
 # 03 is s-alpha geometry, not implemented
@@ -26,7 +26,4 @@ for baseDirectory in testFolders
             @test isapprox(sum(fluxesJulia[i+inputTJLF.NS]),sum(fluxesFortran[i]), atol=1e-2)
         end
     end
-
 end
-
-println("REGRESSION SUCCESS")
