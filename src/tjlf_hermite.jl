@@ -23,56 +23,7 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     nx = 2*inputs.NXGRID -1
     h0 = 1.0/π^0.25
     m = Int((nx+1)/2) ### NXGRID
-
-    y = Vector{T}(undef, m)
-    wy = Vector{T}(undef, m)
-    z = 0.0
-    for i = m:-1:1
-        # initial guess z
-        if(i==m)
-            z = √(2*nx + 1) - 1.85575*(2*nx + 1)^(-0.16667)
-        elseif(i==m-1)
-            z = z - 1.14*nx^.426/z
-        elseif(i==m-2)
-            z = 1.86*z - 0.86*y[m]
-        elseif(i==m-3)
-            z = 1.91*z - 0.91*y[m-1]
-        else
-            z = 2.0*z - y[i+2]
-        end
-
-        pp = 0
-        for its = 1:maxit
-            p1 = h0
-            p2 = 0.0
-            for j = 1:nx
-                p3 = p2
-                p2 = p1
-                p1 = z*√(2.0/j)*p2 - √((j-1)/j)*p3
-            end
-            pp = √(2.0*nx)*p2
-            z1 = z
-            z = z1 - p1/pp
-            if(abs(z-z1)<=eps) break end
-        end
-
-        y[i] = z
-        wy[i] = 2/pp^2
-    end
-    wy[1] = wy[1]/2
-
-    x = Vector{T}(undef, nx)
-    wx = Vector{T}(undef, nx)
-    for i = 1:m
-        x[m+i-1] = y[i]
-        x[i] = -y[m+1-i]
-
-        wx[m+i-1] = wy[i]/2
-        wx[i] = wy[m+1-i]/2
-    end
-    x[m] = 0.0
-    wx[m] = 2.0*wx[m]
-
+   
     #--------------------------------------------------------------
 
     #     The hermite basis functions of the wave function are
@@ -94,7 +45,9 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     #       h(j+1,i) = H(j,i)/SQRT(sum(w*H(j)**2))
     #     These have been pre-evaluated for speed.
     #     They are orthonormal with error of 1.0E-8.
-
+    x, wx = gausshermite(nx)
+    wx = 0.5*wx
+    
     h0 = √(2)/π^0.25
     h = Matrix{T}(undef, nbasis, nx)
     h[1,:] .= h0

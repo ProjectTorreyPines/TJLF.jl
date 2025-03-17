@@ -3,6 +3,7 @@ module TJLF
 #using MKL
 using Base.Threads
 using LinearAlgebra
+using FastGaussQuadrature
 import LinearAlgebra.LAPACK.ggev!
 import LinearAlgebra.LAPACK.gesv!
 using Arpack # use version 0.5.3
