@@ -735,15 +735,17 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     rmaj_loc = inputs.RMAJ_LOC
     zmaj_loc = 0.0 #inputs.ZMAJ_LOC
     dzmajdx_loc = 0.0 #inputs.DZMAJDX_LOC
+    zmaj_loc = inputs.ZMAJ_LOC
+    dzmajdx_loc = inputs.DZMAJDX_LOC
     delta_loc = inputs.DELTA_LOC #gacode.io doesn't def this, but del is usually for triangularity, so a default value of 0 doesn't make much sense...
     kappa_loc = inputs.KAPPA_LOC #elongation
     zeta_loc = inputs.ZETA_LOC #squareness of flux surface
-    q_loc = inputs.Q_LOC #safety factor
+    q_s = inputs.Q_LOC #safety factor
+    
     #### these might be global variables
-    p_prime_loc = inputs.P_PRIME_LOC
-    q_prime_loc = inputs.Q_PRIME_LOC
-    #p_prime_s = inputs.P_PRIME_LOC # (qa^2)/(rB^2)*dp/dr -> regression test has 0, TIMcase doesn't
-    #q_prime_s = inputs.Q_PRIME_LOC # (q^2*a^2)/(r^2)*s
+  
+    p_prime_s = inputs.P_PRIME_LOC # (qa^2)/(rB^2)*dp/dr -> regression test has 0, TIMcase doesn't
+    q_prime_s = inputs.Q_PRIME_LOC # (q^2*a^2)/(r^2)*s
 
     drmajdx_loc = inputs.DRMAJDX_LOC #These two I might want to ask about
     drmindx_loc = inputs.DRMINDX_LOC
@@ -797,15 +799,15 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
 
 
-    function get_argR(theta)
+    function get_argR(theta::Float64)
 
         
         
         get_arg = theta + sh_cos0 +
-            sh_cos1*cos(theta) +
+            sh_cos1*cos(theta)  +
             sh_cos2*cos(2*theta) + 
             sh_cos3*cos(3*theta) +
-            sh_cos4*cos(4*theta) + 
+            sh_cos4*cos(4*theta) +
             sh_cos5*cos(5*theta) +
             sh_cos6*cos(6*theta) + 
             x_delta*sin(theta) -
@@ -821,7 +823,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
         get_arg = 1.0 - sh_cos1*sin(theta) -
           2*sh_cos2*sin(2*theta) - 
-          3*sh_cos3*sin(3*theta) - 
+          3*sh_cos3*sin(3*theta) -
           4*sh_cos4*sin(4*theta) - 
           5*sh_cos5*sin(5*theta) - 
           6*sh_cos6*sin(6*theta) + 
@@ -849,11 +851,11 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
       function get_theta0(theta::Float64)
 
-        small = 1e-12
+        
         theta1 = theta
         argR = get_argR(theta)
         i = 0
-        while (abs(argR > small)) & (i< 20)
+        while (abs(argR) > small) & (i < 20.0)
           argR_t = get_argR_t(theta1)
           argR = get_argR(theta1)
         
@@ -862,6 +864,8 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
           i = i + 1
         end
         get_theta0 = theta1
+      
+        return get_theta0
     end
 
 
@@ -894,6 +898,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
     while(theta<2π)
         theta = theta + dtheta
+        
         if(theta>2π)
             theta = theta-dtheta
             dtheta = 2π-theta
@@ -901,9 +906,11 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
         end
         
         argR = get_argR(theta)
-
+        
        
         argR_t = get_argR_t(theta)
+       
+
         r_t = -rmin_loc*sin(argR)*argR_t# dR/dtheta
 
         argZ = theta
@@ -931,15 +938,20 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     t_s[ms+1]=-2π
     # make a first guess based on theta=0.0
     theta = theta0
+    
     argR = get_argR(theta)
     argR_t = get_argR_t(theta)
     argZ = theta
     argZ_t = 1.0
+    r_t = -rmin_loc*sin(argR)*argR_t
     z_t = kappa_loc*rmin_loc*cos(argZ)*argZ_t # dZ/dtheta
     l_t = √(r_t^2 + z_t^2) # dl/dtheta
+ 
+    
     
     dtheta = -ds/l_t
     theta = theta0 + dtheta
+    #@show dtheta
     l_t1=l_t
 
 
@@ -964,7 +976,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
     # distribute endpoint error over interior points
     dtheta = (t_s[ms+1]+2*π) /ms
-
+    
     for m in 2:ms+1
         t_s[m] = t_s[m] - (m-1)*dtheta
     end
@@ -1013,12 +1025,13 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
         # grad_r_out[m] = grad_r
 
         # changes q_s to q_loc
-        Bp[m] = (rmin_loc/(q_loc*R[m]))*grad_r*B_unit
+        Bp[m] = (rmin_loc/(q_s*R[m]))*grad_r*B_unit
     end
-    p_prime_s = p_prime_loc * B_unit
-    q_prime_s = q_prime_loc / B_unit
+    p_prime_s = p_prime_s * B_unit
+    q_prime_s = q_prime_s / B_unit
     B_unit_out .= B_unit
-
+   
+    
    
    
 

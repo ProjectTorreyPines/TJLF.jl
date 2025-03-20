@@ -15,9 +15,9 @@
  USE_BISECTION=T
  USE_INBOARD_DETRAPPED=F
  USE_AVE_ION_GRID=F
- SAT_RULE=  1
+ SAT_RULE=  2
  KYGRID_MODEL=  1
- XNU_MODEL=  2
+ XNU_MODEL=  3
  VPAR_MODEL=  0
  VPAR_SHEAR_MODEL=  1
  SIGN_BT= 1.00000E+00
@@ -85,7 +85,7 @@
  #---------------------------------------------------
  # Gaussian width parameters:
  #---------------------------------------------------
- WIDTH= 7.82664E-01
+ WIDTH= 5.11075E-01
  WIDTH_MIN= 3.00000E-01
  FIND_WIDTH=T
  NWIDTH= 21
@@ -129,7 +129,7 @@
  SHAPE_COS6= 0.00000E+00
  SHAPE_S_COS6= 0.00000E+00
  P_PRIME_LOC=-1.49959E-03
- Q_PRIME_LOC= 1.05301E+02
+ Q_PRIME_LOC= 1.53010E+01
  BETA_LOC= 0.00000E+00
  KX0_LOC= 0.00000E+00
   
