@@ -806,12 +806,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     #
     x_delta = asin(delta_loc)
 
-    sh_cos = [inputs.SHAPE_COS0, inputs.SHAPE_COS1, inputs.SHAPE_COS2,
-              inputs.SHAPE_COS3, inputs.SHAPE_COS4, inputs.SHAPE_COS5,
-              inputs.SHAPE_COS6]
-    sh_sin = [0., x_delta, -zeta_loc,
-              inputs.SHAPE_SIN3, inputs.SHAPE_SIN4,
-              inputs.SHAPE_SIN5, inputs.SHAPE_SIN6]
+    
 
     theta = 0.0
 
