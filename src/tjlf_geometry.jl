@@ -733,8 +733,8 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
     rmin_loc = inputs.RMIN_LOC
     rmaj_loc = inputs.RMAJ_LOC
-    zmaj_loc = 0.0 #inputs.ZMAJ_LOC
-    dzmajdx_loc = 0.0 #inputs.DZMAJDX_LOC
+    zmaj_loc = inputs.ZMAJ_LOC
+    dzmajdx_loc = inputs.DZMAJDX_LOC
     zmaj_loc = inputs.ZMAJ_LOC
     dzmajdx_loc = inputs.DZMAJDX_LOC
     delta_loc = inputs.DELTA_LOC #gacode.io doesn't def this, but del is usually for triangularity, so a default value of 0 doesn't make much sense...
