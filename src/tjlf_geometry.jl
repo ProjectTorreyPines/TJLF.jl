@@ -13,7 +13,7 @@ description:
     calculate kx0_e (spectral shift) given the growthrate used for the second pass of TM
 
 location:
-    tjlf_geometry.jl    
+    tjlf_geometry.jl
 """
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};
     small::T=0.00000001) where T<:Real
@@ -85,7 +85,7 @@ parameters:
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
     ky::T                               - ky value
     ky_index::Int                       - index used for multithreading
-    kx0_e::T=NaN                        - spectral shift provided for second pass 
+    kx0_e::T=NaN                        - spectral shift provided for second pass
 
 outputs:
     OutputGeometry{Float64}()           - OutputGeometry struct for different WIDTHS value
@@ -134,7 +134,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
     grad_r0_out = satParams.grad_r0
 
     f = satParams.Bt0 * inputs.RMAJ_LOC # Bt0_out = f/rmaj_input defined
-    
+
     kx0 = inputs.KX0_LOC/ky
     if(alpha_quench_in==0.0 && !isnan(kx0_e))
         if(inputs.UNITS=="GYRO")
@@ -546,6 +546,11 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
         m3 > 1 || (m3 = ((m + 1) % (ms+1)) + 1)
         m4 > 2 || (m4 = ((m + 2) % (ms+1)) + 1)
 
+#        m1 = ((ms + m - 2) % ms) + 1
+#        m2 = ((ms + m - 1) % ms) + 1
+#        m3 = ((m + 1) % ms) + 1
+#        m4 = ((m + 2) % ms) + 1
+
         R_s = (R[m1] - 8.0*R[m2] + 8.0*R[m3] - R[m4])/delta_s
         Z_s = (Z[m1] - 8.0*Z[m2] + 8.0*Z[m3] - Z[m4])/delta_s
         s_p[m] = √(R_s^2 + Z_s^2)
@@ -681,6 +686,11 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
         m3 > 1 || (m3 = ((m + 1) % (ms+1)) + 1)
         m4 > 2 || (m4 = ((m + 2) % (ms+1)) + 1)
 
+#        m1 = ((ms + m - 2) % ms) + 1
+#        m2 = ((ms + m - 1) % ms) + 1
+#        m3 = ((m + 1) % ms) + 1
+#        m4 = ((m + 2) % ms) + 1
+
         sintheta_geo[m] = -rmaj_s*(f/(R[m]*B[m]^2)) * (B[m1]-8*B[m2]+8*B[m3]-B[m4])/(delta_s*s_p[m])
 
     end
@@ -795,6 +805,14 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     # compute the arclength around the flux surface
     #
     x_delta = asin(delta_loc)
+
+    sh_cos = [inputs.SHAPE_COS0, inputs.SHAPE_COS1, inputs.SHAPE_COS2,
+              inputs.SHAPE_COS3, inputs.SHAPE_COS4, inputs.SHAPE_COS5,
+              inputs.SHAPE_COS6]
+    sh_sin = [0., x_delta, -zeta_loc,
+              inputs.SHAPE_SIN3, inputs.SHAPE_SIN4,
+              inputs.SHAPE_SIN5, inputs.SHAPE_SIN6]
+
     theta = 0.0
 
 
@@ -1021,7 +1039,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
             B_unit = 1.0/grad_r # B_unit choosen to make bx(0)=ky**2 i.e. qrat_geo(0)/b_geo(0)=1.0
             if(drmindx_loc==1.0) B_unit=1.0 end # Waltz-Miller convention
         end
-        
+
         # grad_r_out[m] = grad_r
 
         # changes q_s to q_loc
