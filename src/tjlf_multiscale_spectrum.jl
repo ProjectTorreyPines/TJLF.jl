@@ -358,15 +358,25 @@ function intensity_sat(
         x_TEM = 1.0
         Y_ITG = 3.3 * (gmax^2) / (kmax^5)
         Y_TEM = 12.7 * (gmax^2) / (kmax^4)
+       
         scal = 0.82 # Q(SAT3 GA D) / (2 * QLA(ITG,Q) * Q(SAT2 GA D))
 
         Ys = Vector{Float64}(undef, nmodes)
         xs = Vector{Float64}(undef, nmodes)
 
         for k in 1:nmodes
-            # (field, species, mode, ky, type) type = 2 is energy flux
-            sum_W_i = sum(QL_weights[1,2:end,k,:,2], dims=1) # sum over ion species, requires electrons to be species 1
 
+
+            sum_W_i = zeros(length(QL_weights[1, 1, k, :, 2]))
+
+            for is in 2:size(QL_weights)[2] # sum over ion species, requires electrons to be species 1
+
+
+
+                sum_W_i .= sum_W_i .+ QL_weights[1, is, k, :, 2]
+            # (field, species, mode, ky, type) type = 2 is energy flux
+            end
+            
             # check for singularities in weight ratio near kmax
             if(kmax<=ky_spect[1])
                 x = 0.5
@@ -384,7 +394,7 @@ function intensity_sat(
                 end
             end
             Y = mode_transition_function(x, Y_ITG, Y_TEM, x_ITG, x_TEM)
-
+            
             xs[k] = x
             Ys[k] = Y
         end
@@ -640,12 +650,14 @@ function intensity_sat(
                 if(gamma0 > small) # B: Based on the reduction of the matrices field_spectrum_out and gamma_matrix, I'm going to presume that they are in Fortran's [2, :, :] and [1, :, :] space respectively.
                     if (ky0 <= kT)
 		                if(kP>=kT)
+                           
                             field_spectrum_out[j,i] = 0.0
                         elseif(ky0 <= kP) # initial quadratic
                             sig_ratio = (aoverb * (ky0^2) + ky0 + coverb) / (aoverb * (k0^2) + k0 + coverb)
                             field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky * (gamma_matrix[i,j]/gamma0)^(2 * expsub)
                         else # connecting quadratic
                             if YTs[i] == 0.0
+                               
                                 YTs[i] = 1e-5
                             end
                             doversig0 = ( (Ys[i] / YTs[i]) ^ (1.0/abs(c_1))
