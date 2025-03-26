@@ -1,7 +1,7 @@
 name = "TJLF"
 uuid = "12ecd31c-256b-4db5-a799-cd5afeb0bd7d"
 authors = ["Tom Neiser <neisert@fusion.gat.com>", "Danny Sun <dannysun@alumni.princeton.edu>"]
-version = "1.0.9"
+version = "1.0.6"
 
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
@@ -11,7 +11,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-Arpack = "=0.5.3, 0.5"
+Arpack = "=0.5.3"
 FastGaussQuadrature = "1.0.2"
 StaticArrays = "1"
 
