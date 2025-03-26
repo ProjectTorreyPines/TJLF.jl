@@ -650,14 +650,14 @@ function intensity_sat(
                 if(gamma0 > small) # B: Based on the reduction of the matrices field_spectrum_out and gamma_matrix, I'm going to presume that they are in Fortran's [2, :, :] and [1, :, :] space respectively.
                     if (ky0 <= kT)
 		                if(kP>=kT)
-                            @show kP
+                           
                             field_spectrum_out[j,i] = 0.0
                         elseif(ky0 <= kP) # initial quadratic
                             sig_ratio = (aoverb * (ky0^2) + ky0 + coverb) / (aoverb * (k0^2) + k0 + coverb)
                             field_spectrum_out[j,i] = Ys[i] * (sig_ratio^c_1) * Fky * (gamma_matrix[i,j]/gamma0)^(2 * expsub)
                         else # connecting quadratic
                             if YTs[i] == 0.0
-                                @show YTs[i]
+                               
                                 YTs[i] = 1e-5
                             end
                             doversig0 = ( (Ys[i] / YTs[i]) ^ (1.0/abs(c_1))
