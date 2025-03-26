@@ -55,7 +55,6 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     # if next val is >= kymin and curr val is less than kycut save it
     # update testmax and max index if necessary
 
-    ##### What should i initialize j1 to???
     j1 = nothing
     for j in 1:length(ky_spect)-1
         if((ky_spect[j+1] >= kymin) && (ky_spect[j] <= kycut))
@@ -70,9 +69,8 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
         end
     end
 
-    ###### What do you do if jmax_mix = NOTHING
     if isnothing(j1)
-        error("There is nothing in ky and gamma that meet saturation requirements, IDK what to do -DSun")
+        error("Check that ky spectrum has entries in the range kymin <= ky <= kycut.")
     end
     # if testmax is not updated a single time
     if(testmax==0.0) jmax_mix=j1 end
