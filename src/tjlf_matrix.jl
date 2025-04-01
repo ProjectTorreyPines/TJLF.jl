@@ -14,6 +14,8 @@ outputs:
 description:
     calculates components used for the eigenmatrix with helper functions that calculate the finite larmor radius integral and hermite basis averages
 """
+
+
 function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},
                     ky::T,
                     nbasis::Int, ky_index::Int) where T<:Real
@@ -36,7 +38,13 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     get_ave!(inputs, outputGeo, outputHermite, ave, nbasis, ky, ky_index)
 
     if(inputs.VPAR_MODEL==0 && inputs.USE_BPER)
-        ave.bpinv = inv(ave.bp)
+       
+    if isinf(cond(ave.bp))
+     println("Singular matrix, be careful with a solution")
+     ave.bpinv = pinv(ave.bp)
+    else
+     ave.bpinv = inv(ave.bp)
+    end          
         for i = 1:nbasis
             for j = 1:nbasis
                 ave.p0inv[i,j] = 0.0
