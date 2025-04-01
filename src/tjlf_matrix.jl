@@ -36,7 +36,12 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     get_ave!(inputs, outputGeo, outputHermite, ave, nbasis, ky, ky_index)
 
     if(inputs.VPAR_MODEL==0 && inputs.USE_BPER)
-        ave.bpinv = inv(ave.bp)
+       
+      
+      
+      ave.bpinv = pinv(ave.bp)
+      
+        
         for i = 1:nbasis
             for j = 1:nbasis
                 ave.p0inv[i,j] = 0.0
