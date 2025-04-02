@@ -101,7 +101,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v, alpha, beta = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector)
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector)
 
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
@@ -237,7 +237,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         b_par_QL_out = zeros(Float64, nmodes_out)
         kx_bar_out = zeros(Float64, nmodes_out)
         kpar_bar_out = zeros(Float64, nmodes_out)
-
+       
         # used for computing eigenvector
         if inputs.SMALL != 0.0
             zmat = similar(amat)
@@ -249,7 +249,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     # calculate eigenvector
                     eigenvector .= inputs.SMALL
                     # alpha and beta from eigensolver.jl
-                    zmat = beta[jmax[imax]].*amat .- (inputs.SMALL.+alpha[jmax[imax]]).*bmat
+                    zmat = amat .- (inputs.SMALL.+rr[jmax[imax]] .+ xi * ri[jmax[imax]]).*bmat
+                   
                     gesv!(zmat,eigenvector)
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])
