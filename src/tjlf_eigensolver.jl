@@ -22,7 +22,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
                         aveGrad::AveGrad{T},aveGradB::AveGradB{T},
                         nbasis::Int, ky::T,
-                        amat::Matrix{K},bmat::Matrix{K},
+                        amat::Matrix{K},bmat::Matrix{K}, 
                         ky_index::Int,
                         find_eigenvector::Bool) where T<:Real where K<:Complex
 
@@ -43,7 +43,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     taus::Vector{Float64} = inputs.TAUS
     zs::Vector{Float64} = inputs.ZS
     as::Vector{Float64} = inputs.AS
-
+    
 
     vs2 = √(taus[2] / mass[2])
     vs1 = √(taus[1] / mass[1])
@@ -2707,6 +2707,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
         if sigma != 0.0
             Threads.lock(l2)
+            
             try
                 λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LR,sigma=sigma,maxiter=50)
                 Threads.unlock(l2)
@@ -2723,12 +2724,23 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     if inputs.IFLUX || find_eigenvector
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
-        (alpha, beta, _, _) = ggev!('N','N',amat_copy,bmat_copy)
-    else
-        (alpha, beta, _, _) = ggev!('N','N',amat,bmat)
-    end
-    return alpha./beta, fill(NaN*im,(1,1)), alpha, beta
 
+        (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
+       
+        (alpha, _, _) = geev!('N','N',amat_copy)
+      
+       
+       
+    else
+
+        (amat, bmat,_) = gesv!(bmat, amat)
+       
+        (alpha, _, _) = geev!('N','N',amat)
+
+       
+    end
+   
+    return alpha, fill(NaN*im,(1,1))
     ### not supported
     # print("kyrlov: ")
     # @time begin
