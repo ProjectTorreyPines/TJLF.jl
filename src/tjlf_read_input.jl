@@ -101,6 +101,7 @@ function readInput(filename::String)::InputTJLF
            
             getfield(inputTJLF, Symbol(field)) .= [parse(ComplexF64, strip(item)) for item in split(value[12:end-1], ",")]
 
+        else # if not for the species vector
             # string
             if startswith(value, '\'') || startswith(value, '\"')
                 val = string(strip(value, ['\'', '"']))
