@@ -205,7 +205,6 @@ end
 
 Write input_tglf to file in input.tglf format to be read by TGLF
 """
-
 function save(input::InputTJLF, filename::AbstractString)
         open(filename, "w") do io
             for key in fieldnames(typeof(input))
