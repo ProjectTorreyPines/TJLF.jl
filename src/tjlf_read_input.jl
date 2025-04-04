@@ -203,7 +203,7 @@ end
 """
     save(input::Union{InputTJLF}, filename::AbstractString)
 
-Write input_tglf to file in input.tglf format to be read by TGLF
+Write input_tjlf to file in InputTJLF format to be read by TJLF
 """
 function save(input::InputTJLF, filename::AbstractString)
         open(filename, "w") do io
