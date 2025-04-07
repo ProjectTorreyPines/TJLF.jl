@@ -16,10 +16,10 @@ description:
     Main transport model function.
     Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity, and fluxes.
 """
-function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
+function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
     alpha_quench_in = inputs.ALPHA_QUENCH
-    vexb_shear_s = inputs.VEXB_SHEAR*inputs.SIGN_IT
+    vexb_shear_s = inputs.VEXB_SHEAR * inputs.SIGN_IT
     ns = inputs.NS
     nmodes = inputs.NMODES
     ky_spect = inputs.KY_SPECTRUM
@@ -27,58 +27,55 @@ function tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputH
     
     original_iflux = inputs.IFLUX
 
-    ### output values
-    firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2) # output eigenvalue spectrum is from the first pass
-    QL_weights::Array{Float64,5} = zeros(Float64, 3, ns, nmodes, nky, 5)
+    # Output arrays
+    firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2)
+    QL_weights = zeros(Float64, 3, ns, nmodes, nky, 5)
 
-    # compute the flux spectrum and eigenvalues
-    if alpha_quench_in!=0.0 || vexb_shear_s==0.0 # do not calculate spectral shift
-
-        Threads.@threads for ky_index = eachindex(ky_spect)
-            # print("this is c")
-            onePass!(inputs, satParams, outputHermite, vexb_shear_s, firstPass_eigenvalue, QL_weights, ky_index)
+    if alpha_quench_in != 0.0 || vexb_shear_s == 0.0
+        Threads.@threads for ky_index in eachindex(ky_spect)
+            local_inputs = minimal_scalar_copy(inputs)
+            onePass!(local_inputs, satParams, outputHermite, vexb_shear_s,
+                     firstPass_eigenvalue, QL_weights, ky_index)
         end
 
-    elseif !inputs.FIND_WIDTH # calculate spectral shift with predetermined width spectrum
-
-        # get the gammas to calculate the spectral shift on second pass
-        inputs.IFLUX = false # do not compute QL on first pass
-        Threads.@threads for ky_index = eachindex(ky_spect)
-            widthPass!(inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
+    elseif !inputs.FIND_WIDTH
+        inputs.IFLUX = false
+        Threads.@threads for ky_index in eachindex(ky_spect)
+            local_inputs = minimal_scalar_copy(inputs)
+            widthPass!(local_inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
         end
-        kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1]) # spectral shift
-        
-        inputs.IFLUX = true # do not compute QL on first pass
-        Threads.@threads for ky_index = eachindex(ky_spect)
-            secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index)
+        kx0_e = xgrid_functions_geo(inputs, satParams, firstPass_eigenvalue[:,:,1])
+        inputs.IFLUX = true
+        Threads.@threads for ky_index in eachindex(ky_spect)
+            local_inputs = minimal_scalar_copy(inputs)
+            secondPass!(local_inputs, satParams, outputHermite, kx0_e[ky_index],
+                        firstPass_eigenvalue, QL_weights, ky_index)
         end
 
-    else # calculate the spectral shift and the width spectrum
-        # initial guess if finding width
+    else
         inputs.WIDTH_SPECTRUM .= inputs.WIDTH
-        inputs.IFLUX = false # do not compute QL on first pass
-        Threads.@threads for ky_index = eachindex(ky_spect)
-            # println("this is a")
-            firstPass!(inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index) #  spectral shift model double pass
+        inputs.IFLUX = false
+        Threads.@threads for ky_index in eachindex(ky_spect)
+            local_inputs = minimal_scalar_copy(inputs)
+            firstPass!(local_inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
         end
-        kx0_e = xgrid_functions_geo(inputs,satParams,firstPass_eigenvalue[:,:,1]) # spectral shift
-
-        inputs.IFLUX = true # do not compute QL on first pass
-        Threads.@threads for ky_index = eachindex(ky_spect)
-            # println("this is b")
-            secondPass!(inputs, satParams, outputHermite, kx0_e[ky_index], firstPass_eigenvalue, QL_weights, ky_index)
+        kx0_e = xgrid_functions_geo(inputs, satParams, firstPass_eigenvalue[:,:,1])
+        inputs.IFLUX = true
+        Threads.@threads for ky_index in eachindex(ky_spect)
+            local_inputs = minimal_scalar_copy(inputs)
+            secondPass!(local_inputs, satParams, outputHermite, kx0_e[ky_index],
+                        firstPass_eigenvalue, QL_weights, ky_index)
         end
-
     end
-    inputs.IFLUX = original_iflux
 
-    inputs.EIGEN_SPECTRUM .= firstPass_eigenvalue[1,:,1].+firstPass_eigenvalue[1,:,2].*im
+    inputs.IFLUX = original_iflux
+    inputs.EIGEN_SPECTRUM .= firstPass_eigenvalue[1,:,1] .+ firstPass_eigenvalue[1,:,2] .* im
+
     if inputs.SAT_RULE == 0
-        @debug "Using SAT0 means the return value of TM is not the QL weights, but actually flux_spectrum_out = QL_weights * phi_bar_out. notice difference near LS return statement"
+        @debug "Using SAT0 means the return value of TM is not the QL weights, but actually flux_spectrum_out = QL_weights * phi_bar_out. Notice the difference near LS return statement."
     end
 
     return QL_weights, firstPass_eigenvalue
-
 end
 
 #----------------------------------------------------------------------------------------------------------------------------

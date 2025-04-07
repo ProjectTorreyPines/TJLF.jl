@@ -1043,13 +1043,6 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     p_prime_s = p_prime_s * B_unit
     q_prime_s = q_prime_s / B_unit
     B_unit_out .= B_unit
-   
-    
-   
-   
-
-
-
 
     return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, ds, t_s
 end
