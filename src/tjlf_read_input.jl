@@ -94,13 +94,18 @@ function readInput(filename::String)::InputTJLF
             getfield(inputTJLF, speciesField)[speciesIndex] = parse(Float64, value)
 
             # species vector as a vector
-        elseif startswith(value, '[')
-            getfield(inputTJLF, Symbol(field)) .= [parse(Float64, strip(item)) for item in split(value[2:end-1], ",")]
-
+        elseif startswith(value, '[') 
+            try
+              getfield(inputTJLF, Symbol(field)) .= [parse(Float64, strip(item)) for item in split(value[2:end-1], ",")]
+            catch e
+              continue   # to skip NaN vectors KY_SPECTRUM
+            end
         elseif startswith(value, "ComplexF64[")
-           
-            getfield(inputTJLF, Symbol(field)) .= [parse(ComplexF64, strip(item)) for item in split(value[12:end-1], ",")]
-
+            try 
+             getfield(inputTJLF, Symbol(field)) .= [parse(ComplexF64, strip(item)) for item in split(value[12:end-1], ",")]
+            catch e
+              continue
+            end
         else # if not for the species vector
             # string
             if startswith(value, '\'') || startswith(value, '\"')
