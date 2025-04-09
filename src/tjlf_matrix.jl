@@ -58,8 +58,8 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     h_ratios!(inputs, aveH)
 
     if(inputs.LINSKER_FACTOR!=0.0) 
-        @warn "NOT TESTED matrix.jl ln 68"
-        grad_ave_h(inputs,ave,aveH,aveGrad) 
+      
+        grad_ave_h!(inputs,ave,aveH,aveGrad) 
     end
 
     ave_hp0!(inputs, ave, aveH)
@@ -81,7 +81,7 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     if(nroot>6)
         g_ratios!(inputs, aveG)
         if(inputs.LINSKER_FACTOR!=0) 
-            @warn "NOT TESTED matrix.jl ln 91"
+           
             grad_ave_g(inputs,ave,aveG,aveGrad)
         end
         ave_gp0!(inputs, ave, aveG)
@@ -944,10 +944,14 @@ function grad_ave_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveGrad::Ave
     Atmp = zeros(eltype(aveH.hu1), nbasis, nbasis)
     Btmp = zeros(eltype(aveH.hp1), nbasis, nbasis)
 
-    hp1inv = inv(aveH.hp1)
+    
 
     for is = ns0:ns
+
+        hp1inv = inv(aveH.hp1[is, :, :])
+
         mult5!(aveGrad.gradhp1, ave.kpar, aveH.hp1, C1tmp, C2tmp, Btmp, is)
+       # mult3!(aveGrad.gradhp1, ave.kpar, aveH.hp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradhr11, aveH.hu1, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradhr13, aveH.hu3, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
 
@@ -976,10 +980,14 @@ function  grad_ave_g(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveGrad::Ave
     Atmp = zeros(eltype(aveG.gu1), nbasis, nbasis)
     Btmp = zeros(eltype(aveG.gp1), nbasis, nbasis)
 
-    gp1inv = inv(aveG.gp1)
+    
 
     for is = ns0:ns
+        
+        gp1inv = inv(aveG.gp1[is, :, :])
+
         mult5!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, C2tmp, Btmp, is)
+      #  mult3!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradgr11, aveG.gu1, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradgr13, aveG.gu3, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
 
