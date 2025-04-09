@@ -193,7 +193,7 @@ mutable struct InputTJLF{T<:Real}
     USE_BISECTION::Union{Bool,Missing}
     USE_INBOARD_DETRAPPED::Union{Bool,Missing}
     USE_AVE_ION_GRID::Union{Bool,Missing}
-    NEW_EIKONAL::Union{Bool,Missing} ## this seems useless, the flag has to be both true and false to do anything
+    NEW_EIKONAL::Union{Bool,Missing}
     FIND_WIDTH::Union{Bool,Missing}
     IFLUX::Union{Bool,Missing}
     ADIABATIC_ELEC::Union{Bool,Missing}
