@@ -923,7 +923,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradgr13p1=0.0
                         else
                             @warn "NOT TESTED eigensolve.jl ln 906"
-                            gradgp1 = linsker*aveGrad.gradgp1p0[is,ib,jb]
+                            gradgp1  = linsker*aveGrad.gradgp1p0[is,ib,jb]
                             gradgr11 = linsker*aveGrad.gradgr11p0[is,ib,jb]
                             gradgr13 = linsker*aveGrad.gradgr13p0[is,ib,jb]
                             gradgp1p1 = linsker*aveGrad.gradgp1p1[is,ib,jb]
