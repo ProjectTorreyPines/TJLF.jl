@@ -249,7 +249,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     # calculate eigenvector
                     eigenvector .= inputs.SMALL
                     # alpha and beta from eigensolver.jl
-                    zmat = amat .- (inputs.SMALL.+rr[jmax[imax]] .+ xi * ri[jmax[imax]]).*bmat
+                    zmat = amat .- (inputs.SMALL.+rr[jmax[imax]] .+ im * ri[jmax[imax]]).*bmat
                    
                     gesv!(zmat,eigenvector)
                 else
