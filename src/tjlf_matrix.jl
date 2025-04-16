@@ -79,10 +79,10 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
 
     nroot = 15 ###### hardcoded
     if(nroot>6)
+       
         g_ratios!(inputs, aveG)
         if(inputs.LINSKER_FACTOR!=0) 
-           
-            grad_ave_g(inputs,ave,aveG,aveGrad)
+           grad_ave_g!(inputs,ave,aveG,aveGrad)
         end
         ave_gp0!(inputs, ave, aveG)
         if(inputs.BETAE>0.0)
@@ -942,22 +942,22 @@ function grad_ave_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveGrad::Ave
     C1tmp = zeros(eltype(aveGrad.gradhp1), nbasis, nbasis)
     C2tmp = zeros(eltype(aveGrad.gradhp1), nbasis, nbasis)
     Atmp = zeros(eltype(aveH.hu1), nbasis, nbasis)
-    Btmp = zeros(eltype(aveH.hp1), nbasis, nbasis)
+    Btmp = zeros(eltype(aveH.hu1), nbasis, nbasis)
 
     
 
     for is = ns0:ns
 
+        
         hp1inv = inv(aveH.hp1[is, :, :])
 
         mult5!(aveGrad.gradhp1, ave.kpar, aveH.hp1, C1tmp, C2tmp, Btmp, is)
-       # mult3!(aveGrad.gradhp1, ave.kpar, aveH.hp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradhr11, aveH.hu1, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradhr13, aveH.hu3, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
 
-        mult3!(aveGrad.gradhp1p1, aveGrad.gradhp1, hp1inv, C1tmp, Atmp, Btmp, is)
-        mult3!(aveGrad.gradhr11p1, aveGrad.gradhr11, hp1inv, C1tmp, Atmp, Btmp, is)
-        mult3!(aveGrad.gradhr13p1, aveGrad.gradhr13, hp1inv, C1tmp, Atmp, Btmp, is)
+        mult1!(aveGrad.gradhp1p1, aveGrad.gradhp1, hp1inv, C1tmp, Atmp, is)
+        mult1!(aveGrad.gradhr11p1, aveGrad.gradhr11, hp1inv, C1tmp, Atmp, is)
+        mult1!(aveGrad.gradhr13p1, aveGrad.gradhr13, hp1inv, C1tmp, Atmp, is)
 
         mult1!(aveGrad.gradhp1p0, aveGrad.gradhp1, ave.p0inv, C1tmp, Atmp, is)
         mult1!(aveGrad.gradhr11p0, aveGrad.gradhr11, ave.p0inv, C1tmp, Atmp, is)
@@ -969,7 +969,7 @@ end
 #***************************************************************
 #   compute the parallel gradient of ave_g matricies
 #***************************************************************
-function  grad_ave_g(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveGrad::AveGrad{T}) where T<:Real
+function  grad_ave_g!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveGrad::AveGrad{T}) where T<:Real
 
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
@@ -986,14 +986,13 @@ function  grad_ave_g(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveGrad::Ave
         
         gp1inv = inv(aveG.gp1[is, :, :])
 
-        mult5!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, C2tmp, Btmp, is)
-      #  mult3!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, Atmp, Btmp, is)
+        mult5!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, C2tmp, Btmp, is)        
         mult3!(aveGrad.gradgr11, aveG.gu1, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradgr13, aveG.gu3, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
 
-        mult3!(aveGrad.gradgp1p1, aveGrad.gradgp1, gp1inv, C1tmp, Atmp, Btmp, is)
-        mult3!(aveGrad.gradgr11p1, aveGrad.gradgr11, gp1inv, C1tmp, Atmp, Btmp, is)
-        mult3!(aveGrad.gradgr13p1, aveGrad.gradgr13, gp1inv, C1tmp, Atmp, Btmp, is)
+        mult1!(aveGrad.gradgp1p1, aveGrad.gradgp1, gp1inv, C1tmp, Atmp,is)
+        mult1!(aveGrad.gradgr11p1, aveGrad.gradgr11, gp1inv, C1tmp, Atmp, is)
+        mult1!(aveGrad.gradgr13p1, aveGrad.gradgr13, gp1inv, C1tmp, Atmp,  is)
 
         mult1!(aveGrad.gradgp1p0, aveGrad.gradgp1, ave.p0inv, C1tmp, Atmp, is)
         mult1!(aveGrad.gradgr11p0, aveGrad.gradgr11, ave.p0inv, C1tmp, Atmp, is)
