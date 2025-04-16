@@ -760,7 +760,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         gradhr11p1 = 0.0
                         gradhr13p1 = 0.0
                     else
-                        @warn ("NOT TESTED eigensolver.jl ln 744")
+                       
                         gradhp1 = linsker*aveGrad.gradhp1p0[is,ib,jb]
                         gradhr11 = linsker*aveGrad.gradhr11p0[is,ib,jb]
                         gradhr13 = linsker*aveGrad.gradhr13p0[is,ib,jb]
@@ -915,6 +915,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                                     - ft2*aveKG.kpargu3[is,ib,jb] + aveKG.kpargu1[is,ib,jb]/3)
 
                         if(nbasis==1 || linsker==0.0)
+                        
                             gradgp1=0.0
                             gradgr11=0.0
                             gradgr13=0.0
@@ -922,8 +923,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradgr11p1=0.0
                             gradgr13p1=0.0
                         else
-                            @warn "NOT TESTED eigensolve.jl ln 906"
-                            gradgp1 = linsker*aveGrad.gradgp1p0[is,ib,jb]
+                           
+                            gradgp1  = linsker*aveGrad.gradgp1p0[is,ib,jb]
                             gradgr11 = linsker*aveGrad.gradgr11p0[is,ib,jb]
                             gradgr13 = linsker*aveGrad.gradgr13p0[is,ib,jb]
                             gradgp1p1 = linsker*aveGrad.gradgp1p1[is,ib,jb]
