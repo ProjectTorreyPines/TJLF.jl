@@ -16,7 +16,13 @@ for baseDirectory in testFolders
         lines = readlines(fileDirectory)
         fluxesFortran = parse.(Float64, split(lines[1]))
 
-        inputTJLF = readInput(baseDirectory * "/input.tglf")
+        inputTJLF = readInput(joinpath(baseDirectory,"input.tglf"))
+        fluxesJulia = sum(TJLF.run_tjlf(inputTJLF); dims=1)[1, :, :]
+        
+        # Test saving InputTJLF and running on it
+        temp_dir = mktempdir(baseDirectory)
+        TJLF.save(inputTJLF, joinpath(temp_dir, "test_input_tjlf"))
+        inputTJLF = readInput(joinpath(temp_dir, "test_input_tjlf"))
         fluxesJulia = sum(TJLF.run_tjlf(inputTJLF); dims=1)[1, :, :]
 
         for i in 1:3*inputTJLF.NS

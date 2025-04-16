@@ -2700,7 +2700,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         if inputs.FIND_WIDTH
             error("If FIND_EIGEN false, FIND_WIDTH should also be false")
         end
-        
+
         sigma = 0.0
         if !isnan(inputs.EIGEN_SPECTRUM[ky_index])
             sigma = inputs.EIGEN_SPECTRUM[ky_index]
@@ -2709,15 +2709,15 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             Threads.lock(l2)
             
             try
-                λ, v = eigs(sparse(amat),sparse(bmat),nev=inputs.NMODES,which=:LR,sigma=sigma,maxiter=50)
-                Threads.unlock(l2)
+                λ, v = eigs(sparse(amat), sparse(bmat), nev=inputs.NMODES, which=:LR, sigma=sigma, maxiter=50)
                 return λ, v, NaN, NaN
-            catch
-                @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
+            catch e
+                @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues: $(e)"
+            finally
                 Threads.unlock(l2)
             end
         else
-            @warn "no growth rate intial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
+            @warn "no growth rate initial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
         end
     end
 

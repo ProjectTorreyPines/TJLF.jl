@@ -94,11 +94,19 @@ function readInput(filename::String)::InputTJLF
             getfield(inputTJLF, speciesField)[speciesIndex] = parse(Float64, value)
 
             # species vector as a vector
-        elseif startswith(value, '[')
-            getfield(inputTJLF, Symbol(field)) .= [parse(Float64, strip(item)) for item in split(value[2:end-1], ",")]
-
+        elseif startswith(value, '[') 
+            try
+              getfield(inputTJLF, Symbol(field)) .= [parse(Float64, strip(item)) for item in split(value[2:end-1], ",")]
+            catch e
+              continue   # to skip NaN vectors KY_SPECTRUM
+            end
+        elseif startswith(value, "ComplexF64[")
+            try 
+             getfield(inputTJLF, Symbol(field)) .= [parse(ComplexF64, strip(item)) for item in split(value[12:end-1], ",")]
+            catch e
+              continue
+            end
         else # if not for the species vector
-
             # string
             if startswith(value, '\'') || startswith(value, '\"')
                 val = string(strip(value, ['\'', '"']))
@@ -137,8 +145,13 @@ function readInput(filename::String)::InputTJLF
     end
 
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
-    inputTJLF.KY_SPECTRUM .= NaN
-    inputTJLF.EIGEN_SPECTRUM .= NaN
+    if ismissing(inputTJLF.KY_SPECTRUM)
+        inputTJLF.KY_SPECTRUM .= NaN 
+    end
+    if ismissing(inputTJLF.EIGEN_SPECTRUM)
+        inputTJLF.EIGEN_SPECTRUM .= NaN 
+    end
+    
 
     # double check struct is properly populated
 
@@ -192,3 +205,40 @@ function checkInput(inputTJLFVector::Vector{InputTJLF})
         checkInput(inputTJLF)
     end
 end
+"""
+    save(input::Union{InputTJLF}, filename::AbstractString)
+
+Write input_tjlf to file in InputTJLF format to be read by TJLF
+"""
+function save(input::InputTJLF, filename::AbstractString)
+        open(filename, "w") do io
+            for key in fieldnames(typeof(input))
+                if startswith(String(key), "_")
+                    continue
+                end
+                try
+                    value = getfield(input, key)
+                    if ismissing(value)
+                        continue
+                    elseif isa(value, Int)
+                        println(io, "$(key)=$(convert(Int, value))")
+                    elseif isa(value, String)
+                        println(io, "$(key)='$value'")
+                    elseif isa(value, Bool)
+                        println(io, "$(key)=.$value.")
+                    elseif isa(value, Vector{Float64})
+                        println(io, "$(key)=$(convert(Vector{Float64}, value))")
+                    elseif isa(value, Vector{ComplexF64})
+                        println(io, "$(key)=$(convert(Vector{ComplexF64}, value))")
+                    else
+                        println(io, "$(key)=$(convert(Float64, value))")
+                    end
+                catch e
+                    println("Error writing $key to input file")
+                    rethrow(e)
+                end
+            end
+        end
+   
+end
+

@@ -1,7 +1,7 @@
 name = "TJLF"
 uuid = "12ecd31c-256b-4db5-a799-cd5afeb0bd7d"
 authors = ["Tom Neiser <neisert@fusion.gat.com>", "Danny Sun <dannysun@alumni.princeton.edu>"]
-version = "1.0.7"
+version = "1.0.9"
 
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"

@@ -193,7 +193,7 @@ mutable struct InputTJLF{T<:Real}
     USE_BISECTION::Union{Bool,Missing}
     USE_INBOARD_DETRAPPED::Union{Bool,Missing}
     USE_AVE_ION_GRID::Union{Bool,Missing}
-    NEW_EIKONAL::Union{Bool,Missing} ## this seems useless, the flag has to be both true and false to do anything
+    NEW_EIKONAL::Union{Bool,Missing}
     FIND_WIDTH::Union{Bool,Missing}
     IFLUX::Union{Bool,Missing}
     ADIABATIC_ELEC::Union{Bool,Missing}
@@ -377,6 +377,15 @@ mutable struct InputTJLF{T<:Real}
     end
 end
 
+function minimal_scalar_copy(inputs::TJLF.InputTJLF{T}) where T<:Real
+    # Create a new instance using the constructor that sets up NS and the number of ky points.
+    local_inputs = TJLF.InputTJLF{T}(inputs.NS, length(inputs.KY_SPECTRUM))
+    # Loop over all fields and assign the value from the original.
+    for f in fieldnames(typeof(inputs))
+        setfield!(local_inputs, f, getfield(inputs, f))
+    end
+    return local_inputs
+end
 
 ##########################################################
 #       Get from tjlf_hermite
