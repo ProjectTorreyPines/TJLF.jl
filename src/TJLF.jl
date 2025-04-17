@@ -1,15 +1,15 @@
 module TJLF
 
-#using MKL
+using MKL
 using Base.Threads
-using LinearAlgebra
-import LinearAlgebra.LAPACK.gesv!
-import LinearAlgebra.LAPACK.geev!
-using Arpack # use version 0.5.3
+using LinearAlgebra  #still need it for eigen!
+import MKL.LAPACK.gesv!
+import MKL.LAPACK.geev!
+using ArnoldiMethod
 using SparseArrays
 using StaticArrays
 using FastGaussQuadrature
-# using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem
+#using KrylovKit 
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
