@@ -4,15 +4,17 @@ authors = ["Tom Neiser <neisert@fusion.gat.com>", "Danny Sun <dannysun@alumni.pr
 version = "1.0.9"
 
 [deps]
-Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
+ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MKL = "33e6dc65-8f57-5167-99aa-e5a354878fb2"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-Arpack = "=0.5.3"
+ArnoldiMethod = "0.4.0"
 FastGaussQuadrature = "1.0.2"
+MKL = "0.8.0"
 StaticArrays = "1"
 
 [extras]
