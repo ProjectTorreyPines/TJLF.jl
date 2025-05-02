@@ -1100,4 +1100,19 @@ mutable struct AveGradB{T<:Real}
             gradBgp1, gradBgp3, gradBgr11, gradBgr13, gradBgr33, gradBgu1, gradBgu3, gradBgu33
         )
     end
+
+
+#----------------------------------------------
+struct ShiftAndInvert{TA,TB,TT}
+    A_lu::TA
+    B::TB
+    temp::TT
+end
+
+function (M::ShiftAndInvert)(y, x)
+    mul!(M.temp, M.B, x)
+    ldiv!(y, M.A_lu, M.temp)
+end
+
+
 end

@@ -2691,13 +2691,15 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     #*************************************************************
     # find the eigenvalues and eigenvectors
     #*************************************************************
-
+    inputs.SMALL = 0.0
     if inputs.SMALL != 0.0 && !inputs.FIND_EIGEN
         @warn "FIND_EIGEN is being ignored since inputs.SMALL!=0.0"
     end
 
     # calculate eigenvalues/eigenvectors
     if inputs.SMALL == 0.0 && !inputs.FIND_EIGEN && !inputs.IFLUX
+        println("uuuuu")
+        @time begin
         if inputs.FIND_WIDTH
             error("If FIND_EIGEN false, FIND_WIDTH should also be false")
         end
@@ -2711,6 +2713,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             
             try
                 λ, v = eigs(sparse(amat), sparse(bmat), nev=inputs.NMODES, which=:LR, sigma=sigma, maxiter=50)
+               # λ, v = partialschur(sparse(amat),  nev=inputs.NMODES, which=:LR, maxiter=50)
                 return λ, v, NaN, NaN
             catch e
                 @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues: $(e)"
@@ -2720,16 +2723,17 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         else
             @warn "no growth rate initial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
         end
+        end 
     end
 
     if inputs.IFLUX || find_eigenvector
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
-
+        @time begin
         (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
        
         (alpha, _, _) = geev!('N','N',amat_copy)
-      
+        end
        
        
     else

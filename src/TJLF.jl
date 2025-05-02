@@ -9,7 +9,9 @@ using ArnoldiMethod
 using SparseArrays
 using StaticArrays
 using FastGaussQuadrature
-#using KrylovKit 
+using KrylovKit 
+using LinearMaps
+using Arpack
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")

@@ -27,7 +27,12 @@ outputs:
 description:
     TGLF Linear Stability driver computes all quasilinear quantities for a single ky
 """
-function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
+function construct_linear_map(A, B)
+    a = ShiftAndInvert(factorize(A), B, Vector{eltype(A)}(undef, size(A, 1)))
+    LinearMap{eltype(A)}(a, size(A, 1), ismutating = true)
+end
+
+function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, 
             ky::T,
             nbasis::Int,
             vexb_shear_s::T,
@@ -238,6 +243,14 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         kx_bar_out = zeros(Float64, nmodes_out)
         kpar_bar_out = zeros(Float64, nmodes_out)
        
+
+
+    
+        
+        
+        
+
+
         # used for computing eigenvector
         if inputs.SMALL != 0.0
             zmat = similar(amat)
@@ -255,8 +268,13 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])
                         Threads.lock(l)
-                        try
-                            _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
+                        try 
+                           # _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
+                            decomp, = partialschur(construct_linear_map(sparse(amat), sparse(bmat)), nev=1, which=:LM)
+                            λs_inv, vec = partialeigen(decomp)
+                           
+                           # vec = 1 ./ decomp.Q
+                   
                             eigenvector = vec[:,1]
                         finally
                             Threads.unlock(l)
