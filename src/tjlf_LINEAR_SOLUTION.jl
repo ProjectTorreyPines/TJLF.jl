@@ -252,37 +252,19 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
 
         # used for computing eigenvector
-        if inputs.SMALL != 0.0
-            zmat = similar(amat)
-            eigenvector = Vector{ComplexF64}(undef,iur)
-        end
+   
+        zmat = similar(amat)
+        eigenvector = Vector{ComplexF64}(undef,iur)
+        
         for imax = 1:nmodes_out
             if (jmax[imax] > 0)
-                if inputs.SMALL != 0.0
-                    # calculate eigenvector
-                    eigenvector .= inputs.SMALL
-                    # alpha and beta from eigensolver.jl
-                    zmat = amat .- (inputs.SMALL.+rr[jmax[imax]] .+ im * ri[jmax[imax]]).*bmat
-                   
-                    gesv!(zmat,eigenvector)
-                else
-                    if inputs.FIND_EIGEN || isnan(v[1,1])
-                        Threads.lock(l)
-                        try 
-                           # _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
-                            decomp, = partialschur(construct_linear_map(sparse(amat), sparse(bmat)), nev=1, which=:LM)
-                            λs_inv, vec = partialeigen(decomp)
-                           
-                           # vec = 1 ./ decomp.Q
-                   
-                            eigenvector = vec[:,1]
-                        finally
-                            Threads.unlock(l)
-                        end
-                    else
-                        eigenvector = v[:, jmax[imax]]
-                    end
-                end
+               
+                eigenvector .= 1e-11 #inputs.SMALL
+                
+                zmat = amat .- (inputs.SMALL.+rr[jmax[imax]] .+ im * ri[jmax[imax]]).*bmat
+              
+                gesv!(zmat, eigenvector)
+               
 
                 Ns_Ts_phase,
                 Ne_Te_phase,
