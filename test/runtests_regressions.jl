@@ -1,6 +1,6 @@
 using Test
 using TJLF
-using Profile
+
 
 # tglf regression test
 directory = joinpath(@__DIR__, "tglf_regression")
@@ -20,8 +20,7 @@ for baseDirectory in testFolders
 
         inputTJLF = readInput(joinpath(baseDirectory,"input.tglf"))
         fluxesJulia = sum(TJLF.run_tjlf(inputTJLF); dims=1)[1, :, :]
-        #@profile TJLF.run_tjlf(inputTJLF)
-        #Profile.print()
+     
        # # Test saving InputTJLF and running on it
       #  temp_dir = mktempdir(baseDirectory)
        # TJLF.save(inputTJLF, joinpath(temp_dir, "test_input_tjlf"))
