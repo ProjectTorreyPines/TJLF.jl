@@ -10,7 +10,6 @@ using ArnoldiMethod
 using SparseArrays
 using StaticArrays
 using FastGaussQuadrature
-using KrylovKit 
 using LinearMaps
 using Arpack
 
