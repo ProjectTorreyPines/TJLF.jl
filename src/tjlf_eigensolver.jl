@@ -2751,11 +2751,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     else
       
 
-        (amat, bmat,_) = gesv!(bmat, amat)
-    
-      
        
-        (alpha, _, _) = geev!('N','N',amat)
        
         if inputs.SMALL == 5
             

@@ -112,7 +112,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
-    @show size(rr)
+    #@show size(rr)
    
     # filter out numerical instabilities that sometimes occur with high mode frequency
     if filter_in > 0.0
