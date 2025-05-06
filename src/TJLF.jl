@@ -4,6 +4,7 @@ using MKL
 using Base.Threads
 using LinearAlgebra  #still need it for eigen!
 import MKL.LAPACK.gesv!
+import MKL.LAPACK.ggev!
 import MKL.LAPACK.geev!
 using ArnoldiMethod
 using SparseArrays
@@ -12,6 +13,11 @@ using FastGaussQuadrature
 using KrylovKit 
 using LinearMaps
 using Arpack
+using IterativeSolvers
+using Profile
+
+
+#BLAS.set_num_threads(1)
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")

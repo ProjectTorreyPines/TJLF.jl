@@ -106,11 +106,14 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
+    
     eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector)
-
+    
+    
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
-
+    @show size(rr)
+   
     # filter out numerical instabilities that sometimes occur with high mode frequency
     if filter_in > 0.0
         max_freq = 2 * abs(ave.wdh[1, 1]) / R_unit
@@ -183,19 +186,26 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     elseif(inputs.IBRANCH==-1)
         # find the top nmodes most unstable modes
         ### put the unstable modes in ascending order by growthrate
+        
         jmax = sortperm(rr) #### sort_eigenvalues(nmodes_in,jmax), i believe this does the same thing
+        
         jmax .= ifelse.(rr[jmax] .> epsilon1, jmax, 0)
+        
         reverse!(jmax)
+        
         nmodes_out = 0
         for j1 = 1:min(nmodes_in, size(rr, 1))
             if (jmax[j1] != 0)
+                
                 nmodes_out = nmodes_out + 1
                 gamma_out[j1] = rr[jmax[j1]]
                 freq_out[j1] = -ri[jmax[j1]]
             end
         end
     end
-
+    
+  
+    
     # apply quench rule
     if (alpha_quench_in != 0.0)
         for j1 = 1:nmodes_in
@@ -241,28 +251,23 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         a_par_QL_out = zeros(Float64, nmodes_out)
         b_par_QL_out = zeros(Float64, nmodes_out)
         kx_bar_out = zeros(Float64, nmodes_out)
-        kpar_bar_out = zeros(Float64, nmodes_out)
-       
-
-
-    
+        kpar_bar_out = zeros(Float64, nmodes_out)    
+ 
         
-        
-        
-
-
+                
         # used for computing eigenvector
-   
+       
         zmat = similar(amat)
         eigenvector = Vector{ComplexF64}(undef,iur)
-        
+       
         for imax = 1:nmodes_out
+          
             if (jmax[imax] > 0)
-               
+                
                 eigenvector .= 1e-11 #inputs.SMALL
                 
                 zmat = amat .- (inputs.SMALL.+rr[jmax[imax]] .+ im * ri[jmax[imax]]).*bmat
-              
+                
                 gesv!(zmat, eigenvector)
                
 
@@ -286,6 +291,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 stress_par_weight,
                 stress_tor_weight,
                 exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalues[jmax[imax]], eigenvector)
+                
                 #### probably outputs
                 wd_bar_out[imax] = wd_bar
                 b0_bar_out[imax] = b0_bar

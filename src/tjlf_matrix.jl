@@ -418,6 +418,7 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     end
 
     # find the eigenvalues of ave.wdh
+   
     eigen = eigen!(Symmetric(ave.wdh))
     w = eigen.values
     a = eigen.vectors
@@ -428,6 +429,7 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     ave.wdh = a * w * transpose(a) 
 
     ### now for wdg
+    
     eigen = eigen!(Symmetric(ave.wdg))
     w = eigen.values
     a = eigen.vectors

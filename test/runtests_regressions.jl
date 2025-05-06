@@ -1,12 +1,14 @@
 using Test
 using TJLF
+using Profile
 
 # tglf regression test
 directory = joinpath(@__DIR__, "tglf_regression")
 tests = readdir(directory)
 
 # 03 is s-alpha geometry, not implemented
-excludeFolders = ["tglf03"]
+#excludeFolders = ["tglf01", "tglf02","tglf03", "tglf04","tglf05", "tglf06","tglf07", "tglf08","tglf09", "tglf12"]
+excludeFolders = ["tglf03",  "tglf12"]
 testFolders = [joinpath(directory, item) for item in readdir(directory) if isdir(joinpath(directory, item)) && item ∉ excludeFolders]
 
 for baseDirectory in testFolders
@@ -18,7 +20,8 @@ for baseDirectory in testFolders
 
         inputTJLF = readInput(joinpath(baseDirectory,"input.tglf"))
         fluxesJulia = sum(TJLF.run_tjlf(inputTJLF); dims=1)[1, :, :]
-        
+        #@profile TJLF.run_tjlf(inputTJLF)
+        #Profile.print()
        # # Test saving InputTJLF and running on it
       #  temp_dir = mktempdir(baseDirectory)
        # TJLF.save(inputTJLF, joinpath(temp_dir, "test_input_tjlf"))

@@ -2712,7 +2712,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             Threads.lock(l2)
             
             try
+                println("uuuuuuu")
+                decomp, = partialschur(construct_linear_map(sparse(amat), sparse(bmat)), nev=inputs.NMODES, which=:LR)
+                λ_inv, v = partialeigen(decomp)
+                λ_new = 1 ./ λ_inv
                 λ, v = eigs(sparse(amat), sparse(bmat), nev=inputs.NMODES, which=:LR, sigma=sigma, maxiter=50)
+                @show isapprox(λ, λ_new, atol=1e-5)
+
                # λ, v = partialschur(sparse(amat),  nev=inputs.NMODES, which=:LR, maxiter=50)
                 return λ, v, NaN, NaN
             catch e
@@ -2725,27 +2731,46 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
         end 
     end
+    
+    #if inputs.SAT_RULE ==2 || inputs.SAT_RULE ==3 
+    #    nev1 = nbasis * 45 
+    #else
+    nev1 = nbasis * 30
+    #end
 
     if inputs.IFLUX || find_eigenvector
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
-        @time begin
-        (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
+        
+        decomp, = partialschur(construct_linear_map(amat_copy, bmat_copy), nev=nev1, tol = 1e-3)
+        λ_inv, v = partialeigen(decomp)
+        alpha = 1 ./  λ_inv
        
-        (alpha, _, _) = geev!('N','N',amat_copy)
-        end
-       
-       
+        
+
     else
+      
 
         (amat, bmat,_) = gesv!(bmat, amat)
+    
+      
        
         (alpha, _, _) = geev!('N','N',amat)
-
        
+        if inputs.SMALL == 5
+            
+            decomp, = partialschur(construct_linear_map(amat, bmat), nev=nev1, v1=v_previous, tol = 1e-3)
+        else
+            decomp, = partialschur(construct_linear_map(amat, bmat), nev=nev1)
+        end
+        λ_inv, v = partialeigen(decomp)
+        alpha = 1 ./  λ_inv
+        v_previous = alpha
+        inputs.SMALL == 5
+
     end
    
-    return alpha, fill(NaN*im,(1,1))
+    return alpha,  fill(NaN*im,(1,1))
     ### not supported
     # print("kyrlov: ")
     # @time begin

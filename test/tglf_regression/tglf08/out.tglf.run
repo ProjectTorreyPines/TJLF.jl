@@ -3,5 +3,5 @@ no mpi
   D(R) = -0.0000E+00  D(I) =  0.0000E+00
   kinetic species =          2  non-kinetic species =          0
       Gam/Gam_GB      Q/Q_GB  Q_low/Q_GB    Pi/Pi_GB      S/S_GB
-elec  6.0341E-01  1.1307E+01  9.5164E+00  6.9023E-14  5.4613E+00
-ion1  6.0341E-01  2.8422E+01  2.8440E+01  2.4348E-11 -5.4613E+00
+elec  4.6322E-01  1.0330E+01  8.5555E+00  1.2761E-14  4.5914E+00
+ion1  4.6322E-01  2.5382E+01  2.5440E+01  1.9802E-11 -4.5914E+00
