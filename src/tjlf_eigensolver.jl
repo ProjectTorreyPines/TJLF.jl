@@ -2731,12 +2731,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
         end 
     end
+
+    nev1 = size(amat)[1]
     
-    #if inputs.SAT_RULE ==2 || inputs.SAT_RULE ==3 
-    #    nev1 = nbasis * 45 
-    #else
-    nev1 = nbasis * 30
-    #end
 
     if inputs.IFLUX || find_eigenvector
         amat_copy = copy(amat)
