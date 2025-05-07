@@ -24,7 +24,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         nbasis::Int, ky::T,
                         amat::Matrix{K},bmat::Matrix{K}, 
                         ky_index::Int,
-                        find_eigenvector::Bool) where T<:Real where K<:Complex
+                        find_eigenvector::Bool, arnoldi::ArnoldiMethod.ArnoldiWorkspace{K, Matrix{K}, Matrix{K}, Matrix{K}, Matrix{K}}) where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2733,34 +2733,38 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     end
 
     nev1 = size(amat)[1]
-    
+   
+
+
+   
 
     if inputs.IFLUX || find_eigenvector
+       
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
-        
-        decomp, = partialschur(construct_linear_map(amat_copy, bmat_copy), nev=nev1, tol = 1e-3)
+        # can't start with arnoldi methods becouse of different dimention now
+        decomp, = partialschur(construct_linear_map(amat_copy, bmat_copy), nev=nev1)
         λ_inv, v = partialeigen(decomp)
         alpha = 1 ./  λ_inv
        
-        
 
     else
-      
-
-       
-       
-        if inputs.SMALL == 5
+              
+        
+        try
+            decomp, = partialschur!(construct_linear_map(amat, bmat), arnoldi,   nev=nev1)
+           
+        catch e   
+            #println("testing - arnodli space has been changed")
             
-            decomp, = partialschur(construct_linear_map(amat, bmat), nev=nev1, v1=v_previous, tol = 1e-3)
-        else
-            decomp, = partialschur(construct_linear_map(amat, bmat), nev=nev1)
+            decomp, = partialschur(construct_linear_map(amat, bmat),   nev=nev1)
+           
         end
         λ_inv, v = partialeigen(decomp)
         alpha = 1 ./  λ_inv
-        v_previous = alpha
-        inputs.SMALL == 5
-
+      
+       
+       
     end
    
     return alpha,  fill(NaN*im,(1,1))

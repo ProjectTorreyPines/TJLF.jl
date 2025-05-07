@@ -41,7 +41,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             gamma_reference_kx0::Vector{T} = T[],
             freq_reference_kx0::Vector{T} = T[],
             outputGeo::Union{OutputGeometry{T},Missing} = missing,
-            find_eigenvector::Bool = false) where T <: Real
+            find_eigenvector::Bool = false, arnoldi::ArnoldiMethod.ArnoldiWorkspace{K, Matrix{K}, Matrix{K}, Matrix{K}, Matrix{K}}) where T <: Real where K<:Complex
 
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
@@ -107,12 +107,12 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
     
-    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector)
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector, arnoldi)
     
     
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
-    #@show size(rr)
+  
    
     # filter out numerical instabilities that sometimes occur with high mode frequency
     if filter_in > 0.0
@@ -203,8 +203,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             end
         end
     end
-    
-  
+   
     
     # apply quench rule
     if (alpha_quench_in != 0.0)

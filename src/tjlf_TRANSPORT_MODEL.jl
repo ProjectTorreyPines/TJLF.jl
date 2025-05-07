@@ -127,6 +127,18 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             error("NOT IMPLEMENTED YET -DSUN")
         end
     else
+
+        nev1 = (ns - ns0 + 1) * 15 * nbasis
+        V, tmp = Matrix{ComplexF64}(undef, nev1, nev1+1), Matrix{ComplexF64}(undef, nev1, nev1+1)
+        H, Q = Matrix{ComplexF64}(undef, nev1+1, nev1), Matrix{ComplexF64}(undef, nev1, nev1)
+        arnoldi = ArnoldiWorkspace(V, H, V_tmp = tmp, Q = Q)
+
+
+
+
+
+
+
         inputs.IFLUX = true
         # use new nbasis value
         nbasis = inputs.NBASIS_MAX
@@ -134,7 +146,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         # println("this is XII")
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-        ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
+        ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index, arnoldi=arnoldi)
 
         if(inputs.USE_INBOARD_DETRAPPED && inputs.IBRANCH==-1) # check for inward ballooning modes
             b_geo = satParams.B_geo
@@ -149,7 +161,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 # println("this is XIII")
                 nmodes_out, gamma_out, freq_out,
                 particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-                _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo, arnoldi=arnoldi)
             end
         end
     end
@@ -255,8 +267,16 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
 
     # calculate the eigenvalues with no shear
     nbasis = inputs.NBASIS_MAX
+
+    nev1 = (ns - ns0 + 1) * 15 * nbasis
+    V, tmp = Matrix{ComplexF64}(undef, nev1, nev1+1), Matrix{ComplexF64}(undef, nev1, nev1+1)
+    H, Q = Matrix{ComplexF64}(undef, nev1+1, nev1), Matrix{ComplexF64}(undef, nev1, nev1)
+    arnoldi = ArnoldiWorkspace(V, H, V_tmp = tmp, Q = Q)
+
+
+
     nmodes_out, gamma_out, freq_out,
-    _,_,_,_,_,ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
+    _,_,_,_,_,ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index, arnoldi=arnoldi)
 
     if(inputs.IBRANCH==-1) # check for inward ballooning modes
         if(inputs.USE_INBOARD_DETRAPPED) ####### find ft_test and modB_test
@@ -272,7 +292,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
                     @warn "NOT TESTED max.jl ln 302"
                     # println("this is XIII")
                     nmodes_out, gamma_out, freq_out,
-                    _,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                    _,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo, arnoldi=arnoldi)
                 end
             end
         end
@@ -317,7 +337,7 @@ description:
 function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
     kx0_e::T,
     firstPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
-
+    #println("secondPass")
     # input values
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
@@ -327,6 +347,11 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
 
     # saturation values
     R_unit = satParams.R_unit
+
+    nev1 = (ns - ns0 + 1) * 15 * nbasis_max_in
+    V, tmp = Matrix{ComplexF64}(undef, nev1, nev1+1), Matrix{ComplexF64}(undef, nev1, nev1+1)
+    H, Q = Matrix{ComplexF64}(undef, nev1+1, nev1), Matrix{ComplexF64}(undef, nev1, nev1)
+    arnoldi = ArnoldiWorkspace(V, H, V_tmp = tmp, Q = Q)
 
     # initialize reference eigenvalue arrays
     gamma_reference_kx0 = similar(firstPass_eigenvalue[:,1,1])
@@ -343,7 +368,7 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
         _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
-                            kx0_e, gamma_reference_kx0, freq_reference_kx0)
+                            kx0_e, gamma_reference_kx0, freq_reference_kx0, arnoldi=arnoldi)
 
         gamma_nb_min_out = gamma_out[1]
     else
