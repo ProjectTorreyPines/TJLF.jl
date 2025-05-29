@@ -17,6 +17,12 @@ outputs:
 description:
     uses the structs calculated in tjlf_matrix.jl to populate matrix amat and bmat, solves the generalized eigenvalue problem for only the eigenvalues, returns those eigenvalues
 """
+function construct_linear_map(A, B, sigma)
+    P = lu(A - sigma*B)    
+    LinearMap{eltype(A)}((y,x) -> ldiv!(y, P, B*x),size(A, 1))
+end
+
+
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
@@ -2704,21 +2710,24 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
         sigma = 0.0
         if !isnan(inputs.EIGEN_SPECTRUM[ky_index])
-            sigma = inputs.EIGEN_SPECTRUM[ky_index]
+            sigma = inputs.EIGEN_SPECTRUM[ky_index]  #array of eigenvalues from input file
         end
+       
         if sigma != 0.0
-            Threads.lock(l2)
-            
-            try
-                λ, v = eigs(sparse(amat), sparse(bmat), nev=inputs.NMODES, which=:LR, sigma=sigma, maxiter=50)
-                return λ, v, NaN, NaN
+           
+            try              
+                nev1=inputs.NMODES                  
+                L=construct_linear_map(sparse(amat), sparse(bmat), sigma)
+                λ, v, _ = eigsolve(L, nev1, 1, :LR) 
+               # printl("Success!!!!----------------------------")  - this solver almost never works
+                return λ, v[ky_index], NaN, NaN
             catch e
-                @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues: $(e)"
+                @warn "eigsolve() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues: $(e)"
             finally
-                Threads.unlock(l2)
+               
             end
         else
-            @warn "no growth rate initial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
+            @warn "no growth rate initial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues"
         end
     end
 
