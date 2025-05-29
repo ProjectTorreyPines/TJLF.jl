@@ -5,7 +5,6 @@ using Base.Threads
 using LinearAlgebra
 import LinearAlgebra.LAPACK.gesv!
 import LinearAlgebra.LAPACK.geev!
-using Arpack # use version 0.5.3
 using SparseArrays
 using StaticArrays
 using FastGaussQuadrature
