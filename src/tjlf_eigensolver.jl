@@ -17,10 +17,7 @@ outputs:
 description:
     uses the structs calculated in tjlf_matrix.jl to populate matrix amat and bmat, solves the generalized eigenvalue problem for only the eigenvalues, returns those eigenvalues
 """
-function construct_linear_map(A, B, sigma)
-    P = lu(A - sigma*B)    
-    LinearMap{eltype(A)}((y,x) -> ldiv!(y, P, B*x),size(A, 1))
-end
+
 
 
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
@@ -2716,11 +2713,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         if sigma != 0.0
            
             try              
-                nev1=inputs.NMODES                  
+                nev1=inputs.NMODES            
                 L=construct_linear_map(sparse(amat), sparse(bmat), sigma)
-                λ, v, _ = eigsolve(L, nev1, 1, :LR) 
+                λ, v, _ = eigsolve(L, size(amat)[1], nev1, :LM) 
                # printl("Success!!!!----------------------------")  - this solver almost never works
-                return λ, v[ky_index], NaN, NaN
+                return λ, v[1], NaN, NaN
             catch e
                 @warn "eigsolve() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues: $(e)"
             finally
