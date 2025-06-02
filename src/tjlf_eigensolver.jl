@@ -22,7 +22,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
                         aveGrad::AveGrad{T},aveGradB::AveGradB{T},
                         nbasis::Int, ky::T,
-                        amat::Matrix{K},bmat::Matrix{K}, 
+                        amat::Matrix{K},bmat::Matrix{K},
                         ky_index::Int,
                         find_eigenvector::Bool) where T<:Real where K<:Complex
 
@@ -43,7 +43,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     taus::Vector{Float64} = inputs.TAUS
     zs::Vector{Float64} = inputs.ZS
     as::Vector{Float64} = inputs.AS
-    
+
 
     vs2 = √(taus[2] / mass[2])
     vs1 = √(taus[1] / mass[1])
@@ -760,7 +760,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         gradhr11p1 = 0.0
                         gradhr13p1 = 0.0
                     else
-                       
+
                         gradhp1 = linsker*aveGrad.gradhp1p0[is,ib,jb]
                         gradhr11 = linsker*aveGrad.gradhr11p0[is,ib,jb]
                         gradhr13 = linsker*aveGrad.gradhr13p0[is,ib,jb]
@@ -915,7 +915,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                                     - ft2*aveKG.kpargu3[is,ib,jb] + aveKG.kpargu1[is,ib,jb]/3)
 
                         if(nbasis==1 || linsker==0.0)
-                        
+
                             gradgp1=0.0
                             gradgr11=0.0
                             gradgr13=0.0
@@ -923,7 +923,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradgr11p1=0.0
                             gradgr13p1=0.0
                         else
-                           
+
                             gradgp1  = linsker*aveGrad.gradgp1p0[is,ib,jb]
                             gradgr11 = linsker*aveGrad.gradgr11p0[is,ib,jb]
                             gradgr13 = linsker*aveGrad.gradgr13p0[is,ib,jb]
@@ -2708,7 +2708,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
         if sigma != 0.0
             Threads.lock(l2)
-            
+
             try
                 λ, v = eigs(sparse(amat), sparse(bmat), nev=inputs.NMODES, which=:LR, sigma=sigma, maxiter=50)
                 return λ, v, NaN, NaN
@@ -2727,20 +2727,21 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         bmat_copy = copy(bmat)
 
         (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
-       
+
         (alpha, _, _) = geev!('N','N',amat_copy)
-      
-       
-       
+
+
+
     else
 
         (amat, bmat,_) = gesv!(bmat, amat)
-       
-        (alpha, _, _) = geev!('N','N',amat)
+        alpha = geev!('N','N',amat)[1]
+        #alpha = mygeev!(amat)
+        #alpha = eigvals!(amat)
+        #alpha = geevx!('B', 'N', 'N', 'N', amat)[2]
 
-       
     end
-   
+
     return alpha, fill(NaN*im,(1,1))
     ### not supported
     # print("kyrlov: ")
@@ -2760,3 +2761,34 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # return alpha./beta, vr
 
 end
+
+# import LinearAlgebra: checksquare, BlasInt, libblastrampoline
+# import LinearAlgebra.BLAS: @blasfunc
+# import LinearAlgebra.LAPACK: chklapackerror
+# const works = [Vector{Float64}(undef, 20000) for _ in 1:10]
+# function mygeev!(A::AbstractMatrix{T}) where {T<:Complex}
+#     n = checksquare(A)
+#     VL    = similar(A, T, (n, 0))
+#     VR    = similar(VL)
+#     W     = similar(A, T, n)
+#     rwork = similar(A, Float64, 2n)
+#     work = Vector{T}(undef, 1)
+#     #work  = works[Threads.threadid()]
+#     lwork = BlasInt(-1)
+#     info  = Ref{BlasInt}()
+#     for i = 1:2  # first call returns lwork as work[1]
+#         ccall((@blasfunc(zgeev_), libblastrampoline), Cvoid,
+#                 (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{T},
+#                 Ref{BlasInt}, Ptr{T}, Ptr{T}, Ref{BlasInt},
+#                 Ptr{T}, Ref{BlasInt}, Ptr{T}, Ref{BlasInt},
+#                 Ptr{Float64}, Ref{BlasInt}, Clong, Clong),
+#                 'N', 'N', n, A, max(1,stride(A,2)), W, VL, n, VR, n,
+#                 work, lwork, rwork, info, 1, 1)
+#         chklapackerror(info[])
+#         if i == 1
+#             lwork = BlasInt(real(work[1]))
+#             resize!(work, lwork)
+#         end
+#     end
+#     W
+# end

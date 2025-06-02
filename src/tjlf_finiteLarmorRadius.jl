@@ -44,14 +44,9 @@ function FLR_hs(ft::T, b::T, Amat::Matrix{T}; b2=b^2, b25=b^2.5)::T where T<:Rea
     y4 = FLR_constants.y4
     y5 = FLR_constants.y5
     g = FLR_constants.g
-    h = Vector{Float64}(undef, na)
 
-    for i = 1:4
-        h[i] = b/(y4[i] + b2)
-    end
-    for i = 5:na
-        h[i] = b2/(0.25*y5[i] + b25)
-    end
+    h14 = i -> b/(y4[i] + b2)
+    h5na = i -> b2/(0.25*y5[i] + b25)
 
     # transform to gt grid
     gt = √(1-ft)
@@ -70,7 +65,7 @@ function FLR_hs(ft::T, b::T, Amat::Matrix{T}; b2=b^2, b25=b^2.5)::T where T<:Rea
     for k = 1:na
         ca = Amat[i,k] + (Amat[j,k] - Amat[i,k])*dg
         # sum up the terms
-        hs = hs + ca*h[k]
+        hs = hs + ca*(k <= 4 ? h14(k) : h5na(k))
     end
 
     return hs
