@@ -2736,9 +2736,6 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
         (amat, bmat,_) = gesv!(bmat, amat)
         alpha = geev!('N','N',amat)[1]
-        #alpha = mygeev!(amat)
-        #alpha = eigvals!(amat)
-        #alpha = geevx!('B', 'N', 'N', 'N', amat)[2]
 
     end
 
@@ -2761,34 +2758,3 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # return alpha./beta, vr
 
 end
-
-# import LinearAlgebra: checksquare, BlasInt, libblastrampoline
-# import LinearAlgebra.BLAS: @blasfunc
-# import LinearAlgebra.LAPACK: chklapackerror
-# const works = [Vector{Float64}(undef, 20000) for _ in 1:10]
-# function mygeev!(A::AbstractMatrix{T}) where {T<:Complex}
-#     n = checksquare(A)
-#     VL    = similar(A, T, (n, 0))
-#     VR    = similar(VL)
-#     W     = similar(A, T, n)
-#     rwork = similar(A, Float64, 2n)
-#     work = Vector{T}(undef, 1)
-#     #work  = works[Threads.threadid()]
-#     lwork = BlasInt(-1)
-#     info  = Ref{BlasInt}()
-#     for i = 1:2  # first call returns lwork as work[1]
-#         ccall((@blasfunc(zgeev_), libblastrampoline), Cvoid,
-#                 (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ptr{T},
-#                 Ref{BlasInt}, Ptr{T}, Ptr{T}, Ref{BlasInt},
-#                 Ptr{T}, Ref{BlasInt}, Ptr{T}, Ref{BlasInt},
-#                 Ptr{Float64}, Ref{BlasInt}, Clong, Clong),
-#                 'N', 'N', n, A, max(1,stride(A,2)), W, VL, n, VR, n,
-#                 work, lwork, rwork, info, 1, 1)
-#         chklapackerror(info[])
-#         if i == 1
-#             lwork = BlasInt(real(work[1]))
-#             resize!(work, lwork)
-#         end
-#     end
-#     W
-# end
