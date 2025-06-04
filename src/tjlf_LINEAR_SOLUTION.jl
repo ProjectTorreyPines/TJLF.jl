@@ -27,6 +27,11 @@ outputs:
 description:
     TGLF Linear Stability driver computes all quasilinear quantities for a single ky
 """
+function construct_linear_map(A, B, sigma)
+    P = lu(A - sigma*B)    
+    LinearMap{eltype(A)}((y,x) -> ldiv!(y, P, B*x),size(A, 1))
+end
+
 function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
             ky::T,
             nbasis::Int,
@@ -255,12 +260,16 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     gesv!(zmat,eigenvector)
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])
-                        Threads.lock(l)
-                        try
-                            _, vec = eigs(sparse(amat),sparse(bmat),nev=1,sigma=eigenvalues[jmax[imax]],which=:LM)
-                            eigenvector = vec[:,1]
+                      
+                        
+                        try                       
+                            nev1=size(amat)[1]                           
+                            L=construct_linear_map(sparse(amat), sparse(bmat), eigenvalues[jmax[imax]])
+                            _, vec, _ = eigsolve(L, nev1, 1, :LM) 
+                            eigenvector = vec[1]                                                  
+
                         finally
-                            Threads.unlock(l)
+                       
                         end
                     else
                         eigenvector = v[:, jmax[imax]]

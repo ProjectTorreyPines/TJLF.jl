@@ -5,11 +5,11 @@ using Base.Threads
 using LinearAlgebra
 import LinearAlgebra.LAPACK.gesv!
 import LinearAlgebra.LAPACK.geev!
-using Arpack # use version 0.5.3
 using SparseArrays
 using StaticArrays
 using FastGaussQuadrature
-# using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem
+using LinearMaps
+using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem but use it to replace Arpack
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
@@ -27,6 +27,7 @@ include("tjlf_max.jl")
 include("tjlf_TRANSPORT_MODEL.jl")
 include("run_tjlf.jl")
 
+LinearAlgebra.BLAS.set_num_threads(1)
 export readInput
 export gauss_hermite, get_sat_params, get_ky_spectrum, get_ky_spectrum_size, tjlf_TM
 export sum_ky_spectrum, xgrid_functions_geo
