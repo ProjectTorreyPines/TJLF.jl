@@ -775,7 +775,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     if (abs(argR) < small)
         theta0=0.0
     else
-        theta0=get_theta0(theta, inputs, small)
+        theta0=get_theta0(theta, inputs; small)
     end
 
     argZ = theta
