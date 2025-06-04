@@ -6,7 +6,7 @@ directory = joinpath(@__DIR__, "tglf_regression")
 tests = readdir(directory)
 
 # 03 is s-alpha geometry, not implemented
-excludeFolders = ["tglf01","tglf02","tglf03","tglf04","tglf05","tglf06","tglf07"]
+excludeFolders = ["tglf03"]
 testFolders = [joinpath(directory, item) for item in readdir(directory) if isdir(joinpath(directory, item)) && item ∉ excludeFolders]
 
 for baseDirectory in testFolders

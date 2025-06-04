@@ -17,12 +17,15 @@ outputs:
 description:
     uses the structs calculated in tjlf_matrix.jl to populate matrix amat and bmat, solves the generalized eigenvalue problem for only the eigenvalues, returns those eigenvalues
 """
+
+
+
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
                         aveGrad::AveGrad{T},aveGradB::AveGradB{T},
                         nbasis::Int, ky::T,
-                        amat::Matrix{K},bmat::Matrix{K}, 
+                        amat::Matrix{K},bmat::Matrix{K},
                         ky_index::Int,
                         find_eigenvector::Bool) where T<:Real where K<:Complex
 
@@ -43,7 +46,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     taus::Vector{Float64} = inputs.TAUS
     zs::Vector{Float64} = inputs.ZS
     as::Vector{Float64} = inputs.AS
-    
+
 
     vs2 = √(taus[2] / mass[2])
     vs1 = √(taus[1] / mass[1])
@@ -503,8 +506,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             if(index==21) index=20 end
             df = (ft-uv_constants.fm[index])/(uv_constants.fm[index+1]-uv_constants.fm[index])
 
-            v .= uv_constants.vm[:,index] .+ uv_constants.vm_diff[:,index].*df
-            vb .= uv_constants.vbm[:,index] .+ uv_constants.vbm_diff[:,index].*df
+            @views @. v = uv_constants.vm[:,index] + uv_constants.vm_diff[:,index] * df
+            @views @. vb = uv_constants.vbm[:,index] + uv_constants.vbm_diff[:,index] * df
 
             u1_r = v[1]
             u1_i = v[2]
@@ -760,7 +763,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         gradhr11p1 = 0.0
                         gradhr13p1 = 0.0
                     else
-                       
+
                         gradhp1 = linsker*aveGrad.gradhp1p0[is,ib,jb]
                         gradhr11 = linsker*aveGrad.gradhr11p0[is,ib,jb]
                         gradhr13 = linsker*aveGrad.gradhr13p0[is,ib,jb]
@@ -915,7 +918,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                                     - ft2*aveKG.kpargu3[is,ib,jb] + aveKG.kpargu1[is,ib,jb]/3)
 
                         if(nbasis==1 || linsker==0.0)
-                        
+
                             gradgp1=0.0
                             gradgr11=0.0
                             gradgr13=0.0
@@ -923,7 +926,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             gradgr11p1=0.0
                             gradgr13p1=0.0
                         else
-                           
+
                             gradgp1  = linsker*aveGrad.gradgp1p0[is,ib,jb]
                             gradgr11 = linsker*aveGrad.gradgr11p0[is,ib,jb]
                             gradgr13 = linsker*aveGrad.gradgr13p0[is,ib,jb]
@@ -2704,21 +2707,24 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
         sigma = 0.0
         if !isnan(inputs.EIGEN_SPECTRUM[ky_index])
-            sigma = inputs.EIGEN_SPECTRUM[ky_index]
+            sigma = inputs.EIGEN_SPECTRUM[ky_index]  #array of eigenvalues from input file
         end
+       
         if sigma != 0.0
-            Threads.lock(l2)
-            
-            try
-                λ, v = eigs(sparse(amat), sparse(bmat), nev=inputs.NMODES, which=:LR, sigma=sigma, maxiter=50)
-                return λ, v, NaN, NaN
+           
+            try              
+                nev1=inputs.NMODES            
+                L=construct_linear_map(sparse(amat), sparse(bmat), sigma)
+                λ, v, _ = eigsolve(L, size(amat)[1], nev1, :LM) 
+               # printl("Success!!!!----------------------------")  - this solver almost never works
+                return λ, v[1], NaN, NaN
             catch e
-                @warn "eigs() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues: $(e)"
+                @warn "eigsolve() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues: $(e)"
             finally
-                Threads.unlock(l2)
+               
             end
         else
-            @warn "no growth rate initial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using ggev! to find all eigenvalues"
+            @warn "no growth rate initial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues"
         end
     end
 
@@ -2727,36 +2733,12 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         bmat_copy = copy(bmat)
 
         (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
-       
-        (alpha, _, _) = geev!('N','N',amat_copy)
-      
-       
-       
+        alpha = geev!('N','N',amat_copy)[1]
     else
-
         (amat, bmat,_) = gesv!(bmat, amat)
-       
-        (alpha, _, _) = geev!('N','N',amat)
-
-       
+        alpha = geev!('N','N',amat)[1]
     end
-   
-    return alpha, fill(NaN*im,(1,1))
-    ### not supported
-    # print("kyrlov: ")
-    # @time begin
-    # _, _ = geneigsolve((amat,bmat))
-    # end
 
-    ### about the same but less allocations
-    # print("ggev: ")
-    # @time begin
-    # if inputs.IFLUX
-    #     (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
-    # else
-    #     (alpha, beta, _, vr) = ggev!('N','N',amat,bmat)
-    # end
-    # end
-    # return alpha./beta, vr
+    return alpha, fill(NaN*im,(1,1))
 
 end

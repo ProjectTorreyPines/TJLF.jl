@@ -1,3 +1,21 @@
+function new_aves(inputs::InputTJLF{T}, nbasis::Int) where {T<:Real}
+    ns::Int = inputs.NS
+
+    ave = Ave{Float64}(ns, nbasis)
+    aveH = AveH{Float64}(ns, nbasis)
+    aveWH = AveWH{Float64}(ns, nbasis)
+    aveKH = AveKH(ns, nbasis)
+
+    aveG = AveG{Float64}(ns, nbasis)
+    aveWG = AveWG{Float64}(ns, nbasis)
+    aveKG = AveKG(ns, nbasis)
+
+    aveGrad = AveGrad{Float64}(ns, nbasis)
+    aveGradB = AveGradB{Float64}(ns, nbasis)
+    return ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG, aveGrad, aveGradB
+end
+
+
 """
     get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,ky_index::Int)
 
@@ -16,21 +34,11 @@ description:
 """
 function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},
                     ky::T,
-                    nbasis::Int, ky_index::Int) where T<:Real
+                    nbasis::Int, ky_index::Int;
+                    aves = new_aves(inputs, nbasis)) where T<:Real
 
-    ns::Int = inputs.NS
-
-    ave = Ave{Float64}(ns, nbasis)
-    aveH = AveH{Float64}(ns, nbasis)
-    aveWH = AveWH{Float64}(ns, nbasis)
-    aveKH = AveKH(ns, nbasis)
-
-    aveG = AveG{Float64}(ns, nbasis)
-    aveWG = AveWG{Float64}(ns, nbasis)
-    aveKG = AveKG(ns, nbasis)
-
-    aveGrad = AveGrad{Float64}(ns, nbasis)
-    aveGradB = AveGradB{Float64}(ns, nbasis)
+    reset_ave!.(aves)
+    ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG, aveGrad, aveGradB = aves
 
     FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky, nbasis, ky_index)
     get_ave!(inputs, outputGeo, outputHermite, ave, nbasis, ky, ky_index)
@@ -57,31 +65,31 @@ function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
 
     h_ratios!(inputs, aveH)
 
-    if(inputs.LINSKER_FACTOR!=0.0) 
-      
-        grad_ave_h!(inputs,ave,aveH,aveGrad) 
+    if(inputs.LINSKER_FACTOR!=0.0)
+
+        grad_ave_h!(inputs,ave,aveH,aveGrad)
     end
 
     ave_hp0!(inputs, ave, aveH)
     if(inputs.BETAE>0.0)
         ave_hb0!(inputs, ave, aveH)
-        if(inputs.VPAR_MODEL==0) ave_hbp!(inputs, ave, aveH) end
+        inputs.VPAR_MODEL==0 && ave_hbp!(inputs, ave, aveH)
     end
 
     wd_h!(inputs, ave, aveH, aveWH)
     kpar_h!(inputs, ave, aveH, aveKH)
 
-    if(inputs.GRADB_FACTOR!=0.0) 
+    if(inputs.GRADB_FACTOR!=0.0)
         @warn "NOT TESTED matrix.jl ln 82"
-        gradB_h(inputs,ave,aveH,aveGradB) 
+        gradB_h(inputs,ave,aveH,aveGradB)
     end
 
 
     nroot = 15 ###### hardcoded
     if(nroot>6)
-       
+
         g_ratios!(inputs, aveG)
-        if(inputs.LINSKER_FACTOR!=0) 
+        if(inputs.LINSKER_FACTOR!=0)
            grad_ave_g!(inputs,ave,aveG,aveGrad)
         end
         ave_gp0!(inputs, ave, aveG)
@@ -194,7 +202,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             end
         end
     end
-    
+
     @views dvec = outputHermite._dvec[:,ky_index]
     for is = ns0:ns
         @views dvec .= hxn[is,:] .* wx
@@ -237,7 +245,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             outer!(aveG.gw333, h, dvec, is)
         end
     end
-    
+
     @inbounds for k47 in eachindex(aveH.hn)
         (abs(aveH.hn[k47]) < zero_cut) && (aveH.hn[k47] = 0)
         (abs(aveH.hp1[k47]) < zero_cut) && (aveH.hp1[k47] = 0)
@@ -277,32 +285,32 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
 
     width_in = inputs.WIDTH_SPECTRUM[ky_index]
 
-    vpar_model_in = inputs.VPAR_MODEL
-    alpha_mach_in = inputs.ALPHA_MACH
-    sign_it_in = inputs.SIGN_IT
-    use_bper_in = inputs.USE_BPER
+    vpar_model_in = inputs.VPAR_MODEL::Int
+    alpha_mach_in = inputs.ALPHA_MACH::T
+    sign_it_in = inputs.SIGN_IT::Int
+    use_bper_in = inputs.USE_BPER::Bool
 
-    betae_s = inputs.BETAE ##### not true for 'GENE' units
-    debye_s = inputs.DEBYE #### different if UNITS is GENE
-    debye_factor_in = inputs.DEBYE_FACTOR
-    nx = 2*inputs.NXGRID - 1
-    ns = inputs.NS
-    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    betae_s = inputs.BETAE::T ##### not true for 'GENE' units
+    debye_s = inputs.DEBYE::T #### different if UNITS is GENE
+    debye_factor_in = inputs.DEBYE_FACTOR::T
+    nx = 2*inputs.NXGRID::Int - 1
+    ns = inputs.NS::Int
+    ns0 = ifelse(inputs.ADIABATIC_ELEC::Bool, 2, 1)
 
-    taus = inputs.TAUS
-    vpar = inputs.VPAR
-    zs = inputs.ZS
-    as = inputs.AS
+    taus = inputs.TAUS::Vector{T}
+    vpar = inputs.VPAR::Vector{T}
+    zs = inputs.ZS::Vector{T}
+    as = inputs.AS::Vector{T}
 
-    b0x = outputGeo.b0x
-    wdx = outputGeo.wdx
-    wdpx = outputGeo.wdpx
-    kxx = outputGeo.kxx
-    cx_tor_par = outputGeo.cx_tor_par
-    cx_tor_per = outputGeo.cx_tor_per
-    cx_par_par = outputGeo.cx_par_par
-    wx = outputHermite.wx
-    h = outputHermite.h[1:nbasis,:]
+    b0x = outputGeo.b0x::Vector{T}
+    wdx = outputGeo.wdx::Vector{T}
+    wdpx = outputGeo.wdpx::Vector{T}
+    kxx = outputGeo.kxx::Vector{T}
+    cx_tor_par = outputGeo.cx_tor_par::Vector{T}
+    cx_tor_per = outputGeo.cx_tor_per::Vector{T}
+    cx_par_par = outputGeo.cx_par_par::Vector{T}
+    wx = outputHermite.wx::Vector{T}
+    h = outputHermite.h[1:nbasis,:]::Matrix{T}
 
     # fill the Poisson equation phi multiplier px0 x-grid array
     # note that pol is set in get_species
@@ -380,8 +388,8 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
                     ave.kpar_eff[is,i,j] = ave.kpar[i,j]
                     if(vpar_model_in==1 && i==j)
                         @warn "I haven't tested this (matrix.jl ln 403)"
-                        vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.VPAR[is]
-                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*vpar_s*ky*R_unit*q_unit*inputs.WIDTH_SPECTRUM[ky_index]*inputs.MASS[is]/inputs.ZS[is]
+                        vpar_s = (inputs.ALPHA_MACH::T)*(inputs.SIGN_IT::Int)*(inputs.VPAR[is]::T)
+                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*vpar_s*ky*R_unit*q_unit*(inputs.WIDTH_SPECTRUM[ky_index]::T)*(inputs.MASS[is]::T)/(inputs.ZS[is]::T)
                     end
                 end
             end
@@ -409,7 +417,7 @@ end
 #***************************************************************
 function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
-    wd_zero_in = inputs.WD_ZERO
+    wd_zero_in = inputs.WD_ZERO::T
 
     if(size(ave.modwdh)[2]==1)
         ave.modwdh[1,1] = abs(ave.wdh[1,1])
@@ -418,24 +426,28 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     end
 
     # find the eigenvalues of ave.wdh
-    eigen = eigen!(Symmetric(ave.wdh))
-    w = eigen.values
-    a = eigen.vectors
-    # if abs(w)<wd_zero, make it +- wd_zero. otherwise keep the w
-    w .= sign.(w) .* max.(abs.(w), wd_zero_in)
-    w = Diagonal(w)
-    ave.modwdh = a * abs.(w) * transpose(a)
-    ave.wdh = a * w * transpose(a) 
+    wdh = Symmetric(ave.wdh)
+    wh, ah = eigen!(wdh)
+    # if abs(wh)<wd_zero, make it +- wd_zero. otherwise keep the wh
+    @. wh .= sign(wh) * max(abs(wh), wd_zero_in)
+    @inbounds @simd for j in eachindex(wh)
+        for i in eachindex(wh)
+            ave.wdh[i, j]    = sum(ah[i, k] * wh[k] * ah[j, k] for k in eachindex(wh))
+            ave.modwdh[i, j] = sum(ah[i, k] * abs(wh[k]) * ah[j, k] for k in eachindex(wh))
+        end
+    end
 
     ### now for wdg
-    eigen = eigen!(Symmetric(ave.wdg))
-    w = eigen.values
-    a = eigen.vectors
-    # if abs(w)<wd_zero, make it +- wd_zero. otherwise keep the w
-    w .= sign.(w) .* max.(abs.(w), wd_zero_in)
-    w = Diagonal(w)
-    ave.modwdg = a * abs.(w) * transpose(a)
-    ave.wdg = a * w * transpose(a)
+    wdg = Symmetric(ave.wdg)
+    wg, ag = eigen!(wdg)
+    # if abs(wg)<wd_zero, make it +- wd_zero. otherwise keep the wg
+    @. wg = sign(wg) * max(abs(wg), wd_zero_in)
+    @inbounds @simd for j in eachindex(wg)
+        for i in eachindex(wg)
+            ave.wdg[i, j]    = sum(ag[i, k] * wg[k] * ag[j, k] for k in eachindex(wg))
+            ave.modwdg[i, j] = sum(ag[i, k] * abs(wg[k]) * ag[j, k] for k in eachindex(wg))
+        end
+    end
 end
 
 
@@ -501,6 +513,11 @@ function mult3!(C, A, B, Ctmp, Atmp, Btmp, is)
     C[is,:,:] .= Ctmp
 end
 
+# As much as possible, in-place inversion
+function inv!(invA, A, I)
+    F = lu!(A)
+    ldiv!(invA, F, I)
+end
 
 #***************************************************************
 #   compute the h_ratios
@@ -511,15 +528,23 @@ function h_ratios!(inputs::InputTJLF{T}, aveH::AveH{T}) where T<:Real
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     _, nbasis, _ = size(aveH.hn)
-    Ctmp = zeros(eltype(aveH.ht1), nbasis, nbasis)
-    Atmp = zeros(eltype(aveH.hp1), nbasis, nbasis)
-    Btmp = zeros(eltype(aveH.hn), nbasis, nbasis)
+    Ctmp = zeros(T, nbasis, nbasis)
+    Atmp = zeros(T, nbasis, nbasis)
+    Btmp = zeros(T, nbasis, nbasis)
 
-    # compute matrix ratios
+    Iden = Matrix{T}(I, nbasis, nbasis)
+    hninv = zeros(T, nbasis, nbasis)
+    hp1inv = zeros(T, nbasis, nbasis)
+    hp3inv = zeros(T, nbasis, nbasis)
+
     for is = ns0:ns
-        hninv = inv(aveH.hn[is,:,:])
-        hp1inv = inv(aveH.hp1[is,:,:])
-        hp3inv = inv(aveH.hp3[is,:,:])
+
+        Atmp .= @view aveH.hn[is, :, :]
+        inv!(hninv, Atmp, Iden)
+        Atmp .= @view aveH.hp1[is, :, :]
+        inv!(hp1inv, Atmp, Iden)
+        Atmp .= @view aveH.hp3[is, :, :]
+        inv!(hp3inv, Atmp, Iden)
 
         mult1!(aveH.ht1, aveH.hp1, hninv, Ctmp, Atmp, is)
         mult1!(aveH.ht3, aveH.hp3, hninv, Ctmp, Atmp, is)
@@ -724,15 +749,22 @@ function g_ratios!(inputs::InputTJLF{T}, aveG::AveG{T}) where T<:Real
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     _, nbasis, _ = size(aveG.gn)
-    Ctmp = zeros(eltype(aveG.gt1), nbasis, nbasis)
-    Atmp = zeros(eltype(aveG.gp1), nbasis, nbasis)
-    Btmp = zeros(eltype(aveG.gt1), nbasis, nbasis)
+    Ctmp = zeros(T, nbasis, nbasis)
+    Atmp = zeros(T, nbasis, nbasis)
+    Btmp = zeros(T, nbasis, nbasis)
 
+    Iden = Matrix{T}(I, nbasis, nbasis)
+    gninv = zeros(T, nbasis, nbasis)
+    gp1inv = zeros(T, nbasis, nbasis)
+    gp3inv = zeros(T, nbasis, nbasis)
     # compute matrix ratios
     for is = ns0:ns
-        gninv = inv(aveG.gn[is,:,:])
-        gp1inv = inv(aveG.gp1[is,:,:])
-        gp3inv = inv(aveG.gp3[is,:,:])
+        Ctmp .= @view aveG.gn[is,:,:]
+        inv!(gninv, Ctmp, Iden)
+        Ctmp .= @view aveG.gp1[is,:,:]
+        inv!(gp1inv, Ctmp, Iden)
+        Ctmp .= @view aveG.gp3[is,:,:]
+        inv!(gp3inv, Ctmp, Iden)
 
         mult1!(aveG.gt1, aveG.gp1, gninv, Ctmp, Atmp, is)
         mult1!(aveG.gt3, aveG.gp3, gninv, Ctmp, Atmp, is)
@@ -939,17 +971,18 @@ function grad_ave_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveGrad::Ave
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     _, nbasis, _ = size(aveGrad.gradhp1)
-    C1tmp = zeros(eltype(aveGrad.gradhp1), nbasis, nbasis)
-    C2tmp = zeros(eltype(aveGrad.gradhp1), nbasis, nbasis)
-    Atmp = zeros(eltype(aveH.hu1), nbasis, nbasis)
-    Btmp = zeros(eltype(aveH.hu1), nbasis, nbasis)
+    C1tmp = zeros(T, nbasis, nbasis)
+    C2tmp = zeros(T, nbasis, nbasis)
+    Atmp = zeros(T, nbasis, nbasis)
+    Btmp = zeros(T, nbasis, nbasis)
 
-    
+    Iden = Matrix{T}(I, nbasis, nbasis)
+    hp1inv = zeros(T, nbasis, nbasis)
 
     for is = ns0:ns
 
-        
-        hp1inv = inv(aveH.hp1[is, :, :])
+        Atmp .= @view aveH.hp1[is, :, :]
+        inv!(hp1inv, Atmp, Iden)
 
         mult5!(aveGrad.gradhp1, ave.kpar, aveH.hp1, C1tmp, C2tmp, Btmp, is)
         mult3!(aveGrad.gradhr11, aveH.hu1, aveGrad.gradhp1, C1tmp, Atmp, Btmp, is)
@@ -962,7 +995,7 @@ function grad_ave_h!(inputs::InputTJLF{T},ave::Ave{T},aveH::AveH{T},aveGrad::Ave
         mult1!(aveGrad.gradhp1p0, aveGrad.gradhp1, ave.p0inv, C1tmp, Atmp, is)
         mult1!(aveGrad.gradhr11p0, aveGrad.gradhr11, ave.p0inv, C1tmp, Atmp, is)
         mult1!(aveGrad.gradhr13p0, aveGrad.gradhr13, ave.p0inv, C1tmp, Atmp, is)
-    end 
+    end
 end
 
 
@@ -980,13 +1013,15 @@ function  grad_ave_g!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveGrad::Av
     Atmp = zeros(eltype(aveG.gu1), nbasis, nbasis)
     Btmp = zeros(eltype(aveG.gp1), nbasis, nbasis)
 
-    
+    Iden = Matrix{T}(I, nbasis, nbasis)
+    gp1inv = zeros(T, nbasis, nbasis)
 
     for is = ns0:ns
-        
-        gp1inv = inv(aveG.gp1[is, :, :])
 
-        mult5!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, C2tmp, Btmp, is)        
+        Atmp .= @view aveG.gp1[is, :, :]
+        inv!(gp1inv, Atmp, Iden)
+
+        mult5!(aveGrad.gradgp1, ave.kpar, aveG.gp1, C1tmp, C2tmp, Btmp, is)
         mult3!(aveGrad.gradgr11, aveG.gu1, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
         mult3!(aveGrad.gradgr13, aveG.gu3, aveGrad.gradgp1, C1tmp, Atmp, Btmp, is)
 
@@ -997,7 +1032,7 @@ function  grad_ave_g!(inputs::InputTJLF{T},ave::Ave{T},aveG::AveG{T},aveGrad::Av
         mult1!(aveGrad.gradgp1p0, aveGrad.gradgp1, ave.p0inv, C1tmp, Atmp, is)
         mult1!(aveGrad.gradgr11p0, aveGrad.gradgr11, ave.p0inv, C1tmp, Atmp, is)
         mult1!(aveGrad.gradgr13p0, aveGrad.gradgr13, ave.p0inv, C1tmp, Atmp, is)
-    end 
+    end
 end
 
 
