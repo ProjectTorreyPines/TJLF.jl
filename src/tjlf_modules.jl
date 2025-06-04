@@ -1,3 +1,5 @@
+abstract type AbstractAve{T<:Number} end
+
 Base.@kwdef mutable struct InputTGLF
     SIGN_BT::Union{Int,Missing} = missing
     SIGN_IT::Union{Int,Missing} = missing
@@ -465,7 +467,7 @@ end
 #       Used for get_matrx()
 ##########################################################
 
-mutable struct Ave{T<:Real}
+mutable struct Ave{T<:Real} <: AbstractAve{T}
     kx::Matrix{T}
 
     wdh::Matrix{T}
@@ -523,7 +525,7 @@ mutable struct Ave{T<:Real}
 end
 
 
-mutable struct AveH{T<:Real}
+mutable struct AveH{T<:Real} <: AbstractAve{T}
 
     # average h-bessel functions
     hn::Array{T,3}
@@ -636,7 +638,7 @@ end
 
 
 
-mutable struct AveWH{T<:Real}
+mutable struct AveWH{T<:Real} <: AbstractAve{T}
 
     wdhp1p0::Array{T,3}
     wdhr11p0::Array{T,3}
@@ -713,7 +715,7 @@ end
 
 
 
-mutable struct AveKH
+mutable struct AveKH <: AbstractAve{ComplexF64}
 
     kparhnp0::Array{ComplexF64,3}
     kparhp1p0::Array{ComplexF64,3}
@@ -765,7 +767,7 @@ mutable struct AveKH
 end
 
 
-mutable struct AveG{T<:Real}
+mutable struct AveG{T<:Real} <: AbstractAve{T}
 
     # average g-bessel functions
     gn::Array{T,3}
@@ -880,7 +882,7 @@ mutable struct AveG{T<:Real}
 end
 
 
-mutable struct AveWG{T<:Real}
+mutable struct AveWG{T<:Real} <: AbstractAve{T}
 
     wdgp1p0::Array{T,3}
     wdgr11p0::Array{T,3}
@@ -954,7 +956,7 @@ mutable struct AveWG{T<:Real}
     end
 end
 
-mutable struct AveKG
+mutable struct AveKG <: AbstractAve{ComplexF64}
 
     kpargnp0::Array{ComplexF64,3}
     kpargp1p0::Array{ComplexF64,3}
@@ -1008,7 +1010,7 @@ end
 
 
 
-mutable struct AveGrad{T<:Real}
+mutable struct AveGrad{T<:Real}  <: AbstractAve{T}
     gradhp1::Array{T,3}
     gradhr11::Array{T,3}
     gradhr13::Array{T,3}
@@ -1057,7 +1059,7 @@ mutable struct AveGrad{T<:Real}
     end
 end
 
-mutable struct AveGradB{T<:Real}
+mutable struct AveGradB{T<:Real}  <: AbstractAve{T}
     gradBhp1::Array{T,3}
     gradBhp3::Array{T,3}
     gradBhr11::Array{T,3}
@@ -1099,5 +1101,11 @@ mutable struct AveGradB{T<:Real}
             gradBhp1, gradBhp3, gradBhr11, gradBhr13, gradBhr33, gradBhu1, gradBhu3, gradBhu33,
             gradBgp1, gradBgp3, gradBgr11, gradBgr13, gradBgr33, gradBgu1, gradBgu3, gradBgu33
         )
+    end
+end
+
+function reset_ave!(ave::AbstractAve{T}) where {T<:Number}
+    for fieldname in fieldnames(typeof(ave))
+        fill!(getproperty(ave, fieldname), zero(T))
     end
 end

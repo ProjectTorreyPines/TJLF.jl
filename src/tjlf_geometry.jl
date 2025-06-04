@@ -541,7 +541,7 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
         m3 = (m % (ms+1)) + 1
         m4 = ((m + 1) % (ms+1)) + 1
         ### had to do this weird short-circuiting bc of weird indexing
-        m1 < ms || (m1 = ((ms + m - 3) % (ms+1)) + 1) 
+        m1 < ms || (m1 = ((ms + m - 3) % (ms+1)) + 1)
         m2 < ms+1 || (m2 = ((ms + m - 2) % (ms+1)) + 1)
         m3 > 1 || (m3 = ((m + 1) % (ms+1)) + 1)
         m4 > 2 || (m4 = ((m + 2) % (ms+1)) + 1)
@@ -741,59 +741,24 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
     ## Modified 8/2024 to include Miller eXtended Harmonic (MXH) parameterization (Arbon et al PPCF 2021)
 
-    rmin_loc = inputs.RMIN_LOC
-    rmaj_loc = inputs.RMAJ_LOC
-    zmaj_loc = inputs.ZMAJ_LOC
-    dzmajdx_loc = inputs.DZMAJDX_LOC
-    zmaj_loc = inputs.ZMAJ_LOC
-    dzmajdx_loc = inputs.DZMAJDX_LOC
-    delta_loc = inputs.DELTA_LOC #gacode.io doesn't def this, but del is usually for triangularity, so a default value of 0 doesn't make much sense...
-    kappa_loc = inputs.KAPPA_LOC #elongation
-    zeta_loc = inputs.ZETA_LOC #squareness of flux surface
-    q_s = inputs.Q_LOC #safety factor
-    
+    rmin_loc = inputs.RMIN_LOC::T
+    rmaj_loc = inputs.RMAJ_LOC::T
+    zmaj_loc = inputs.ZMAJ_LOC::T
+    dzmajdx_loc = inputs.DZMAJDX_LOC::T
+    kappa_loc = inputs.KAPPA_LOC::T #elongation
+    q_s = inputs.Q_LOC::T #safety factor
+
     #### these might be global variables
-  
-    p_prime_s = inputs.P_PRIME_LOC # (qa^2)/(rB^2)*dp/dr -> regression test has 0, TIMcase doesn't
-    q_prime_s = inputs.Q_PRIME_LOC # (q^2*a^2)/(r^2)*s
 
-    drmajdx_loc = inputs.DRMAJDX_LOC #These two I might want to ask about
-    drmindx_loc = inputs.DRMINDX_LOC
+    p_prime_s = inputs.P_PRIME_LOC::T # (qa^2)/(rB^2)*dp/dr -> regression test has 0, TIMcase doesn't
+    q_prime_s = inputs.Q_PRIME_LOC::T # (q^2*a^2)/(r^2)*s
 
-    sh_cos0 = inputs.SHAPE_COS0
-    sh_cos1 = inputs.SHAPE_COS1
-    sh_cos2 = inputs.SHAPE_COS2
-    sh_cos3 = inputs.SHAPE_COS3
-    sh_cos4 = inputs.SHAPE_COS4
-    sh_cos5 = inputs.SHAPE_COS5
-    sh_cos6 = inputs.SHAPE_COS6
-
-    sh_sin3 = inputs.SHAPE_SIN3
-    sh_sin4 = inputs.SHAPE_SIN4
-    sh_sin5 = inputs.SHAPE_SIN5
-    sh_sin6 = inputs.SHAPE_SIN6
-
-    sh_s_cos0 = inputs.SHAPE_S_COS0
-    sh_s_cos1 = inputs.SHAPE_S_COS1
-    sh_s_cos2 = inputs.SHAPE_S_COS2
-    sh_s_cos3 = inputs.SHAPE_S_COS3
-    sh_s_cos4 = inputs.SHAPE_S_COS4
-    sh_s_cos5 = inputs.SHAPE_S_COS5
-    sh_s_cos6 = inputs.SHAPE_S_COS6
-
-    sh_s_sin3 = inputs.SHAPE_S_SIN3
-    sh_s_sin4 = inputs.SHAPE_S_SIN4
-    sh_s_sin5 = inputs.SHAPE_S_SIN5
-    sh_s_sin6 = inputs.SHAPE_S_SIN6
-
-   
-    
+    drmajdx_loc = inputs.DRMAJDX_LOC::T #These two I might want to ask about
+    drmindx_loc = inputs.DRMINDX_LOC::T
 
     #Extraction of shears in geometry:
-    s_zeta_loc = inputs.S_ZETA_LOC
-    s_delta_loc = inputs.S_DELTA_LOC
-    s_kappa_loc = inputs.S_KAPPA_LOC #Why is elongation shear defined differently than for triangularity and squareness?
-    
+    s_kappa_loc = inputs.S_KAPPA_LOC::T #Why is elongation shear defined differently than for triangularity and squareness?
+
     R = zeros(T,ms+1)
     Z = zeros(T,ms+1)
     Bp = zeros(T,ms+1)
@@ -801,107 +766,23 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     small = 1.0e-12
 
     if(rmin_loc<0.00001) rmin_loc=0.00001 end
-    #
-    # compute the arclength around the flux surface
-    #
-    x_delta = asin(delta_loc)
-
-    
 
     theta = 0.0
 
+    argR = get_argR(theta, inputs)
 
-
-    function get_argR(theta::Float64)
-
-        
-        
-        get_arg = theta + sh_cos0 +
-            sh_cos1*cos(theta)  +
-            sh_cos2*cos(2*theta) + 
-            sh_cos3*cos(3*theta) +
-            sh_cos4*cos(4*theta) +
-            sh_cos5*cos(5*theta) +
-            sh_cos6*cos(6*theta) + 
-            x_delta*sin(theta) -
-            zeta_loc*sin(2*theta) +
-            sh_sin3*sin(3*theta) +
-            sh_sin4*sin(4*theta) +
-            sh_sin5*sin(5*theta) +
-            sh_sin6*sin(6*theta)
-        return get_arg
-    end
-
-    function get_argR_t(theta::Float64)
-
-        get_arg = 1.0 - sh_cos1*sin(theta) -
-          2*sh_cos2*sin(2*theta) - 
-          3*sh_cos3*sin(3*theta) -
-          4*sh_cos4*sin(4*theta) - 
-          5*sh_cos5*sin(5*theta) - 
-          6*sh_cos6*sin(6*theta) + 
-          x_delta*cos(theta) - 
-          2*zeta_loc*cos(2*theta) +
-          3*sh_sin3*cos(3*theta) +
-          4*sh_sin4*cos(4*theta) +
-          5*sh_sin5*cos(5*theta) +
-          6*sh_sin6*cos(6*theta)
-        return get_arg  
-      end
-
-      function get_argR_r(theta::Float64)
-
-         get_arg =  sh_s_cos0 + sh_s_cos1*cos(theta) +
-              sh_s_cos2*cos(2*theta) + sh_s_cos3*cos(3*theta) +
-              sh_s_cos4*cos(4*theta) + sh_s_cos5*cos(5*theta) +
-              sh_s_cos6*cos(6*theta) + s_delta_loc*sin(theta)/cos(x_delta) -
-              s_zeta_loc*sin(2*theta) + sh_s_sin3*sin(3*theta) +
-              sh_s_sin4*sin(4*theta) + sh_s_sin5*sin(5*theta) +
-              sh_s_sin6*sin(6*theta)
-        
-         return get_arg
-      end
-
-      function get_theta0(theta::Float64)
-
-        
-        theta1 = theta
-        argR = get_argR(theta)
-        i = 0
-        while (abs(argR) > small) & (i < 20.0)
-          argR_t = get_argR_t(theta1)
-          argR = get_argR(theta1)
-        
-          theta2 = theta1 - argR/argR_t
-          theta1 = theta2
-          i = i + 1
-        end
-        get_theta0 = theta1
-      
-        return get_theta0
-    end
-
-
-
-
-
-
-    argR = get_argR(theta)
-    
-    argR_t = get_argR_t(theta)
+    argR_t = get_argR_t(theta, inputs)
     if (abs(argR) < small)
         theta0=0.0
     else
-        theta0=get_theta0(theta)
+        theta0=get_theta0(theta, inputs)
     end
 
     argZ = theta
     argZ_t= 1.0
     r_t = -rmin_loc*sin(argR)*argR_t
     z_t = kappa_loc*rmin_loc*cos(argZ)*argZ_t
-     
- 
-    
+
     l_t = √(r_t^2 + z_t^2)
     # scale dtheta by l_t to keep mts points in each ds interval of size pi_2/ms
     dtheta = 2π/(mts*ms*l_t)
@@ -911,18 +792,15 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
     while(theta<2π)
         theta = theta + dtheta
-        
+
         if(theta>2π)
             theta = theta-dtheta
             dtheta = 2π-theta
             theta = 2π
         end
-        
-        argR = get_argR(theta)
-        
-       
-        argR_t = get_argR_t(theta)
-       
+
+        argR = get_argR(theta, inputs)
+        argR_t = get_argR_t(theta, inputs)
 
         r_t = -rmin_loc*sin(argR)*argR_t# dR/dtheta
 
@@ -939,7 +817,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
         l_t1 = l_t
     end
-    
+
     ds = arclength/ms
 
     # Find the theta points which map to an equally spaced s-grid of ms points along the arclength
@@ -951,17 +829,17 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     t_s[ms+1]=-2π
     # make a first guess based on theta=0.0
     theta = theta0
-    
-    argR = get_argR(theta)
-    argR_t = get_argR_t(theta)
+
+    argR = get_argR(theta, inputs)
+    argR_t = get_argR_t(theta, inputs)
     argZ = theta
     argZ_t = 1.0
     r_t = -rmin_loc*sin(argR)*argR_t
     z_t = kappa_loc*rmin_loc*cos(argZ)*argZ_t # dZ/dtheta
     l_t = √(r_t^2 + z_t^2) # dl/dtheta
- 
-    
-    
+
+
+
     dtheta = -ds/l_t
     theta = theta0 + dtheta
     #@show dtheta
@@ -969,11 +847,11 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
 
     for m in 2:ms+1
-        argR = get_argR(theta)
-        argR_t = get_argR_t(theta)
+        argR = get_argR(theta, inputs)
+        argR_t = get_argR_t(theta, inputs)
         argZ = theta
         argZ_t = 1.0
-        
+
         r_t = -rmin_loc*sin(argR)*argR_t
         z_t = kappa_loc*rmin_loc*cos(argZ)*argZ_t
         l_t = √(r_t^2 + z_t^2)
@@ -981,15 +859,13 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 
         t_s[m] = t_s[m-1] + dtheta
         theta = theta0 + t_s[m] + dtheta
-       
+
         l_t1 = l_t
     end
 
-
-
     # distribute endpoint error over interior points
     dtheta = (t_s[ms+1]+2*π) /ms
-    
+
     for m in 2:ms+1
         t_s[m] = t_s[m] - (m-1)*dtheta
     end
@@ -1001,8 +877,8 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     B_unit = NaN
     for m in 1:ms+1
         theta = t_s[m]+theta0
-        argR = get_argR(theta)
-        argR_t = get_argR_t(theta)
+        argR = get_argR(theta, inputs)
+        argR_t = get_argR_t(theta, inputs)
         argZ = theta
         argZ_t = 1.0
 
@@ -1020,11 +896,11 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
         R_t = -rmin_loc*sin(argR)*argR_t# dR/dtheta
         Z_t = kappa_loc*rmin_loc*cos(argZ)*argZ_t # dZ/dtheta
         l_t = √(R_t^2 + Z_t^2) # dl/dtheta
-        argR_r=get_argR_r(theta)
+        argR_r = get_argR_r(theta, inputs)
         R_r = drmajdx_loc + drmindx_loc*cos(argR) - sin(argR)*argR_r*drmindx_loc
 
        # R_r = drmajdx_loc + drmindx_loc*cos(arg_r) - sin(arg_r)*
-        # dZ/dr 
+        # dZ/dr
         Z_r = dzmajdx_loc + kappa_loc*sin(argZ)*drmindx_loc*(1.0 +s_kappa_loc)
         # Jacobian
         det = R_r*Z_t - R_t*Z_r
@@ -1045,4 +921,118 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     B_unit_out .= B_unit
 
     return R, Bp, Z, q_prime_s, p_prime_s, B_unit_out, ds, t_s
+end
+
+
+function get_argR(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
+    sh_cos0 = inputs.SHAPE_COS0::T
+    sh_cos1 = inputs.SHAPE_COS1::T
+    sh_cos2 = inputs.SHAPE_COS2::T
+    sh_cos3 = inputs.SHAPE_COS3::T
+    sh_cos4 = inputs.SHAPE_COS4::T
+    sh_cos5 = inputs.SHAPE_COS5::T
+    sh_cos6 = inputs.SHAPE_COS6::T
+    delta_loc = inputs.DELTA_LOC::T
+    x_delta = asin(delta_loc)
+    zeta_loc = inputs.ZETA_LOC::T #squareness of flux surface
+    sh_sin3 = inputs.SHAPE_SIN3::T
+    sh_sin4 = inputs.SHAPE_SIN4::T
+    sh_sin5 = inputs.SHAPE_SIN5::T
+    sh_sin6 = inputs.SHAPE_SIN6::T
+
+    get_arg = theta + sh_cos0 +
+        sh_cos1*cos(theta)  +
+        sh_cos2*cos(2*theta) +
+        sh_cos3*cos(3*theta) +
+        sh_cos4*cos(4*theta) +
+        sh_cos5*cos(5*theta) +
+        sh_cos6*cos(6*theta) +
+        x_delta*sin(theta) -
+        zeta_loc*sin(2*theta) +
+        sh_sin3*sin(3*theta) +
+        sh_sin4*sin(4*theta) +
+        sh_sin5*sin(5*theta) +
+        sh_sin6*sin(6*theta)
+    return get_arg
+end
+
+function get_argR_t(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
+
+    sh_cos1 = inputs.SHAPE_COS1::T
+    sh_cos2 = inputs.SHAPE_COS2::T
+    sh_cos3 = inputs.SHAPE_COS3::T
+    sh_cos4 = inputs.SHAPE_COS4::T
+    sh_cos5 = inputs.SHAPE_COS5::T
+    sh_cos6 = inputs.SHAPE_COS6::T
+    delta_loc = inputs.DELTA_LOC::T #gacode.io doesn't def this, but del is usually for triangularity, so a default value of 0 doesn't make much sense...
+    x_delta = asin(delta_loc)
+    zeta_loc = inputs.ZETA_LOC::T #squareness of flux surface
+    sh_sin3 = inputs.SHAPE_SIN3::T
+    sh_sin4 = inputs.SHAPE_SIN4::T
+    sh_sin5 = inputs.SHAPE_SIN5::T
+    sh_sin6 = inputs.SHAPE_SIN6::T
+
+    get_arg = 1.0 - sh_cos1*sin(theta) -
+        2*sh_cos2*sin(2*theta) -
+        3*sh_cos3*sin(3*theta) -
+        4*sh_cos4*sin(4*theta) -
+        5*sh_cos5*sin(5*theta) -
+        6*sh_cos6*sin(6*theta) +
+        x_delta*cos(theta) -
+        2*zeta_loc*cos(2*theta) +
+        3*sh_sin3*cos(3*theta) +
+        4*sh_sin4*cos(4*theta) +
+        5*sh_sin5*cos(5*theta) +
+        6*sh_sin6*cos(6*theta)
+    return get_arg
+end
+
+function get_argR_r(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
+
+    delta_loc = inputs.DELTA_LOC::T #gacode.io doesn't def this, but del is usually for triangularity, so a default value of 0 doesn't make much sense...
+    sh_s_cos0 = inputs.SHAPE_S_COS0::T
+    sh_s_cos1 = inputs.SHAPE_S_COS1::T
+    sh_s_cos2 = inputs.SHAPE_S_COS2::T
+    sh_s_cos3 = inputs.SHAPE_S_COS3::T
+    sh_s_cos4 = inputs.SHAPE_S_COS4::T
+    sh_s_cos5 = inputs.SHAPE_S_COS5::T
+    sh_s_cos6 = inputs.SHAPE_S_COS6::T
+
+    sh_s_sin3 = inputs.SHAPE_S_SIN3::T
+    sh_s_sin4 = inputs.SHAPE_S_SIN4::T
+    sh_s_sin5 = inputs.SHAPE_S_SIN5::T
+    sh_s_sin6 = inputs.SHAPE_S_SIN6::T
+
+    #Extraction of shears in geometry:
+    s_zeta_loc = inputs.S_ZETA_LOC::T
+    s_delta_loc = inputs.S_DELTA_LOC::T
+
+    x_delta = asin(delta_loc)
+
+    get_arg =  sh_s_cos0 + sh_s_cos1*cos(theta) +
+        sh_s_cos2*cos(2*theta) + sh_s_cos3*cos(3*theta) +
+        sh_s_cos4*cos(4*theta) + sh_s_cos5*cos(5*theta) +
+        sh_s_cos6*cos(6*theta) + s_delta_loc*sin(theta)/cos(x_delta) -
+        s_zeta_loc*sin(2*theta) + sh_s_sin3*sin(3*theta) +
+        sh_s_sin4*sin(4*theta) + sh_s_sin5*sin(5*theta) +
+        sh_s_sin6*sin(6*theta)
+
+    return get_arg
+end
+
+function get_theta0(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
+    theta1 = theta
+    argR = get_argR(theta, inputs)
+    i = 0
+    while (abs(argR) > small) & (i < 20.0)
+        argR_t = get_argR_t(theta1, inputs)
+        argR = get_argR(theta1, inputs)
+
+        theta2 = theta1 - argR/argR_t
+        theta1 = theta2
+        i = i + 1
+    end
+    get_theta0 = theta1
+
+    return get_theta0
 end

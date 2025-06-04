@@ -1,3 +1,21 @@
+function new_aves(inputs::InputTJLF{T}, nbasis::Int) where {T<:Real}
+    ns::Int = inputs.NS
+
+    ave = Ave{Float64}(ns, nbasis)
+    aveH = AveH{Float64}(ns, nbasis)
+    aveWH = AveWH{Float64}(ns, nbasis)
+    aveKH = AveKH(ns, nbasis)
+
+    aveG = AveG{Float64}(ns, nbasis)
+    aveWG = AveWG{Float64}(ns, nbasis)
+    aveKG = AveKG(ns, nbasis)
+
+    aveGrad = AveGrad{Float64}(ns, nbasis)
+    aveGradB = AveGradB{Float64}(ns, nbasis)
+    return ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG, aveGrad, aveGradB
+end
+
+
 """
     get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,ky_index::Int)
 
@@ -16,21 +34,11 @@ description:
 """
 function get_matrix(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHermite::OutputHermite{T},
                     ky::T,
-                    nbasis::Int, ky_index::Int) where T<:Real
+                    nbasis::Int, ky_index::Int;
+                    aves = new_aves(inputs, nbasis)) where T<:Real
 
-    ns::Int = inputs.NS
-
-    ave = Ave{Float64}(ns, nbasis)
-    aveH = AveH{Float64}(ns, nbasis)
-    aveWH = AveWH{Float64}(ns, nbasis)
-    aveKH = AveKH(ns, nbasis)
-
-    aveG = AveG{Float64}(ns, nbasis)
-    aveWG = AveWG{Float64}(ns, nbasis)
-    aveKG = AveKG(ns, nbasis)
-
-    aveGrad = AveGrad{Float64}(ns, nbasis)
-    aveGradB = AveGradB{Float64}(ns, nbasis)
+    reset_ave!.(aves)
+    ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG, aveGrad, aveGradB = aves
 
     FLR_xgrid!(inputs, outputGeo, outputHermite, aveH, aveG, ky, nbasis, ky_index)
     get_ave!(inputs, outputGeo, outputHermite, ave, nbasis, ky, ky_index)
@@ -277,32 +285,32 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
 
     width_in = inputs.WIDTH_SPECTRUM[ky_index]
 
-    vpar_model_in = inputs.VPAR_MODEL
-    alpha_mach_in = inputs.ALPHA_MACH
-    sign_it_in = inputs.SIGN_IT
-    use_bper_in = inputs.USE_BPER
+    vpar_model_in = inputs.VPAR_MODEL::Int
+    alpha_mach_in = inputs.ALPHA_MACH::T
+    sign_it_in = inputs.SIGN_IT::Int
+    use_bper_in = inputs.USE_BPER::Bool
 
-    betae_s = inputs.BETAE ##### not true for 'GENE' units
-    debye_s = inputs.DEBYE #### different if UNITS is GENE
-    debye_factor_in = inputs.DEBYE_FACTOR
-    nx = 2*inputs.NXGRID - 1
-    ns = inputs.NS
-    ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
+    betae_s = inputs.BETAE::T ##### not true for 'GENE' units
+    debye_s = inputs.DEBYE::T #### different if UNITS is GENE
+    debye_factor_in = inputs.DEBYE_FACTOR::T
+    nx = 2*inputs.NXGRID::Int - 1
+    ns = inputs.NS::Int
+    ns0 = ifelse(inputs.ADIABATIC_ELEC::Bool, 2, 1)
 
-    taus = inputs.TAUS
-    vpar = inputs.VPAR
-    zs = inputs.ZS
-    as = inputs.AS
+    taus = inputs.TAUS::Vector{T}
+    vpar = inputs.VPAR::Vector{T}
+    zs = inputs.ZS::Vector{T}
+    as = inputs.AS::Vector{T}
 
-    b0x = outputGeo.b0x
-    wdx = outputGeo.wdx
-    wdpx = outputGeo.wdpx
-    kxx = outputGeo.kxx
-    cx_tor_par = outputGeo.cx_tor_par
-    cx_tor_per = outputGeo.cx_tor_per
-    cx_par_par = outputGeo.cx_par_par
-    wx = outputHermite.wx
-    h = outputHermite.h[1:nbasis,:]
+    b0x = outputGeo.b0x::Vector{T}
+    wdx = outputGeo.wdx::Vector{T}
+    wdpx = outputGeo.wdpx::Vector{T}
+    kxx = outputGeo.kxx::Vector{T}
+    cx_tor_par = outputGeo.cx_tor_par::Vector{T}
+    cx_tor_per = outputGeo.cx_tor_per::Vector{T}
+    cx_par_par = outputGeo.cx_par_par::Vector{T}
+    wx = outputHermite.wx::Vector{T}
+    h = outputHermite.h[1:nbasis,:]::Matrix{T}
 
     # fill the Poisson equation phi multiplier px0 x-grid array
     # note that pol is set in get_species
@@ -380,8 +388,8 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
                     ave.kpar_eff[is,i,j] = ave.kpar[i,j]
                     if(vpar_model_in==1 && i==j)
                         @warn "I haven't tested this (matrix.jl ln 403)"
-                        vpar_s = inputs.ALPHA_MACH*inputs.SIGN_IT*inputs.VPAR[is]
-                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*vpar_s*ky*R_unit*q_unit*inputs.WIDTH_SPECTRUM[ky_index]*inputs.MASS[is]/inputs.ZS[is]
+                        vpar_s = (inputs.ALPHA_MACH::T)*(inputs.SIGN_IT::Int)*(inputs.VPAR[is]::T)
+                        ave.kpar_eff[is,i,j] = ave.kpar_eff[is,i,j] - im*alpha_mach_in*vpar_s*ky*R_unit*q_unit*(inputs.WIDTH_SPECTRUM[ky_index]::T)*(inputs.MASS[is]::T)/(inputs.ZS[is]::T)
                     end
                 end
             end
@@ -409,7 +417,7 @@ end
 #***************************************************************
 function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
-    wd_zero_in = inputs.WD_ZERO
+    wd_zero_in = inputs.WD_ZERO::T
 
     if(size(ave.modwdh)[2]==1)
         ave.modwdh[1,1] = abs(ave.wdh[1,1])
@@ -418,24 +426,28 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     end
 
     # find the eigenvalues of ave.wdh
-    eigen = eigen!(Symmetric(ave.wdh))
-    w = eigen.values
-    a = eigen.vectors
-    # if abs(w)<wd_zero, make it +- wd_zero. otherwise keep the w
-    w .= sign.(w) .* max.(abs.(w), wd_zero_in)
-    w = Diagonal(w)
-    ave.modwdh = a * abs.(w) * transpose(a)
-    ave.wdh = a * w * transpose(a)
+    wdh = Symmetric(ave.wdh)
+    wh, ah = eigen!(wdh)
+    # if abs(wh)<wd_zero, make it +- wd_zero. otherwise keep the wh
+    @. wh .= sign(wh) * max(abs(wh), wd_zero_in)
+    @inbounds @simd for j in eachindex(wh)
+        for i in eachindex(wh)
+            ave.wdh[i, j]    = sum(ah[i, k] * wh[k] * ah[j, k] for k in eachindex(wh))
+            ave.modwdh[i, j] = sum(ah[i, k] * abs(wh[k]) * ah[j, k] for k in eachindex(wh))
+        end
+    end
 
     ### now for wdg
-    eigen = eigen!(Symmetric(ave.wdg))
-    w = eigen.values
-    a = eigen.vectors
-    # if abs(w)<wd_zero, make it +- wd_zero. otherwise keep the w
-    w .= sign.(w) .* max.(abs.(w), wd_zero_in)
-    w = Diagonal(w)
-    ave.modwdg = a * abs.(w) * transpose(a)
-    ave.wdg = a * w * transpose(a)
+    wdg = Symmetric(ave.wdg)
+    wg, ag = eigen!(wdg)
+    # if abs(wg)<wd_zero, make it +- wd_zero. otherwise keep the wg
+    @. wg = sign(wg) * max(abs(wg), wd_zero_in)
+    @inbounds @simd for j in eachindex(wg)
+        for i in eachindex(wg)
+            ave.wdg[i, j]    = sum(ag[i, k] * wg[k] * ag[j, k] for k in eachindex(wg))
+            ave.modwdg[i, j] = sum(ag[i, k] * abs(wg[k]) * ag[j, k] for k in eachindex(wg))
+        end
+    end
 end
 
 

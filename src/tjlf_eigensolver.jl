@@ -503,8 +503,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             if(index==21) index=20 end
             df = (ft-uv_constants.fm[index])/(uv_constants.fm[index+1]-uv_constants.fm[index])
 
-            v .= uv_constants.vm[:,index] .+ uv_constants.vm_diff[:,index].*df
-            vb .= uv_constants.vbm[:,index] .+ uv_constants.vbm_diff[:,index].*df
+            @views @. v = uv_constants.vm[:,index] + uv_constants.vm_diff[:,index] * df
+            @views @. vb = uv_constants.vbm[:,index] + uv_constants.vbm_diff[:,index] * df
 
             u1_r = v[1]
             u1_i = v[2]
@@ -2727,34 +2727,12 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         bmat_copy = copy(bmat)
 
         (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
-
-        (alpha, _, _) = geev!('N','N',amat_copy)
-
-
-
+        alpha = geev!('N','N',amat_copy)[1]
     else
-
         (amat, bmat,_) = gesv!(bmat, amat)
         alpha = geev!('N','N',amat)[1]
-
     end
 
     return alpha, fill(NaN*im,(1,1))
-    ### not supported
-    # print("kyrlov: ")
-    # @time begin
-    # _, _ = geneigsolve((amat,bmat))
-    # end
-
-    ### about the same but less allocations
-    # print("ggev: ")
-    # @time begin
-    # if inputs.IFLUX
-    #     (alpha, beta, _, vr) = ggev!('N','V',amat,bmat)
-    # else
-    #     (alpha, beta, _, vr) = ggev!('N','N',amat,bmat)
-    # end
-    # end
-    # return alpha./beta, vr
 
 end
