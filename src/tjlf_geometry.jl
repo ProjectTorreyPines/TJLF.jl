@@ -775,7 +775,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
     if (abs(argR) < small)
         theta0=0.0
     else
-        theta0=get_theta0(theta, inputs)
+        theta0=get_theta0(theta, inputs, small)
     end
 
     argZ = theta
@@ -1020,7 +1020,7 @@ function get_argR_r(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
     return get_arg
 end
 
-function get_theta0(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
+function get_theta0(theta::Float64, inputs::InputTJLF{T}; small::Float64=1e-12) where {T<:Real}
     theta1 = theta
     argR = get_argR(theta, inputs)
     i = 0
