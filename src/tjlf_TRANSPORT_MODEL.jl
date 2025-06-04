@@ -369,8 +369,6 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
                 reduce = (gamma_nb_min_out/gamma_cutoff)^rexp
             end
         end
-        
-        QL_weights[:,ns0:ns,1:nmodes_out,ky_index,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
 
         @views QL_weights[:,ns0:ns,1:nmodes_out,ky_index,1] .= particle_QL_out[:,ns0:ns,1:nmodes_out]
         @views QL_weights[:,ns0:ns,1:nmodes_out,ky_index,2] .= energy_QL_out[:,ns0:ns,1:nmodes_out]
