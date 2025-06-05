@@ -34,7 +34,7 @@ FIND_WIDTH::Bool - this is in the input.tglf file, but is used different than in
 
 WIDTH_SPECTRUM::Vector - external width spectrum used if FIND_WIDTH is False. If FIND_WIDTH is True, this Vector will be populated with widths for each ky grid point. The idea is that you can run with FIND_WIDTH set as True, it will automatically save the width spectrum, you can then change the gradients of that particular struct, and then change the FIND_WIDTH flag to False. Or, you can easily save this value to other InputTJLF struct, not sure why you would necessarily, but the information is here.
 
-FIND_EIGEN::Bool - this flag tells the code which solver to use when solving for the eigenvalues, if unsure, FIND_EIGEN as True is more robust (see [Eigenvalue Solver](#eigenvalue-solver)). Should ONLY be False if FIND_EIGEN is also False because it would be suspicious if you are confident on the eigenvalues enough to use and not confident on the width values (it would also probably break tjlf_max.jl), there should be an assertion to check this.
+FIND_EIGEN::Bool - this flag tells the code which solver to use when solving for the eigenvalues, if unsure, FIND_EIGEN as True is more robust (see [Eigenvalue Solver](#eigenvalue-solver)). Should ONLY be False if FIND_WIDTH is also False because it would be suspicious if you are confident on the eigenvalues enough to use and not confident on the width values (it would also probably break tjlf_max.jl), there should be an assertion to check this.
 
 EIGEN_SPECTRUM::Vector - external eigen spectrum used on the first pass if FIND_EIGEN is False. This value is set to the sigma parameter of the eigs() solver and acts as an initial guess for the iterative solver. Currently, this is a vector that automatically stores the most unstable eigenvalues from the first pass, but it might be smart to save the eigenvalues for each mode and rework how eigs works in LS.jl
 
@@ -47,6 +47,8 @@ I deleted the parameters in the InputTJLF struct that are old and not used. I le
 Deleted parameters: USE_TRANSPORT_MODEL,GEOMETRY_FLAG,B_MODEL_SA,FT_MODEL_SA,VPAR_SHEAR_MODEL,WRITE_WAVEFUNCTION_FLAG,VTS_SHEAR,VNS_SHEAR,VEXB,RMIN_SA,RMAJ_SA,Q_SA,SHAT_SA,ALPHA_SA,XWELL_SA,THETA0_SA,NN_MAX_ERROR
 
 # Eigenvalue Solver
+
+**Update June 2025** KrylovKit.jl replaced Arpack with the same functionality. Still using which=:LM as the most robust. ggev!() has been replaced to gesv!()+geev!() method as done in the Fortran version.
 
 Currently, Arpack.jl's eigs(), can be used in tjlf_LINEAR_SOLUTION.jl and tjlf_eigensolver.jl as a fast iterative solver. In tjlf_LS.jl, eigs() is used to solve for the eigenvector instead of rewriting the generalized eigenvalue problem as a system of linear equations like TGLF, which is potentially a little troublesome. It is also used in tjlf_eigensolver.jl if you provide a EIGEN_SPECTRUM and set FIND_EIGEN to False. eigs() does a shift and inverse iteration to solve the generalized eigenvalue problem, specifying sigma gives the shift, by setting which=:LM you tell eigs() to compute eigenvalues around sigma. I have tried which=:LR (LM is largest magnitude and LR is largest real part), but sometimes the solver will find "fake" eigenvalues with very large real and imaginary parts. I have found using :LM and setting sigma as the most unstable mode has worked, but more testing would be good.
 
@@ -74,6 +76,8 @@ To run top right, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = True
 
 # Arpack.jl
 
+**Update June 2025** Do not use this package anymore and don't need to lock threads, as KrylovKit works fine with multithreading
+
 NOTE, If you are getting:<br>
 <pre>
 Error: XYAUPD_Exception: Maximum number of iterations taken. All possible eigenvalues of OP has been found.<br>
@@ -83,6 +87,7 @@ Error: XYAUPD_Exception: Maximum number of iterations taken. All possible eigenv
 Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. You might have to restart your Julia enviroment, activate TJLF, and **build**.
 
 Also, Arpack.jl's eigs() is **NOT** thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
+
 
 # Indices of Arrays
 
@@ -103,7 +108,10 @@ The order of the indices try to take advantage of Julia's column major memory us
 
 # Multithreading
 
-If you are multithreading, make sure BLAS.set_num_threads(1) is set at some point.
+**Update June 5**: this line has been added to the TJLF.jl
+
+If you are multithreading, make sure BLAS.set_num_threads(1) is set at some point. 
+
 
 # Bash Folder
 
