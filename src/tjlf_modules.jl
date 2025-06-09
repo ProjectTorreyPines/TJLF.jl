@@ -173,20 +173,9 @@ Base.@kwdef mutable struct InputTGLF
     ETG_FACTOR::Float64 = 1.25
     DAMP_PSI::Float64 = 0.0
     DAMP_SIG::Float64 = 0.0
-
 end
 
-
-
-
-
-
-
-
-
-
 mutable struct InputTJLF{T<:Real}
-
     UNITS::Union{String,Missing}
 
     USE_BPER::Union{Bool,Missing}
@@ -309,12 +298,12 @@ mutable struct InputTJLF{T<:Real}
     SHAPE_S_SIN4::Union{T,Missing}
     SHAPE_S_SIN5::Union{T,Missing}
     SHAPE_S_SIN6::Union{T,Missing}
-
 end
 
 function InputTJLF()
     return InputTJLF{Float64}()
 end
+
 function InputTJLF{T}() where {T<:Real}
     InputTJLF{T}(
         missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
@@ -350,38 +339,86 @@ function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
     NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13,  0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0)
 end
 
-# create InputTJLF struct given a InputTGLF struct
-function InputTJLF{T}(inputTGLF::InputTGLF) where {T<:Real}
+"""
+    InputTJLF(input_tglf::InputTGLF)
 
-    nky = get_ky_spectrum_size(inputTGLF.NKY,inputTGLF.KYGRID_MODEL)
-    inputTJLF = InputTJLF{T}(inputTGLF.NS, nky)
-
-    for fieldname in fieldnames(inputTGLF)
-        if occursin(r"\d", String(fieldname)) || fieldname == :_Qgb # species parameter
-            continue
-        end
-        setfield!(inputTJLF, fieldname, getfield(inputTGLF, fieldname))
-    end
-    for i in 1:inputTGLF.NS
-        inputTJLF.ZS[i] = getfield(inputTGLF, Symbol("ZS_", i))
-        inputTJLF.AS[i] = getfield(inputTGLF, Symbol("AS_", i))
-        inputTJLF.MASS[i] = getfield(inputTGLF, Symbol("MASS_", i))
-        inputTJLF.RLNS[i] = getfield(inputTGLF, Symbol("RLNS_", i))
-        inputTJLF.RLTS[i] = getfield(inputTGLF, Symbol("RLTS_", i))
-        inputTJLF.TAUS[i] = getfield(inputTGLF, Symbol("TAUS_", i))
-        inputTJLF.VPAR[i] = getfield(inputTGLF, Symbol("VPAR_", i))
-        inputTJLF.VPAR_SHEAR[i] = getfield(inputTGLF, Symbol("VPAR_SHEAR_", i))
-    end
-    inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
-
-    checkInput(inputTJLF)
-
-    return inputTJLF
+Generates an InputTJLF from a InputTGLF
+"""
+function InputTJLF{T}(input_tglf::InputTGLF) where {T<:Real}
+    nky = get_ky_spectrum_size(input_tglf.NKY, input_tglf.KYGRID_MODEL)
+    input_tjlf = InputTJLF{T}(input_tglf.NS, nky)
+    return update_input_tjlf!(input_tjlf, input_tglf)
 end
 
-function minimal_scalar_copy(inputs::TJLF.InputTJLF{T}) where T<:Real
+"""
+    update_input_tjlf!(input_tglf::InputTGLF)
+
+Modifies an InputTJLF from a InputTGLF
+"""
+function update_input_tjlf!(input_tjlf::InputTJLF, input_tglf::InputTGLF)
+    input_tjlf.NWIDTH = 21
+
+    for fieldname in intersect(fieldnames(typeof(input_tglf)), fieldnames(typeof(input_tjlf)))
+        setfield!(input_tjlf, fieldname, getfield(input_tglf, fieldname))
+    end
+
+    for i in 1:input_tglf.NS
+        input_tjlf.ZS[i] = getfield(input_tglf, Symbol("ZS_", i))
+        input_tjlf.AS[i] = getfield(input_tglf, Symbol("AS_", i))
+        input_tjlf.MASS[i] = getfield(input_tglf, Symbol("MASS_", i))
+        input_tjlf.RLNS[i] = getfield(input_tglf, Symbol("RLNS_", i))
+        input_tjlf.RLTS[i] = getfield(input_tglf, Symbol("RLTS_", i))
+        input_tjlf.TAUS[i] = getfield(input_tglf, Symbol("TAUS_", i))
+        input_tjlf.VPAR[i] = getfield(input_tglf, Symbol("VPAR_", i))
+        input_tjlf.VPAR_SHEAR[i] = getfield(input_tglf, Symbol("VPAR_SHEAR_", i))
+    end
+    input_tjlf.WIDTH_SPECTRUM .= input_tjlf.WIDTH
+
+    # Reset defaults
+    input_tjlf.KY = 0.3
+    input_tjlf.ALPHA_E = 1.0
+    input_tjlf.ALPHA_P = 1.0
+    input_tjlf.XNU_FACTOR = 1.0
+    input_tjlf.DEBYE_FACTOR = 1.0
+    input_tjlf.RLNP_CUTOFF = 18.0
+    input_tjlf.WIDTH = 1.65
+    input_tjlf.WIDTH_MIN = 0.3
+    input_tjlf.BETA_LOC = 0.0
+    input_tjlf.KX0_LOC = 1.0
+    input_tjlf.PARK = 1.0
+    input_tjlf.GHAT = 1.0
+    input_tjlf.GCHAT = 1.0
+    input_tjlf.WD_ZERO = 0.1
+    input_tjlf.LINSKER_FACTOR = 0.0
+    input_tjlf.GRADB_FACTOR = 0.0
+    input_tjlf.FILTER = 2.0
+    input_tjlf.THETA_TRAPPED = 0.7
+    input_tjlf.ETG_FACTOR = 1.25
+    input_tjlf.DAMP_PSI = 0.0
+    input_tjlf.DAMP_SIG = 0.0
+
+    input_tjlf.FIND_EIGEN = true
+    input_tjlf.NXGRID = 16
+
+    input_tjlf.ADIABATIC_ELEC = false
+    input_tjlf.VPAR_MODEL = 0
+    input_tjlf.NEW_EIKONAL = true
+    input_tjlf.USE_BISECTION = true
+    input_tjlf.USE_INBOARD_DETRAPPED = false
+    input_tjlf.IFLUX = true
+    input_tjlf.IBRANCH = -1
+    input_tjlf.KX0_LOC = 0.0
+    input_tjlf.ALPHA_ZF = -1
+
+    # check converison
+    checkInput(input_tjlf)
+
+    return input_tjlf
+end
+
+function minimal_scalar_copy(inputs::InputTJLF{T}) where T<:Real
     # Create a new instance using the constructor that sets up NS and the number of ky points.
-    local_inputs = TJLF.InputTJLF{T}(inputs.NS, length(inputs.KY_SPECTRUM))
+    local_inputs = InputTJLF{T}(inputs.NS, length(inputs.KY_SPECTRUM))
     # Loop over all fields and assign the value from the original.
     for f in fieldnames(typeof(inputs))
         setfield!(local_inputs, f, getfield(inputs, f))
