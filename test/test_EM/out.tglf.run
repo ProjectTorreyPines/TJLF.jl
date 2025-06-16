@@ -1,0 +1,9 @@
+[Parsing data in input.tglf]
+no mpi
+ kx_geo0_out =  2.2374E+00 SAT_geo0_out =  1.0000E+00
+  D(R) = -1.0655E-01  D(I) = -5.9655E-02
+  kinetic species =          3  non-kinetic species =          0
+      Gam/Gam_GB      Q/Q_GB  Q_low/Q_GB    Pi/Pi_GB      S/S_GB
+elec  5.9605E-01  3.8025E+00  2.2121E+00 -4.1205E-04  1.2703E+00
+ion1  1.0694E+00  6.2206E+00  6.1659E+00  2.1390E+00 -1.2159E+00
+ion2 -7.8755E-02  8.5437E-02  9.6703E-02  6.4711E-01  3.8941E-02
