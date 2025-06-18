@@ -39,7 +39,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
-    width_min = inputs.WIDTH_MIN
+    width_min = abs(inputs.WIDTH_MIN)
     width_max = abs(inputs.WIDTH)
 
     ### original values
@@ -51,8 +51,10 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     inputs.IBRANCH = -1
 
     if(sat_rule_in==2 || sat_rule_in==3)
-        inputs.USE_BPER = false
-        inputs.USE_BPAR = false
+        if (width_min_in > 0)
+          inputs.USE_BPER = false
+          inputs.USE_BPAR = false
+        end
     end
     nbasis = ifelse(inputs.NBASIS_MIN!=0, inputs.NBASIS_MIN, inputs.NBASIS_MAX)
     aves = new_aves(inputs, nbasis)
@@ -71,7 +73,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
 
             width_p_max = 3.6*vs/(√(2)*R_unit*q_unit*max(wgp_max,0.001))
             width_p_max=max(width_p_max,0.1)
-            if(width_p_max < width_min_in)
+            if(width_p_max < abs(width_min_in))
                 width_min = width_p_max
             end
         end
