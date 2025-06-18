@@ -8,6 +8,7 @@ FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
+MKL = "33e6dc65-8f57-5167-99aa-e5a354878fb2"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
@@ -15,6 +16,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 FastGaussQuadrature = "1.0.2"
 KrylovKit = "0.9.5"
 LinearMaps = "3.11.4"
+MKL = "0.9.0"
 StaticArrays = "1"
 
 [extras]
