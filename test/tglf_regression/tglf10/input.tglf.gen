@@ -16,7 +16,7 @@
 0.0  DAMP_PSI
 0.0  DAMP_SIG
 .true.  IFLUX
-.false.  USE_BPER
+.true.  USE_BPER
 .false.  USE_BPAR
 .true.  USE_MHD_RULE
 .true.  USE_BISECTION
@@ -60,7 +60,7 @@
 0.0  ZS_7
 3.00000E-01  KY
 1.65  WIDTH
-0.3  WIDTH_MIN
+-0.3  WIDTH_MIN
 21  NWIDTH
 .true.  FIND_WIDTH
 +2.30275E+00  RLNS_1

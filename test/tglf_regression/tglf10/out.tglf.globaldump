@@ -9,7 +9,7 @@
  NS=  3
  USE_TRANSPORT_MODEL=T
  GEOMETRY_FLAG=  1
- USE_BPER=F
+ USE_BPER=T
  USE_BPAR=F
  USE_MHD_RULE=T
  USE_BISECTION=T
@@ -86,7 +86,7 @@
  # Gaussian width parameters:
  #---------------------------------------------------
  WIDTH= 5.11075E-01
- WIDTH_MIN= 3.00000E-01
+ WIDTH_MIN=-3.00000E-01
  FIND_WIDTH=T
  NWIDTH= 21
   
