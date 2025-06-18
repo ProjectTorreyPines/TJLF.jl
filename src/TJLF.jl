@@ -12,7 +12,7 @@ using FastGaussQuadrature
 using LinearMaps
 using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem but use it to replace Arpack
 
-@show BLAS.get_config()
+#@show BLAS.get_config()
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
