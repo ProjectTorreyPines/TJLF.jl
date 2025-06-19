@@ -299,6 +299,15 @@ function intensity_sat(
 
     ### coefficients for SAT_RULE = 1
     czf = abs(alpha_zf)
+
+    if (inputs.ETG_FACTOR < 0)
+        etg_stiff = abs(inputs.ETG_FACTOR)
+      else
+        etg_stiff = 1.0
+    end
+
+
+
     cnorm = 14.29
     cz1=0.48*czf
     cz2=1.0*czf
@@ -453,11 +462,11 @@ function intensity_sat(
     if(sat_rule_in==1)
         gamma .= ifelse.(ky_spect.<kymax1,
                     max.(gamma_net .- (cz1.*(kymax1 .- ky_spect).*vzf1),0.0),
-                    (cz2*gammamax1) .+ max.(gamma_net .- (cz2.*vzf1.*ky_spect),0.0))
+                    (cz2*gammamax1) .+ etg_stiff*max.(gamma_net .- (cz2.*vzf1.*ky_spect),0.0))
     elseif(sat_rule_in==2 || sat_rule_in==3)
         gamma .= ifelse.(ky_spect.<kymax1,
                     gamma_net,
-                    gammamax1 .+ max.(gamma_net .- cz2*vzf1.*ky_spect, 0.0))
+                    gammamax1 .+ etg_stiff*max.(gamma_net .- cz2*vzf1.*ky_spect, 0.0))
     end
     gamma_mix1 .= gamma
 

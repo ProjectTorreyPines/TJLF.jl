@@ -4,7 +4,7 @@
 
  
  GEOMETRY_FLAG=  1
- USE_BPER=.false.
+ USE_BPER=.true.
  USE_BPAR=.false.
  USE_MHD_RULE=.true.
  USE_BISECTION=.true.
@@ -20,7 +20,7 @@
  KY= 3.00000E-01
  NEW_EIKONAL=.true.
  WIDTH=1.65 
- WIDTH_MIN=0.3 
+ WIDTH_MIN=-0.3 
  FIND_WIDTH=.true. 
  NWIDTH=21 
  IFLUX=.true.
