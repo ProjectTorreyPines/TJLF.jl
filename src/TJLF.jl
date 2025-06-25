@@ -1,6 +1,5 @@
 module TJLF
 
-using Base.Threads
 using LinearAlgebra
 import LinearAlgebra.LAPACK.gesv!
 import LinearAlgebra.LAPACK.geev!
@@ -8,7 +7,7 @@ using SparseArrays
 using StaticArrays
 using FastGaussQuadrature
 using LinearMaps
-using KrylovKit
+import KrylovKit
 
 # @show BLAS.get_config()
 BLAS.set_num_threads(1)

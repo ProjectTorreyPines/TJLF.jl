@@ -15,9 +15,6 @@ outputs:
 description:
     uses the structs calculated in tjlf_matrix.jl to populate matrix amat and bmat, solves the generalized eigenvalue problem for only the eigenvalues, returns those eigenvalues
 """
-
-
-
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
@@ -2707,19 +2704,16 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         if !isnan(inputs.EIGEN_SPECTRUM[ky_index])
             sigma = inputs.EIGEN_SPECTRUM[ky_index]  #array of eigenvalues from input file
         end
-       
+
         if sigma != 0.0
-           
             try              
                 nev1=inputs.NMODES            
                 L=construct_linear_map(sparse(amat), sparse(bmat), sigma)
-                λ, v, _ = eigsolve(L, size(amat)[1], nev1, :LM) 
+                λ, v, _ = KrylovKit.eigsolve(L, size(amat)[1], nev1, :LM) 
                # printl("Success!!!!----------------------------")  - this solver almost never works
                 return λ, v[1], NaN, NaN
             catch e
-                @warn "eigsolve() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues: $(e)"
-            finally
-               
+                @warn "KrylovKit.eigsolve() can't find eigen for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues: $(e)"
             end
         else
             @warn "no growth rate initial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues"
