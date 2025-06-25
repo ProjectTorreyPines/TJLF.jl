@@ -258,17 +258,10 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     gesv!(zmat,eigenvector)
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])
-                      
-                        
-                        try                       
-                            nev1=size(amat)[1]                           
-                            L=construct_linear_map(sparse(amat), sparse(bmat), eigenvalues[jmax[imax]])
-                            _, vec, _ = eigsolve(L, nev1, 1, :LM) 
-                            eigenvector = vec[1]                                                  
-
-                        finally
-                       
-                        end
+                        nev1 = size(amat)[1]                           
+                        L = construct_linear_map(sparse(amat), sparse(bmat), eigenvalues[jmax[imax]])
+                        _, vec, _ = KrylovKit.eigsolve(L, nev1, 1, :LM)
+                        eigenvector = vec[1]
                     else
                         eigenvector = v[:, jmax[imax]]
                     end
@@ -294,6 +287,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                 stress_par_weight,
                 stress_tor_weight,
                 exchange_weight = get_QL_weights(inputs, ave, aveH, ky, nbasis, eigenvalues[jmax[imax]], eigenvector)
+
                 #### probably outputs
                 wd_bar_out[imax] = wd_bar
                 b0_bar_out[imax] = b0_bar
