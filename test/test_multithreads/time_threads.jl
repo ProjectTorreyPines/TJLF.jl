@@ -1,37 +1,20 @@
 using Test
 using TJLF
-#using BenchmarkTools  #for using @btime 
 
-
+n_cases = 8
 @show Threads.nthreads()
 
+# this case was picked because it takes the longest
+case = readInput(joinpath(dirname(@__DIR__), "tglf_regression", "tglf10", "input.tglf"))
+inputTJLFVector = TJLF.InputTJLF[case for _ in 1:n_cases]
 
-inputTJLFVector = Vector{Main.TJLF.InputTJLF}(undef, 7)
-directory = joinpath(dirname(@__DIR__), "tglf_regression")
+# single run just to ensure things get precompiled
+TJLF.run_tjlf(inputTJLFVector[1])
 
-baseDirectory = joinpath(directory, "tglf01/")
-inputTJLFVector[1] = readInput(baseDirectory*"input.tglf")
-baseDirectory = joinpath(directory, "tglf02/")
-inputTJLFVector[2] = readInput(baseDirectory*"input.tglf")
-baseDirectory = joinpath(directory, "tglf04/")
-inputTJLFVector[3] = readInput(baseDirectory*"input.tglf")
-baseDirectory = joinpath(directory, "tglf05/")
-inputTJLFVector[4] = readInput(baseDirectory*"input.tglf")
-baseDirectory = joinpath(directory, "tglf06/")
-inputTJLFVector[5] = readInput(baseDirectory*"input.tglf")
-baseDirectory = joinpath(directory, "tglf08/")
-inputTJLFVector[6] = readInput(baseDirectory*"input.tglf")
-baseDirectory = joinpath(directory, "tglf10/")
-inputTJLFVector[7] = readInput(baseDirectory*"input.tglf")
+# serial run
+@time TJLF.run_tjlf(inputTJLFVector[1])
 
-
-# run several times to avoid confusion with a compilation time
-for i in 1:3
-
-@time   TJLF.run_tjlf(inputTJLFVector) 
-
-@time   TJLF.run_tjlf(inputTJLFVector[7]) 
-println("Iteration $i completed -------")
-end
+# parallel run
+@time TJLF.run_tjlf(inputTJLFVector)
 
 println("")
