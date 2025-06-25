@@ -1,7 +1,5 @@
 module TJLF
 
-#using MKL
-using Base.Threads
 using LinearAlgebra
 import LinearAlgebra.LAPACK.gesv!
 import LinearAlgebra.LAPACK.geev!
@@ -9,7 +7,10 @@ using SparseArrays
 using StaticArrays
 using FastGaussQuadrature
 using LinearMaps
-using KrylovKit # interesting eigensolver, but currently does not support generalized eigenvalue problem but use it to replace Arpack
+import KrylovKit
+
+# @show BLAS.get_config()
+BLAS.set_num_threads(1)
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")
@@ -27,12 +28,11 @@ include("tjlf_max.jl")
 include("tjlf_TRANSPORT_MODEL.jl")
 include("run_tjlf.jl")
 
-LinearAlgebra.BLAS.set_num_threads(1)
 export readInput
 export gauss_hermite, get_sat_params, get_ky_spectrum, get_ky_spectrum_size, tjlf_TM
 export sum_ky_spectrum, xgrid_functions_geo
 
 const document = Dict()
-document[Symbol(@__MODULE__)] = [name for name in Base.names(@__MODULE__, all=false, imported=false) if name != Symbol(@__MODULE__)]
+document[Symbol(@__MODULE__)] = [name for name in Base.names(@__MODULE__; all=false, imported=false) if name != Symbol(@__MODULE__)]
 
 end

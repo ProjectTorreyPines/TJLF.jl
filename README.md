@@ -48,6 +48,22 @@ Deleted parameters: USE_TRANSPORT_MODEL,GEOMETRY_FLAG,B_MODEL_SA,FT_MODEL_SA,VPA
 
 # Eigenvalue Solver
 
+TJLF supports multiple eigenvalue solver strategies with different performance/robustness tradeoffs:
+
+## Primary Solver (Default): Direct LAPACK
+- **Method**: `gesv!()` + `geev!()` from `LinearAlgebra.LAPACK`
+- **When used**: `FIND_EIGEN=true` (default)
+- **Benefits**: Robust, fast, excellent thread scaling
+- **Description**: Converts generalized eigenvalue problem to linear system, then finds all eigenvalues
+
+## Iterative Solver: KrylovKit
+- **Method**: `KrylovKit.eigsolve()` with shift-and-invert
+- **When used**: `FIND_EIGEN=false` with valid `EIGEN_SPECTRUM` initial guess
+- **Benefits**: Fast for specific eigenvalues when good initial guess available
+- **Limitations**: Requires accurate initial eigenvalue guess; less robust
+
+## Iterative Solver: Arpack [!DISCONTINUED! in favor of KrylovKit]
+
 Currently, Arpack.jl's eigs(), can be used in tjlf_LINEAR_SOLUTION.jl and tjlf_eigensolver.jl as a fast iterative solver. In tjlf_LS.jl, eigs() is used to solve for the eigenvector instead of rewriting the generalized eigenvalue problem as a system of linear equations like TGLF, which is potentially a little troublesome. It is also used in tjlf_eigensolver.jl if you provide a EIGEN_SPECTRUM and set FIND_EIGEN to False. eigs() does a shift and inverse iteration to solve the generalized eigenvalue problem, specifying sigma gives the shift, by setting which=:LM you tell eigs() to compute eigenvalues around sigma. I have tried which=:LR (LM is largest magnitude and LR is largest real part), but sometimes the solver will find "fake" eigenvalues with very large real and imaginary parts. I have found using :LM and setting sigma as the most unstable mode has worked, but more testing would be good.
 
 Table of the three different combinations of the solvers used in TJLF
@@ -72,17 +88,30 @@ To run top left, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = False
 To run mid left, use the default InputTJLF SMALL parameter = 1e-13<br>
 To run top right, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = True<br>
 
-# Arpack.jl
+## Solver Selection Logic
+1. If `FIND_EIGEN=true`: Uses robust LAPACK-based solver
+2. If `FIND_EIGEN=false` with valid `EIGEN_SPECTRUM`: Attempts KrylovKit iterative solver
+3. If KrylovKit fails: Falls back to LAPACK solver with warning
 
-NOTE, If you are getting:<br>
-<pre>
-Error: XYAUPD_Exception: Maximum number of iterations taken. All possible eigenvalues of OP has been found.<br>
-│ IPARAM(5) returns the number of wanted converged Ritz values.<br>
-│   info = 1</pre>
+# Multithreading
 
-Make sure you are using Arpack v0.5.3 and NOT v0.5.4, the current version does not work. You might have to restart your Julia enviroment, activate TJLF, and **build**.
+See `TJLF/test/test_multithreads` for testing.
 
-Also, Arpack.jl's eigs() is **NOT** thread safe. I have locks in the code to keep things safe. In the future, GenericArpack.jl should provide a pure Julia version of the Arpack algorithm that is thread safe, but it is still under development and seems to be a ways off.
+## Critical Threading Setup
+**IMPORTANT**: For proper multithreading performance, you MUST set:
+```bash
+export OMP_NUM_THREADS=1  # In shell environment
+```
+
+- Prevents BLAS from competing with Julia's threading
+- Essential for performance scaling on Linux systems
+- Without this setting, multithreaded performance will degrade significantly
+- TJLF automatically sets `BLAS.set_num_threads(1)` during module initialization
+
+## Threading Architecture
+- Automatic parallelization over multiple `InputTJLF` instances
+- Thread-safe eigenvalue solver operations
+- No manual thread management required - just pass `Vector{InputTJLF}` to `run_tjlf()`
 
 # Indices of Arrays
 
@@ -100,14 +129,6 @@ There are some 3D and 5D arrays where the indices are not obvious. They are spec
 <pre>species: 1 = electron, 2+ = ions</pre><br>
 <pre>modes: 1 = most unstable</pre>
 The order of the indices try to take advantage of Julia's column major memory usage
-
-# Multithreading
-
-If you are multithreading, make sure BLAS.set_num_threads(1) is set at some point.
-
-# Bash Folder
-
-Wrote a Bash script for testing how number of threads affects speed. Currently it is testing on the seven radial points Tim gave me found in outputs/TIM_test/. You call the executable followed by command line arguements. If you give one number, it gives you the @btime with that number of threads. If you give two numbers, it gives you the @btime looping through those two numbers. If you give three or more numbers, it gives you the @btime for each number in the arguments. I currently don't have any implementation to test the threading speed on other test cases, but you can pretty easily copy my Julia script to meet whatever you need.
 
 # Other Notes from DSUN
 
