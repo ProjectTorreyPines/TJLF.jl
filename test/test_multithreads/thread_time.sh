@@ -1,4 +1,7 @@
 #!/bin/bash
+# If you give one number, it gives you the @btime with that number of threads.
+# If you give two numbers, it gives you the @btime looping through those two numbers.
+# If you give three or more numbers, it gives you the @btime for each number in the arguments.
 
 if [ "$#" -eq "1" ]; then
     if ! [[ "$1" =~ ^[0-9]+$ ]]; then
