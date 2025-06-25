@@ -1760,7 +1760,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         #  n_g ghost terms
                         #****************
                         ja = 6*nbasis+jb + ja0
-                        amat[ia,ja] = (-1*(phi_A +psi_AN)
+                        amat[ia,ja] = (-1.0*(phi_A +psi_AN)
                                 -d_ee*nuei_n_n +xnuei*d_ab*xnu_n_b )
                         bmat[ia,ja] = d_ab - (phi_B + psi_BN)
 
@@ -1769,14 +1769,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         bmat[ia,ja] = -(psi_B + phi_BU)
 
                         ja = 8*nbasis+jb + ja0
-                        amat[ia,ja] = (-0.5*sig_A
+                        amat[ia,ja] = (-0.5*(-1.0*sig_A)
                                 -0.5*im*w_dg*tausIS/zsIS-d_ee*nuei_n_p1)
                         bmat[ia,ja] = -0.5*(-1*sig_B)
 
                         ja = 9*nbasis+jb + ja0
-                        amat[ia,ja] = (1.5*(-1*sig_A)
+                        amat[ia,ja] = (1.5*(-1.0*sig_A)
                                 -1.5*im*w_dg*tausIS/zsIS -d_ee*nuei_n_p3)
-                        bmat[ia,ja] = 1.5*(-1*sig_B)
+                        bmat[ia,ja] = 1.5*(-1.0*sig_B)
 
                         ja = 10*nbasis+jb + ja0
                         amat[ia,ja] = 0.0

@@ -2,7 +2,7 @@ using Test
 using TJLF
 
 # Tolerance for comparing TJLF vs TGLF results
-const RTOL = 0.01  # 1% tolerance for EM case
+const RTOL = 0.00001  # 1% tolerance for EM case
 
 @testset "TJLF vs TGLF electromagnetic comparison" begin
     # Test directory with input.tglf
