@@ -107,7 +107,7 @@ function readInput(filename::String)::InputTJLF
               continue
             end
         else # if not for the species vector
-            # string
+            # string (quoted)
             if startswith(value, '\'') || startswith(value, '\"')
                 val = string(strip(value, ['\'', '"']))
 
@@ -115,13 +115,17 @@ function readInput(filename::String)::InputTJLF
             elseif value == ".true." || value == ".false."
                 val = (lowercase(value) == ".true.")
 
-                # int
-            elseif !contains(value, '.')
+                # int (only if it can actually be parsed as int)
+            elseif tryparse(Int, value) !== nothing
                 val = parse(Int, value)
 
-                # float
-            else
+                # float (only if it can actually be parsed as float)
+            elseif tryparse(Float64, value) !== nothing
                 val = parse(Float64, value)
+
+                # string (fallback for anything else)
+            else
+                val = string(value)
             end
 
             # set the inputTJLF field value
