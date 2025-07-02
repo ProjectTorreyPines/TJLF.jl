@@ -111,9 +111,9 @@ function readInput(filename::String)::InputTJLF
             if startswith(value, '\'') || startswith(value, '\"')
                 val = string(strip(value, ['\'', '"']))
 
-                # bool
-            elseif value == ".true." || value == ".false."
-                val = (lowercase(value) == ".true.")
+                # bool (handle both .true./.false. and true/false formats)
+            elseif value == ".true." || value == ".false." || value == "true" || value == "false"
+                val = (lowercase(value) == ".true." || lowercase(value) == "true")
 
                 # int (only if it can actually be parsed as int)
             elseif tryparse(Int, value) !== nothing
@@ -146,6 +146,11 @@ function readInput(filename::String)::InputTJLF
         ### WTF
         inputTJLF.XNU_MODEL = 3
         inputTJLF.WDIA_TRAPPED = 1.0
+    end
+
+    # Handle USE_BPER setting (consistent with TurbulentTransport.apply_presets!)
+    if inputTJLF.USE_BPER
+        inputTJLF.ALPHA_MACH = 0.0
     end
 
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
