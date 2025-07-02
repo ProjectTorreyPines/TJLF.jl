@@ -107,21 +107,25 @@ function readInput(filename::String)::InputTJLF
               continue
             end
         else # if not for the species vector
-            # string
+            # string (quoted)
             if startswith(value, '\'') || startswith(value, '\"')
                 val = string(strip(value, ['\'', '"']))
 
-                # bool
-            elseif value == ".true." || value == ".false."
-                val = (lowercase(value) == ".true.")
+                # bool (handle both .true./.false. and true/false formats)
+            elseif value == ".true." || value == ".false." || value == "true" || value == "false"
+                val = (lowercase(value) == ".true." || lowercase(value) == "true")
 
-                # int
-            elseif !contains(value, '.')
+                # int (only if it can actually be parsed as int)
+            elseif tryparse(Int, value) !== nothing
                 val = parse(Int, value)
 
-                # float
-            else
+                # float (only if it can actually be parsed as float)
+            elseif tryparse(Float64, value) !== nothing
                 val = parse(Float64, value)
+
+                # string (fallback for anything else)
+            else
+                val = string(value)
             end
 
             # set the inputTJLF field value
@@ -142,6 +146,11 @@ function readInput(filename::String)::InputTJLF
         ### WTF
         inputTJLF.XNU_MODEL = 3
         inputTJLF.WDIA_TRAPPED = 1.0
+    end
+
+    # Handle USE_BPER setting (consistent with TurbulentTransport.apply_presets!)
+    if inputTJLF.USE_BPER
+        inputTJLF.ALPHA_MACH = 0.0
     end
 
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH

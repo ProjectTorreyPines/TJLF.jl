@@ -383,7 +383,6 @@ function update_input_tjlf!(input_tjlf::InputTJLF, input_tglf::InputTGLF)
     input_tjlf.RLNP_CUTOFF = 18.0
     input_tjlf.WIDTH = 1.65
     input_tjlf.WIDTH_MIN = 0.3
-    input_tjlf.BETA_LOC = 0.0
     input_tjlf.KX0_LOC = 1.0
     input_tjlf.PARK = 1.0
     input_tjlf.GHAT = 1.0
@@ -407,7 +406,6 @@ function update_input_tjlf!(input_tjlf::InputTJLF, input_tglf::InputTGLF)
     input_tjlf.USE_INBOARD_DETRAPPED = false
     input_tjlf.IFLUX = true
     input_tjlf.IBRANCH = -1
-    input_tjlf.KX0_LOC = 0.0
     input_tjlf.ALPHA_ZF = -1
 
     # check converison
