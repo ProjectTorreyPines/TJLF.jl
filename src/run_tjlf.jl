@@ -3,9 +3,24 @@ function run(inputTJLF::InputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
-    QL_weights, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
-    QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:, :, 1], QL_weights)
-    return (QL_weights=QL_weights, eigenvalue=eigenvalue, QL_flux_out=QL_flux_out, flux_spectrum=flux_spectrum)
+    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+    
+    # Use appropriate eigenvalues for flux calculation
+    # For two-pass case (ALPHA_QUENCH=0 and VEXB_SHEAR≠0), use second pass eigenvalues
+    # For single-pass case, first and second pass are identical
+    vexb_shear_s = inputTJLF.VEXB_SHEAR * inputTJLF.SIGN_IT
+    if inputTJLF.ALPHA_QUENCH == 0.0 && vexb_shear_s != 0.0
+        # Two-pass case: use second pass eigenvalues for flux calculation
+        eigenvalue_for_flux = secondPass_eigenvalue
+    else
+        # Single-pass case: use first pass eigenvalues
+        eigenvalue_for_flux = firstPass_eigenvalue
+    end
+    
+    QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights)
+    
+    # Return first pass eigenvalues for output (matching TGLF behavior)
+    return (QL_weights=QL_weights, eigenvalue=firstPass_eigenvalue, QL_flux_out=QL_flux_out, flux_spectrum=flux_spectrum)
 end
 
 function run(inputTGLF::InputTGLF)

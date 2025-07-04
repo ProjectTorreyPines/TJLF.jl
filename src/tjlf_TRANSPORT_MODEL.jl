@@ -29,6 +29,7 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
 
     # Output arrays
     firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2)
+    secondPass_eigenvalue = zeros(Float64, nmodes, nky, 2)  # Separate array for second pass results
     QL_weights = zeros(Float64, 3, ns, nmodes, nky, 5)
 
     if alpha_quench_in != 0.0 || vexb_shear_s == 0.0
@@ -37,6 +38,8 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
             onePass!(local_inputs, satParams, outputHermite, vexb_shear_s,
                      firstPass_eigenvalue, QL_weights, ky_index)
         end
+        # No second pass needed for single-pass cases
+        secondPass_eigenvalue .= firstPass_eigenvalue
 
     elseif !inputs.FIND_WIDTH
         inputs.IFLUX = false
@@ -44,12 +47,16 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
             local_inputs = minimal_scalar_copy(inputs)
             widthPass!(local_inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
         end
-        kx0_e = xgrid_functions_geo(inputs, satParams, firstPass_eigenvalue[:,:,1])
+        # Initialize secondPass_eigenvalue with firstPass results before spectral shift
+        secondPass_eigenvalue .= firstPass_eigenvalue
+        
+        # Calculate spectral shift and run second pass
+        kx0_e = calculate_spectral_shift(inputs, satParams, firstPass_eigenvalue)
         inputs.IFLUX = true
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
             secondPass!(local_inputs, satParams, outputHermite, kx0_e[ky_index],
-                        firstPass_eigenvalue, QL_weights, ky_index)
+                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index)
         end
 
     else
@@ -59,12 +66,16 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
             local_inputs = minimal_scalar_copy(inputs)
             firstPass!(local_inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
         end
-        kx0_e = xgrid_functions_geo(inputs, satParams, firstPass_eigenvalue[:,:,1])
+        # Initialize secondPass_eigenvalue with firstPass results before spectral shift
+        secondPass_eigenvalue .= firstPass_eigenvalue
+        
+        # Calculate spectral shift and run second pass
+        kx0_e = calculate_spectral_shift(inputs, satParams, firstPass_eigenvalue)
         inputs.IFLUX = true
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
             secondPass!(local_inputs, satParams, outputHermite, kx0_e[ky_index],
-                        firstPass_eigenvalue, QL_weights, ky_index)
+                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index)
         end
     end
 
@@ -75,7 +86,37 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         @debug "Using SAT0 means the return value of TM is not the QL weights, but actually flux_spectrum_out = QL_weights * phi_bar_out. Notice the difference near LS return statement."
     end
 
-    return QL_weights, firstPass_eigenvalue
+    # Return both eigenvalue arrays
+    return QL_weights, firstPass_eigenvalue, secondPass_eigenvalue
+end
+
+"""
+    calculate_spectral_shift(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, firstPass_eigenvalue::Array{T,3}) where T<:Real
+
+Helper function to calculate spectral shift parameters. 
+For SAT_RULE=2&3, calculates zonal mixing parameters from first pass eigenvalues and passes them to xgrid_functions_geo.
+For SAT_RULE=1, uses the original behavior without zonal mixing parameters.
+
+Returns:
+    kx0_e - spectral shift array for all ky values
+"""
+function calculate_spectral_shift(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, firstPass_eigenvalue::Array{T,3}) where T<:Real
+    # CRITICAL FIX: For SAT_RULE=2 and SAT_RULE=3, calculate zonal mixing parameters from first pass
+    # and pass them to xgrid_functions_geo for proper spectral shift calculation
+    if inputs.SAT_RULE == 2 || inputs.SAT_RULE == 3
+        # Calculate zonal mixing parameters from first pass eigenvalues
+        most_unstable_gamma_first_pass = firstPass_eigenvalue[1, :, 1]
+        vzf_out_first_pass, kymax_out_first_pass, jmax_out_first_pass = get_zonal_mixing(inputs, satParams, most_unstable_gamma_first_pass)            
+        # Use these parameters in spectral shift calculation
+        kx0_e = xgrid_functions_geo(inputs, satParams, firstPass_eigenvalue[:,:,1]; 
+                                    vzf_out_param=vzf_out_first_pass, 
+                                    kymax_out_param=kymax_out_first_pass)
+    else
+        # For SAT_RULE=1, use the original behavior
+        kx0_e = xgrid_functions_geo(inputs, satParams, firstPass_eigenvalue[:,:,1])
+    end
+    
+    return kx0_e
 end
 
 #----------------------------------------------------------------------------------------------------------------------------
@@ -316,7 +357,7 @@ description:
 """
 function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
     kx0_e::T,
-    firstPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
+    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
 
     # input values
     ns = inputs.NS
@@ -338,7 +379,6 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
         gamma_reference_kx0 .= firstPass_eigenvalue[:,ky_index,1]
         freq_reference_kx0 .= firstPass_eigenvalue[:,ky_index,2]
         nbasis = nbasis_max_in
-        # println("this is 3")
 
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
@@ -358,6 +398,16 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
     end
     if(gamma_max == 0.0 || gamma_nb_min_out == 0.0) unstable = false end
 
+    # CRITICAL FIX: Store eigenvalues returned by tjlf_LS (which are first pass eigenvalues in spectral shift mode)
+    # This matches TGLF behavior where second pass returns first pass eigenvalues for spectral shift
+    if nmodes_out > 0
+        secondPass_eigenvalue[1:nmodes_out,ky_index,1] .= gamma_out[1:nmodes_out]
+        secondPass_eigenvalue[1:nmodes_out,ky_index,2] .= freq_out[1:nmodes_out]
+    else
+        # When eigensolver completely fails (nmodes_out = 0), store zeros in first mode
+        secondPass_eigenvalue[1,ky_index,1] = 0.0
+        secondPass_eigenvalue[1,ky_index,2] = 0.0
+    end
 
     if(unstable)
         # println("DSUN")
