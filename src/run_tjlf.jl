@@ -17,7 +17,17 @@ function run(inputTJLF::InputTJLF)
         eigenvalue_for_flux = firstPass_eigenvalue
     end
     
-    QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights)
+    # Calculate fluxes with proper zonal mixing for SAT_RULE 2/3
+    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+        most_unstable_gamma_first_pass = firstPass_eigenvalue[1, :, 1]
+        vzf_out_first_pass, kymax_out_first_pass, jmax_out_first_pass = get_zonal_mixing(inputTJLF, satParams, most_unstable_gamma_first_pass)
+        QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights; 
+                                                    vzf_out_param=vzf_out_first_pass, 
+                                                    kymax_out_param=kymax_out_first_pass, 
+                                                    jmax_out_param=jmax_out_first_pass)
+    else
+        QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights)
+    end
     
     # Return first pass eigenvalues for output (matching TGLF behavior)
     return (QL_weights=QL_weights, eigenvalue=firstPass_eigenvalue, QL_flux_out=QL_flux_out, flux_spectrum=flux_spectrum)

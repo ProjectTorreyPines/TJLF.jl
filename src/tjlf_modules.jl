@@ -374,39 +374,10 @@ function update_input_tjlf!(input_tjlf::InputTJLF, input_tglf::InputTGLF)
     end
     input_tjlf.WIDTH_SPECTRUM .= input_tjlf.WIDTH
 
-    # Reset defaults
-    input_tjlf.KY = 0.3
-    input_tjlf.ALPHA_E = 1.0
-    input_tjlf.ALPHA_P = 1.0
-    input_tjlf.XNU_FACTOR = 1.0
-    input_tjlf.DEBYE_FACTOR = 1.0
-    input_tjlf.RLNP_CUTOFF = 18.0
-    input_tjlf.WIDTH = 1.65
-    input_tjlf.WIDTH_MIN = 0.3
-    input_tjlf.KX0_LOC = 1.0
-    input_tjlf.PARK = 1.0
-    input_tjlf.GHAT = 1.0
-    input_tjlf.GCHAT = 1.0
-    input_tjlf.WD_ZERO = 0.1
-    input_tjlf.LINSKER_FACTOR = 0.0
-    input_tjlf.GRADB_FACTOR = 0.0
-    input_tjlf.FILTER = 2.0
-    input_tjlf.THETA_TRAPPED = 0.7
-    input_tjlf.ETG_FACTOR = 1.25
-    input_tjlf.DAMP_PSI = 0.0
-    input_tjlf.DAMP_SIG = 0.0
-
+    # Set defaults ONLY for parameters that exist in InputTJLF but NOT in InputTGLF
+    # These are TJLF-specific parameters that need defaults
     input_tjlf.FIND_EIGEN = true
     input_tjlf.NXGRID = 16
-
-    input_tjlf.ADIABATIC_ELEC = false
-    input_tjlf.VPAR_MODEL = 0
-    input_tjlf.NEW_EIKONAL = true
-    input_tjlf.USE_BISECTION = true
-    input_tjlf.USE_INBOARD_DETRAPPED = false
-    input_tjlf.IFLUX = true
-    input_tjlf.IBRANCH = -1
-    input_tjlf.ALPHA_ZF = -1
 
     # check converison
     checkInput(input_tjlf)
