@@ -54,7 +54,7 @@ const RTOL = 0.0005  # 0.05% tolerance for NT core case
     
     outputHermite = gauss_hermite(input_tjlf)
     
-    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(input_tjlf, satParams, outputHermite)
+    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(input_tjlf, satParams, outputHermite; return_both_eigenvalues=true)
     
     # For eigenvalue comparison, use first pass eigenvalues (matches TGLF printed output)
     gammaJulia = firstPass_eigenvalue[:, :, 1]
@@ -78,7 +78,6 @@ const RTOL = 0.0005  # 0.05% tolerance for NT core case
         secondPass_eigenvalue[:, :, 1]
     end
     
-    # CRITICAL FIX: Calculate and pass zonal mixing parameters for proper flux calculation
     if input_tjlf.SAT_RULE == 2 || input_tjlf.SAT_RULE == 3
         most_unstable_gamma_first_pass = firstPass_eigenvalue[1, :, 1]
         vzf_out_first_pass, kymax_out_first_pass, jmax_out_first_pass = TJLF.get_zonal_mixing(input_tjlf, satParams, most_unstable_gamma_first_pass)

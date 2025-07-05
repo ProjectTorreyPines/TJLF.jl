@@ -3,7 +3,7 @@ function run(inputTJLF::InputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
-    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite; return_both_eigenvalues=true)
     
     # Use appropriate eigenvalues for flux calculation
     # For two-pass case (ALPHA_QUENCH=0 and VEXB_SHEAR≠0), use second pass eigenvalues

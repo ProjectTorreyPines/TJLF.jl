@@ -1,22 +1,26 @@
 """
-    tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
+    tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}; return_both_eigenvalues::Bool=false) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
+    return_both_eigenvalues::Bool       - If true, returns both first and second pass eigenvalues (default: false)
 
 outputs:
     QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
     firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
                                           type: (gamma, frequency)
+    secondPass_eigenvalue               - 3d array of second pass eigenvalues (mode, ky, type) [only if return_both_eigenvalues=true]
+                                          type: (gamma, frequency)
 
 description:
     Main transport model function.
     Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity, and fluxes.
+    For backward compatibility, by default only returns first pass eigenvalues.
 """
-function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
+function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}; return_both_eigenvalues::Bool=false) where T<:Real
 
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR * inputs.SIGN_IT
@@ -86,8 +90,12 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         @debug "Using SAT0 means the return value of TM is not the QL weights, but actually flux_spectrum_out = QL_weights * phi_bar_out. Notice the difference near LS return statement."
     end
 
-    # Return both eigenvalue arrays
-    return QL_weights, firstPass_eigenvalue, secondPass_eigenvalue
+    # Return eigenvalue arrays based on flag
+    if return_both_eigenvalues
+        return QL_weights, firstPass_eigenvalue, secondPass_eigenvalue
+    else
+        return QL_weights, firstPass_eigenvalue
+    end
 end
 
 """
