@@ -211,12 +211,12 @@ mutable struct InputTJLF{T<:Real}
     VPAR::Union{Vector{T},Missing}
     VPAR_SHEAR::Union{Vector{T},Missing}
 
-    # NOT IN TGLF
-    WIDTH_SPECTRUM::Union{Vector{T},Missing}
-    KY_SPECTRUM::Union{Vector{T},Missing}
-    EIGEN_SPECTRUM::Union{Vector{ComplexF64},Missing}
-    FIND_EIGEN::Union{Bool,Missing}
-    # NOT IN TGLF
+    # NOT IN TGLF (or missing from InputTGLF structure)
+    WIDTH_SPECTRUM::Union{Vector{T},Missing}    # TJLF-specific
+    KY_SPECTRUM::Union{Vector{T},Missing}       # TJLF-specific  
+    EIGEN_SPECTRUM::Union{Vector{ComplexF64},Missing}  # TJLF-specific
+    FIND_EIGEN::Union{Bool,Missing}             # TGLF parameter but missing from InputTGLF
+    # NOT IN TGLF (or missing from InputTGLF structure)
 
     SIGN_BT::Union{Int,Missing}
     SIGN_IT::Union{Int,Missing}
@@ -375,9 +375,9 @@ function update_input_tjlf!(input_tjlf::InputTJLF, input_tglf::InputTGLF)
     input_tjlf.WIDTH_SPECTRUM .= input_tjlf.WIDTH
 
     # Set defaults ONLY for parameters that exist in InputTJLF but NOT in InputTGLF
-    # These are TJLF-specific parameters that need defaults
-    input_tjlf.FIND_EIGEN = true
-    input_tjlf.NXGRID = 16
+    # These are either TJLF-specific parameters OR TGLF parameters missing from InputTGLF structure
+    input_tjlf.FIND_EIGEN = true    # TGLF parameter but missing from InputTGLF structure
+    input_tjlf.NXGRID = 16         # TJLF-specific parameter
 
     # check converison
     checkInput(input_tjlf)
