@@ -40,7 +40,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             freq_reference_kx0::Vector{T} = T[],
             outputGeo::Union{OutputGeometry{T},Missing} = missing,
             find_eigenvector::Bool = false,
-            aves = new_aves(inputs, nbasis)) where T <: Real
+            aves = new_aves(inputs, nbasis),
+            first_pass_eigenvalues::Vector{Complex{T}} = Complex{T}[]) where T <: Real
 
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
@@ -105,7 +106,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector)
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector,first_pass_eigenvalues)
 
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
@@ -260,7 +261,16 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     if inputs.FIND_EIGEN || isnan(v[1,1])
                         nev1 = size(amat)[1]                           
                         L = construct_linear_map(sparse(amat), sparse(bmat), eigenvalues[jmax[imax]])
-                        _, vec, _ = KrylovKit.eigsolve(L, nev1, 1, :LM)
+                        
+                        # Use first pass eigenvalues as initial guesses if available (second pass optimization)
+                        if !isempty(first_pass_eigenvalues) && length(first_pass_eigenvalues) >= 1
+                            # Create initial guess vector from first pass eigenvalue
+                            v0 = randn(ComplexF64, nev1)
+                            v0 .*= abs(first_pass_eigenvalues[1]) / norm(v0)
+                            _, vec, _ = KrylovKit.eigsolve(L, v0, 1, :LM)
+                        else
+                            _, vec, _ = KrylovKit.eigsolve(L, nev1, 1, :LM)
+                        end
                         eigenvector = vec[1]
                     else
                         eigenvector = v[:, jmax[imax]]

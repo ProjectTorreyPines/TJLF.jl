@@ -22,7 +22,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         nbasis::Int, ky::T,
                         amat::Matrix{K},bmat::Matrix{K},
                         ky_index::Int,
-                        find_eigenvector::Bool) where T<:Real where K<:Complex
+                        find_eigenvector::Bool,
+                        first_pass_eigenvalues::Vector{Complex{T}} = Complex{T}[]) where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2709,7 +2710,22 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             try              
                 nev1=inputs.NMODES            
                 L=construct_linear_map(sparse(amat), sparse(bmat), sigma)
-                λ, v, _ = KrylovKit.eigsolve(L, size(amat)[1], nev1, :LM) 
+                
+                # Use first pass eigenvalues as initial guesses if available (second pass optimization)
+                if !isempty(first_pass_eigenvalues) && length(first_pass_eigenvalues) >= nev1
+                    # Create initial guess vectors from first pass eigenvalues
+                    # Use random vectors scaled by the eigenvalue magnitudes as initial guesses
+                    initial_vectors = []
+                    for i in 1:nev1
+                        # Create a random vector and scale it by the eigenvalue magnitude
+                        v0 = randn(ComplexF64, size(amat)[1])
+                        v0 .*= abs(first_pass_eigenvalues[i]) / norm(v0)
+                        push!(initial_vectors, v0)
+                    end
+                    λ, v, _ = KrylovKit.eigsolve(L, initial_vectors, nev1, :LM)
+                else
+                    λ, v, _ = KrylovKit.eigsolve(L, size(amat)[1], nev1, :LM) 
+                end
                # printl("Success!!!!----------------------------")  - this solver almost never works
                 return λ, v[1], NaN, NaN
             catch e

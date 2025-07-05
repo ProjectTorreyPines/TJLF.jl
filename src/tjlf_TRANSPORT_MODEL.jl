@@ -388,10 +388,18 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
         freq_reference_kx0 .= firstPass_eigenvalue[:,ky_index,2]
         nbasis = nbasis_max_in
 
+        # Convert first pass eigenvalues to complex form for KrylovKit hints
+        first_pass_complex = Complex{T}[]
+        for i in 1:size(firstPass_eigenvalue, 1)
+            if firstPass_eigenvalue[i, ky_index, 1] != 0.0 || firstPass_eigenvalue[i, ky_index, 2] != 0.0
+                push!(first_pass_complex, Complex(firstPass_eigenvalue[i, ky_index, 1], firstPass_eigenvalue[i, ky_index, 2]))
+            end
+        end
+
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
         _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
-                            kx0_e, gamma_reference_kx0, freq_reference_kx0)
+                            kx0_e, gamma_reference_kx0, freq_reference_kx0, first_pass_eigenvalues=first_pass_complex)
 
         gamma_nb_min_out = gamma_out[1]
     else
