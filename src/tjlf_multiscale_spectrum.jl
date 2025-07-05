@@ -40,8 +40,12 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
 
     testmax = 0.0
     jmax_mix = 1
+    use_kymin = false
 
-    if(alpha_zf < 0.0) kymin = 0.173 * √(2.0) / rho_ion end
+    if(alpha_zf < 0.0) 
+        use_kymin = true
+        kymin = 0.173 * √(2.0) / rho_ion 
+    end
     # saturation rules
     if sat_rule_in==2 || sat_rule_in==3
         grad_r0 = satParams.grad_r0
@@ -56,7 +60,11 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     # update testmax and max index if necessary
 
     j1 = nothing
+    jmin = 0
     for j in 1:length(ky_spect)-1
+        if ky_spect[j] < kymin
+            jmin = j
+        end
         if((ky_spect[j+1] >= kymin) && (ky_spect[j] <= kycut))
             # save index in case no max
             j1=j
@@ -151,7 +159,15 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
         end #f0 < f1
 
     end    # jmax_mix > 1
-    vzf_mix = gammamax1/kymax1
+    
+    # Match Fortran behavior: if gammamax1 is zero, return vzf_mix = 0.0
+    if gammamax1 == 0.0
+        vzf_mix = 0.0
+    elseif testmax == 0.0
+        vzf_mix = 0.0
+    else
+        vzf_mix = gammamax1/kymax1
+    end
     kymax_mix = kymax1
     ### commented out in original Fortran code
     # jmax_mix = jmax1
@@ -197,7 +213,7 @@ function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
 end
 
 """
-    intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
+    intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T,5},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
@@ -226,7 +242,10 @@ function intensity_sat(
     gamma_matrix::Matrix{T},
     QL_weights::Array{T,5},
     expsub::T=2.0,
-    return_phi_params::Bool=false) where T<:Real
+    return_phi_params::Bool=false;
+    vzf_out_param::T=NaN,
+    kymax_out_param::T=NaN,
+    jmax_out_param::Int=0) where T<:Real
 
     ############ figure out how to make this prettier
     units_in = inputs.UNITS
@@ -260,12 +279,29 @@ function intensity_sat(
     Bt0_out = satParams.Bt0
     b_geo0_out = satParams.B_geo[1]
     grad_r0_out = satParams.grad_r0
-    kx0_e = xgrid_functions_geo(inputs, satParams, gamma_matrix)
-
 
     most_unstable_gamma = gamma_matrix[1, :] # SAT1 and SAT2 use the growth rates of the most unstable modes
 
-    vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, most_unstable_gamma)
+    # Use passed parameters when available, otherwise calculate them
+    if !isnan(vzf_out_param) && !isnan(kymax_out_param)
+        vzf_out = vzf_out_param
+        kymax_out = kymax_out_param
+        if jmax_out_param > 0
+            jmax_out = jmax_out_param
+        else
+            # Find jmax_out from kymax_out
+            kymax_tolerance = 1e-10
+            jmax_out = findfirst(x -> abs(x - kymax_out) < kymax_tolerance, ky_spect)
+            if jmax_out === nothing
+                jmax_out = argmin(abs.(ky_spect .- kymax_out))
+            end
+        end
+    else
+        vzf_out, kymax_out, jmax_out = get_zonal_mixing(inputs, satParams, most_unstable_gamma)
+    end
+
+    # Now calculate spectral shift with the correct parameters
+    kx0_e = xgrid_functions_geo(inputs, satParams, gamma_matrix; vzf_out_param=vzf_out, kymax_out_param=kymax_out)
 
     # model fit parameters
     # Miller geometry values igeo=1
@@ -454,8 +490,6 @@ function intensity_sat(
     jmax1 = jmax_out
     vzf1 = vzf_out
 
-
-
     gamma_mix1 = Vector{Float64}(undef,nky)
     gamma = Vector{Float64}(undef,nky)
 
@@ -465,8 +499,8 @@ function intensity_sat(
                     (cz2*gammamax1) .+ etg_stiff*max.(gamma_net .- (cz2.*vzf1.*ky_spect),0.0))
     elseif(sat_rule_in==2 || sat_rule_in==3)
         gamma .= ifelse.(ky_spect.<kymax1,
-                    gamma_net,
-                    gammamax1 .+ etg_stiff*max.(gamma_net .- cz2*vzf1.*ky_spect, 0.0))
+                    gamma_net,  # Use spectral-shifted values for low-k  
+                    gammamax1 .+ etg_stiff*max.(gamma_net .- cz2*vzf1.*ky_spect, 0.0))  # Use gamma_net (not most_unstable_gamma) for high-k
     end
     gamma_mix1 .= gamma
 
@@ -508,7 +542,7 @@ function intensity_sat(
             gamma = similar(ky_spect)
 
             gamma .= ifelse.(ky_spect.<kymax1,
-                             most_unstable_gamma,
+                             most_unstable_gamma,  # Use original first-pass values for SAT3 recreation  
                             ((gammamax1 * (vzf_out_fp/vzf_out)) .+ max.(most_unstable_gamma .- (cz2.*vzf_out_fp.*ky_spect),0.0)))
 
             gamma_fp .= gamma
@@ -558,7 +592,7 @@ function intensity_sat(
                 k += 1
             end
             for l in k-1:k
-                gamma0 = most_unstable_gamma[l]
+                gamma0 = most_unstable_gamma[l]  # Use original eigenvalues for gamma0
 	            ky0 = ky_spect[l]
 	            kx = kx0_e[l]
 
@@ -608,7 +642,7 @@ function intensity_sat(
     sat_geo_factor_out = Vector{Float64}(undef, nky)
 
     for j in 1:nky
-        gamma0 = most_unstable_gamma[j]
+        gamma0 = most_unstable_gamma[j]  # Use original eigenvalue for gamma0 reference
         ky0 = ky_spect[j]
         kx = kx0_e[j]
         if(sat_rule_in==1)
@@ -791,7 +825,10 @@ function sum_ky_spectrum(
     inputs::InputTJLF{T},
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
-    QL_weights::Array{T,5}
+    QL_weights::Array{T,5};
+    vzf_out_param::T=NaN,
+    kymax_out_param::T=NaN,
+    jmax_out_param::Int=0
 )where T <: Real
 
     sat_rule_in = inputs.SAT_RULE
@@ -805,7 +842,7 @@ function sum_ky_spectrum(
 
     # Multiply QL weights with desired intensity
     if sat_rule_in >= 1 && sat_rule_in <= 3
-        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL_weights)
+        intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL_weights; vzf_out_param=vzf_out_param, kymax_out_param=kymax_out_param, jmax_out_param=jmax_out_param)
         # Ql size (nf,ns,nm,nky,ntype)
         # QLA_P and QLA_E are vectors of size (nm)
         # intensity factor size (nky, nm)

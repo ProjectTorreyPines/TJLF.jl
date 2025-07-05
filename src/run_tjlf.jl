@@ -3,9 +3,34 @@ function run(inputTJLF::InputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
-    QL_weights, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
-    QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue[:, :, 1], QL_weights)
-    return (QL_weights=QL_weights, eigenvalue=eigenvalue, QL_flux_out=QL_flux_out, flux_spectrum=flux_spectrum)
+    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite; return_both_eigenvalues=true)
+    
+    # Use appropriate eigenvalues for flux calculation
+    # For two-pass case (ALPHA_QUENCH=0 and VEXB_SHEAR≠0), use second pass eigenvalues
+    # For single-pass case, first and second pass are identical
+    vexb_shear_s = inputTJLF.VEXB_SHEAR * inputTJLF.SIGN_IT
+    if inputTJLF.ALPHA_QUENCH == 0.0 && vexb_shear_s != 0.0
+        # Two-pass case: use second pass eigenvalues for flux calculation
+        eigenvalue_for_flux = secondPass_eigenvalue
+    else
+        # Single-pass case: use first pass eigenvalues
+        eigenvalue_for_flux = firstPass_eigenvalue
+    end
+    
+    # Calculate fluxes with proper zonal mixing for SAT_RULE 2/3
+    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+        most_unstable_gamma_first_pass = firstPass_eigenvalue[1, :, 1]
+        vzf_out_first_pass, kymax_out_first_pass, jmax_out_first_pass = get_zonal_mixing(inputTJLF, satParams, most_unstable_gamma_first_pass)
+        QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights; 
+                                                    vzf_out_param=vzf_out_first_pass, 
+                                                    kymax_out_param=kymax_out_first_pass, 
+                                                    jmax_out_param=jmax_out_first_pass)
+    else
+        QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights)
+    end
+    
+    # Return first pass eigenvalues for output (matching TGLF behavior)
+    return (QL_weights=QL_weights, eigenvalue=firstPass_eigenvalue, QL_flux_out=QL_flux_out, flux_spectrum=flux_spectrum)
 end
 
 function run(inputTGLF::InputTGLF)
