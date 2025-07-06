@@ -2731,6 +2731,16 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         alpha = geev!('N','N',amat)[1]
     end
 
+    # Apply eigenvalue optimization only to the fallback LAPACK solver results
+    # This preserves full accuracy while still providing performance benefits
+    if length(alpha) > ceil(Int, 10.0 * inputs.NMODES)
+        # Sort by real part (growth rate) in descending order to get most unstable modes
+        # This avoids spurious large negative eigenvalues that indicate numerical instability
+        max_modes = ceil(Int, 10.0 * inputs.NMODES)
+        sorted_indices = sortperm(real.(alpha), rev=true)
+        alpha = alpha[sorted_indices[1:max_modes]]
+    end
+
     return alpha, fill(NaN*im,(1,1))
 
 end

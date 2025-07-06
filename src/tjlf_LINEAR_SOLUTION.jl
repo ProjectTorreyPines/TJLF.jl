@@ -258,9 +258,9 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     gesv!(zmat,eigenvector)
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])
-                        nev1 = size(amat)[1]                           
+                        # Use proper matrix dimension for KrylovKit eigensolver
                         L = construct_linear_map(sparse(amat), sparse(bmat), eigenvalues[jmax[imax]])
-                        _, vec, _ = KrylovKit.eigsolve(L, nev1, 1, :LM)
+                        _, vec, _ = KrylovKit.eigsolve(L, size(amat)[1], 1, :LM)
                         eigenvector = vec[1]
                     else
                         eigenvector = v[:, jmax[imax]]
