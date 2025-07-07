@@ -543,7 +543,7 @@ function intensity_sat(
 
             gamma .= ifelse.(ky_spect.<kymax1,
                              most_unstable_gamma,  # Use original first-pass values for SAT3 recreation  
-                            ((gammamax1 * (vzf_out_fp/vzf_out)) .+ max.(most_unstable_gamma .- (cz2.*vzf_out_fp.*ky_spect),0.0)))
+                            ((gammamax1 * ifelse(vzf_out != 0, vzf_out_fp/vzf_out, 1.0)) .+ max.(most_unstable_gamma .- (cz2.*vzf_out_fp.*ky_spect),0.0)))
 
             gamma_fp .= gamma
         # end
