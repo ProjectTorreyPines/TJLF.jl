@@ -160,8 +160,8 @@ Base.@kwdef mutable struct InputTGLF
     RLNP_CUTOFF::Float64 = 18.0
     WIDTH::Float64 = 1.65
     WIDTH_MIN::Float64 = 0.3
-    BETA_LOC::Float64 = 1.0
-    KX0_LOC::Float64 = 1.0
+    BETA_LOC::Float64 = 0.0
+    KX0_LOC::Float64 = 0.0
     PARK::Float64 = 1.0
     GHAT::Float64 = 1.0
     GCHAT::Float64 = 1.0
