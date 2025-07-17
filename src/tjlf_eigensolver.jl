@@ -497,7 +497,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         ft5 = ft^5
 
         if(nroot>6)
-            index = Int(floor(20*ft))+1
+            index = round(Int, 20*ft, RoundDown) + 1
             if(index==21) index=20 end
             df = (ft-uv_constants.fm[index])/(uv_constants.fm[index+1]-uv_constants.fm[index])
 

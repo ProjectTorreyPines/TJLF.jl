@@ -55,7 +55,7 @@ function FLR_hs(ft::T, b::T, Amat::Matrix{T}; b2=b^2, b25=b^2.5)::T where T<:Rea
     if(gt<=g[2])
         i = 1
     else
-        i = Int(floor(gt/0.025))
+        i = round(Int, gt/0.025, RoundDown)
     end
     j = i+1
 

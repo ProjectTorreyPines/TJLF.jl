@@ -130,7 +130,7 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
 
     elseif(spectrum_type == 3)   # ky_min=ky_in spectrum similar to APS07
         ky_max = ky_factor/rho_ion
-        nky1 = Int(floor(ky_max/ky_in)) - 1
+        nky1 = round(Int, ky_max/ky_in, RoundDown) - 1
         nky2 = 1
         nky = nky1 + nky2
         ky_spectrum = Vector{Float64}(undef,nky + nky_in)
@@ -215,7 +215,7 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
 
         # ky1 = ky_in
         # dky0 = ky1/nky_in
-        # ntest = Int(floor(0.5/dky0))
+        # ntest = round(Int, 0.5/dky0, RoundDown)
         # ####### nky_in can't be too large or else it's bad
         # nky = nky1 + nky_in - ntest
         # if nky<nky1

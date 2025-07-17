@@ -163,7 +163,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         thx = width_in * x[i]
         sign_theta = ifelse(thx>=0, 1.0, -1.0)
 
-        loops = Int(floor(abs(thx/(2π))))
+        loops = round(Int, abs(thx/(2π)), RoundDown)
         y_x = Ly*(abs(thx) - loops*2π)/ (2π)
         if(thx<0.0)
             y_x = Ly - y_x
