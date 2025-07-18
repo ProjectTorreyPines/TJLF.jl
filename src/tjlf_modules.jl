@@ -1,126 +1,126 @@
 abstract type AbstractAve{T<:Number} end
 
-Base.@kwdef mutable struct InputTGLF
+Base.@kwdef mutable struct InputTGLF{T<:Real}
     SIGN_BT::Union{Int,Missing} = missing
     SIGN_IT::Union{Int,Missing} = missing
     NS::Union{Int,Missing} = missing
-    ZMAJ_LOC::Union{Float64,Missing} = missing
-    DRMINDX_LOC::Union{Float64,Missing} = missing
-    DZMAJDX_LOC::Union{Float64,Missing} = missing
-    S_DELTA_LOC::Union{Float64,Missing} = missing
-    ZETA_LOC::Union{Float64,Missing} = missing
-    S_ZETA_LOC::Union{Float64,Missing} = missing
+    ZMAJ_LOC::Union{T,Missing} = missing
+    DRMINDX_LOC::Union{T,Missing} = missing
+    DZMAJDX_LOC::Union{T,Missing} = missing
+    S_DELTA_LOC::Union{T,Missing} = missing
+    ZETA_LOC::Union{T,Missing} = missing
+    S_ZETA_LOC::Union{T,Missing} = missing
 
-    MASS_1::Union{Float64,Missing} = missing
-    ZS_1::Union{Float64,Missing} = missing
-    AS_1::Union{Float64,Missing} = missing
-    TAUS_1::Union{Float64,Missing} = missing
+    MASS_1::Union{T,Missing} = missing
+    ZS_1::Union{T,Missing} = missing
+    AS_1::Union{T,Missing} = missing
+    TAUS_1::Union{T,Missing} = missing
 
-    MASS_2::Union{Float64,Missing} = missing
-    ZS_2::Union{Float64,Missing} = missing
-    VPAR_2::Union{Float64,Missing} = missing
-    VPAR_SHEAR_2::Union{Float64,Missing} = missing
+    MASS_2::Union{T,Missing} = missing
+    ZS_2::Union{T,Missing} = missing
+    VPAR_2::Union{T,Missing} = missing
+    VPAR_SHEAR_2::Union{T,Missing} = missing
 
-    MASS_3::Union{Float64,Missing} = missing
-    ZS_3::Union{Float64,Missing} = missing
-    RLTS_3::Union{Float64,Missing} = missing
-    TAUS_3::Union{Float64,Missing} = missing
-    VPAR_3::Union{Float64,Missing} = missing
-    VPAR_SHEAR_3::Union{Float64,Missing} = missing
+    MASS_3::Union{T,Missing} = missing
+    ZS_3::Union{T,Missing} = missing
+    RLTS_3::Union{T,Missing} = missing
+    TAUS_3::Union{T,Missing} = missing
+    VPAR_3::Union{T,Missing} = missing
+    VPAR_SHEAR_3::Union{T,Missing} = missing
 
     # TGLF-NN uses 3 species
     # This is why parameters for species 1:3 are sorted differently than 4:10
-    MASS_4::Union{Float64,Missing} = missing
-    AS_4::Union{Float64,Missing} = missing
-    ZS_4::Union{Float64,Missing} = missing
-    RLNS_4::Union{Float64,Missing} = missing
-    RLTS_4::Union{Float64,Missing} = missing
-    TAUS_4::Union{Float64,Missing} = missing
-    VPAR_4::Union{Float64,Missing} = missing
-    VPAR_SHEAR_4::Union{Float64,Missing} = missing
+    MASS_4::Union{T,Missing} = missing
+    AS_4::Union{T,Missing} = missing
+    ZS_4::Union{T,Missing} = missing
+    RLNS_4::Union{T,Missing} = missing
+    RLTS_4::Union{T,Missing} = missing
+    TAUS_4::Union{T,Missing} = missing
+    VPAR_4::Union{T,Missing} = missing
+    VPAR_SHEAR_4::Union{T,Missing} = missing
 
-    MASS_5::Union{Float64,Missing} = missing
-    AS_5::Union{Float64,Missing} = missing
-    ZS_5::Union{Float64,Missing} = missing
-    RLNS_5::Union{Float64,Missing} = missing
-    RLTS_5::Union{Float64,Missing} = missing
-    TAUS_5::Union{Float64,Missing} = missing
-    VPAR_5::Union{Float64,Missing} = missing
-    VPAR_SHEAR_5::Union{Float64,Missing} = missing
+    MASS_5::Union{T,Missing} = missing
+    AS_5::Union{T,Missing} = missing
+    ZS_5::Union{T,Missing} = missing
+    RLNS_5::Union{T,Missing} = missing
+    RLTS_5::Union{T,Missing} = missing
+    TAUS_5::Union{T,Missing} = missing
+    VPAR_5::Union{T,Missing} = missing
+    VPAR_SHEAR_5::Union{T,Missing} = missing
 
-    MASS_6::Union{Float64,Missing} = missing
-    AS_6::Union{Float64,Missing} = missing
-    ZS_6::Union{Float64,Missing} = missing
-    RLNS_6::Union{Float64,Missing} = missing
-    RLTS_6::Union{Float64,Missing} = missing
-    TAUS_6::Union{Float64,Missing} = missing
-    VPAR_6::Union{Float64,Missing} = missing
-    VPAR_SHEAR_6::Union{Float64,Missing} = missing
+    MASS_6::Union{T,Missing} = missing
+    AS_6::Union{T,Missing} = missing
+    ZS_6::Union{T,Missing} = missing
+    RLNS_6::Union{T,Missing} = missing
+    RLTS_6::Union{T,Missing} = missing
+    TAUS_6::Union{T,Missing} = missing
+    VPAR_6::Union{T,Missing} = missing
+    VPAR_SHEAR_6::Union{T,Missing} = missing
 
-    MASS_7::Union{Float64,Missing} = missing
-    AS_7::Union{Float64,Missing} = missing
-    ZS_7::Union{Float64,Missing} = missing
-    RLNS_7::Union{Float64,Missing} = missing
-    RLTS_7::Union{Float64,Missing} = missing
-    TAUS_7::Union{Float64,Missing} = missing
-    VPAR_7::Union{Float64,Missing} = missing
-    VPAR_SHEAR_7::Union{Float64,Missing} = missing
+    MASS_7::Union{T,Missing} = missing
+    AS_7::Union{T,Missing} = missing
+    ZS_7::Union{T,Missing} = missing
+    RLNS_7::Union{T,Missing} = missing
+    RLTS_7::Union{T,Missing} = missing
+    TAUS_7::Union{T,Missing} = missing
+    VPAR_7::Union{T,Missing} = missing
+    VPAR_SHEAR_7::Union{T,Missing} = missing
 
-    MASS_8::Union{Float64,Missing} = missing
-    AS_8::Union{Float64,Missing} = missing
-    ZS_8::Union{Float64,Missing} = missing
-    RLNS_8::Union{Float64,Missing} = missing
-    RLTS_8::Union{Float64,Missing} = missing
-    TAUS_8::Union{Float64,Missing} = missing
-    VPAR_8::Union{Float64,Missing} = missing
-    VPAR_SHEAR_8::Union{Float64,Missing} = missing
+    MASS_8::Union{T,Missing} = missing
+    AS_8::Union{T,Missing} = missing
+    ZS_8::Union{T,Missing} = missing
+    RLNS_8::Union{T,Missing} = missing
+    RLTS_8::Union{T,Missing} = missing
+    TAUS_8::Union{T,Missing} = missing
+    VPAR_8::Union{T,Missing} = missing
+    VPAR_SHEAR_8::Union{T,Missing} = missing
 
-    MASS_9::Union{Float64,Missing} = missing
-    AS_9::Union{Float64,Missing} = missing
-    ZS_9::Union{Float64,Missing} = missing
-    RLNS_9::Union{Float64,Missing} = missing
-    RLTS_9::Union{Float64,Missing} = missing
-    TAUS_9::Union{Float64,Missing} = missing
-    VPAR_9::Union{Float64,Missing} = missing
-    VPAR_SHEAR_9::Union{Float64,Missing} = missing
+    MASS_9::Union{T,Missing} = missing
+    AS_9::Union{T,Missing} = missing
+    ZS_9::Union{T,Missing} = missing
+    RLNS_9::Union{T,Missing} = missing
+    RLTS_9::Union{T,Missing} = missing
+    TAUS_9::Union{T,Missing} = missing
+    VPAR_9::Union{T,Missing} = missing
+    VPAR_SHEAR_9::Union{T,Missing} = missing
 
-    MASS_10::Union{Float64,Missing} = missing
-    AS_10::Union{Float64,Missing} = missing
-    ZS_10::Union{Float64,Missing} = missing
-    RLNS_10::Union{Float64,Missing} = missing
-    RLTS_10::Union{Float64,Missing} = missing
-    TAUS_10::Union{Float64,Missing} = missing
-    VPAR_10::Union{Float64,Missing} = missing
-    VPAR_SHEAR_10::Union{Float64,Missing} = missing
+    MASS_10::Union{T,Missing} = missing
+    AS_10::Union{T,Missing} = missing
+    ZS_10::Union{T,Missing} = missing
+    RLNS_10::Union{T,Missing} = missing
+    RLTS_10::Union{T,Missing} = missing
+    TAUS_10::Union{T,Missing} = missing
+    VPAR_10::Union{T,Missing} = missing
+    VPAR_SHEAR_10::Union{T,Missing} = missing
 
-    AS_2::Union{Float64,Missing} = missing
-    AS_3::Union{Float64,Missing} = missing
-    BETAE::Union{Float64,Missing} = missing
-    DEBYE::Union{Float64,Missing} = missing
-    DELTA_LOC::Union{Float64,Missing} = missing
-    DRMAJDX_LOC::Union{Float64,Missing} = missing
-    KAPPA_LOC::Union{Float64,Missing} = missing
-    P_PRIME_LOC::Union{Float64,Missing} = missing
-    Q_LOC::Union{Float64,Missing} = missing
-    Q_PRIME_LOC::Union{Float64,Missing} = missing
-    RLNS_1::Union{Float64,Missing} = missing
-    RLNS_2::Union{Float64,Missing} = missing
-    RLNS_3::Union{Float64,Missing} = missing
-    RLTS_1::Union{Float64,Missing} = missing
-    RLTS_2::Union{Float64,Missing} = missing
-    RMAJ_LOC::Union{Float64,Missing} = missing
-    RMIN_LOC::Union{Float64,Missing} = missing
-    S_KAPPA_LOC::Union{Float64,Missing} = missing
-    TAUS_2::Union{Float64,Missing} = missing
-    VEXB_SHEAR::Union{Float64,Missing} = missing
-    VPAR_1::Union{Float64,Missing} = missing
-    VPAR_SHEAR_1::Union{Float64,Missing} = missing
-    XNUE::Union{Float64,Missing} = missing
-    ZEFF::Union{Float64,Missing} = missing
+    AS_2::Union{T,Missing} = missing
+    AS_3::Union{T,Missing} = missing
+    BETAE::Union{T,Missing} = missing
+    DEBYE::Union{T,Missing} = missing
+    DELTA_LOC::Union{T,Missing} = missing
+    DRMAJDX_LOC::Union{T,Missing} = missing
+    KAPPA_LOC::Union{T,Missing} = missing
+    P_PRIME_LOC::Union{T,Missing} = missing
+    Q_LOC::Union{T,Missing} = missing
+    Q_PRIME_LOC::Union{T,Missing} = missing
+    RLNS_1::Union{T,Missing} = missing
+    RLNS_2::Union{T,Missing} = missing
+    RLNS_3::Union{T,Missing} = missing
+    RLTS_1::Union{T,Missing} = missing
+    RLTS_2::Union{T,Missing} = missing
+    RMAJ_LOC::Union{T,Missing} = missing
+    RMIN_LOC::Union{T,Missing} = missing
+    S_KAPPA_LOC::Union{T,Missing} = missing
+    TAUS_2::Union{T,Missing} = missing
+    VEXB_SHEAR::Union{T,Missing} = missing
+    VPAR_1::Union{T,Missing} = missing
+    VPAR_SHEAR_1::Union{T,Missing} = missing
+    XNUE::Union{T,Missing} = missing
+    ZEFF::Union{T,Missing} = missing
 
     # switches
     UNITS::Union{String,Missing} = missing
-    ALPHA_ZF::Union{Float64,Missing} = missing
+    ALPHA_ZF::Union{T,Missing} = missing
     USE_MHD_RULE::Union{Bool,Missing} = missing
     NKY::Union{Int,Missing} = missing
     SAT_RULE::Union{Int,Missing} = missing
@@ -131,12 +131,12 @@ Base.@kwdef mutable struct InputTGLF
     XNU_MODEL::Union{Int,Missing} = missing
     USE_AVE_ION_GRID::Union{Bool,Missing} = missing
     ALPHA_QUENCH::Union{Int,Missing} = missing
-    ALPHA_MACH::Union{Float64,Missing} = missing
-    WDIA_TRAPPED::Union{Float64,Missing} = missing
+    ALPHA_MACH::Union{T,Missing} = missing
+    WDIA_TRAPPED::Union{T,Missing} = missing
     USE_BPAR::Union{Bool,Missing} = missing
     USE_BPER::Union{Bool,Missing} = missing
 
-    _Qgb::Union{Float64,Missing} = missing
+    _Qgb::Union{T,Missing} = missing
 
     # missing
     USE_BISECTION::Bool = true
@@ -152,27 +152,31 @@ Base.@kwdef mutable struct InputTGLF
     VPAR_SHEAR_MODEL::Int = 1
     IBRANCH::Int = -1
 
-    KY::Float64 = 0.3
-    ALPHA_E::Float64 = 1.0
-    ALPHA_P::Float64 = 1.0
-    XNU_FACTOR::Float64 = 1.0
-    DEBYE_FACTOR::Float64 = 1.0
-    RLNP_CUTOFF::Float64 = 18.0
-    WIDTH::Float64 = 1.65
-    WIDTH_MIN::Float64 = 0.3
-    BETA_LOC::Float64 = 0.0
-    KX0_LOC::Float64 = 0.0
-    PARK::Float64 = 1.0
-    GHAT::Float64 = 1.0
-    GCHAT::Float64 = 1.0
-    WD_ZERO::Float64 = 0.1
-    LINSKER_FACTOR::Float64 = 0.0
-    GRADB_FACTOR::Float64 = 0.0
-    FILTER::Float64 = 2.0
-    THETA_TRAPPED::Float64 = 0.7
-    ETG_FACTOR::Float64 = 1.25
-    DAMP_PSI::Float64 = 0.0
-    DAMP_SIG::Float64 = 0.0
+    KY::T = 0.3
+    ALPHA_E::T = 1.0
+    ALPHA_P::T = 1.0
+    XNU_FACTOR::T = 1.0
+    DEBYE_FACTOR::T = 1.0
+    RLNP_CUTOFF::T = 18.0
+    WIDTH::T = 1.65
+    WIDTH_MIN::T = 0.3
+    BETA_LOC::T = 0.0
+    KX0_LOC::T = 0.0
+    PARK::T = 1.0
+    GHAT::T = 1.0
+    GCHAT::T = 1.0
+    WD_ZERO::T = 0.1
+    LINSKER_FACTOR::T = 0.0
+    GRADB_FACTOR::T = 0.0
+    FILTER::T = 2.0
+    THETA_TRAPPED::T = 0.7
+    ETG_FACTOR::T = 1.25
+    DAMP_PSI::T = 0.0
+    DAMP_SIG::T = 0.0
+end
+
+function InputTGLF()
+    return InputTGLF{Float64}()
 end
 
 mutable struct InputTJLF{T<:Real}
@@ -344,7 +348,7 @@ end
 
 Generates an InputTJLF from a InputTGLF
 """
-function InputTJLF{T}(input_tglf::InputTGLF) where {T<:Real}
+function InputTJLF{T}(input_tglf::InputTGLF{T}) where {T<:Real}
     nky = get_ky_spectrum_size(input_tglf.NKY, input_tglf.KYGRID_MODEL)
     input_tjlf = InputTJLF{T}(input_tglf.NS, nky)
     return update_input_tjlf!(input_tjlf, input_tglf)
@@ -355,7 +359,7 @@ end
 
 Modifies an InputTJLF from a InputTGLF
 """
-function update_input_tjlf!(input_tjlf::InputTJLF, input_tglf::InputTGLF)
+function update_input_tjlf!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) where {T<:Real}
     input_tjlf.NWIDTH = 21
 
     for fieldname in intersect(fieldnames(typeof(input_tglf)), fieldnames(typeof(input_tjlf)))
@@ -385,7 +389,7 @@ function update_input_tjlf!(input_tjlf::InputTJLF, input_tglf::InputTGLF)
     return input_tjlf
 end
 
-function minimal_scalar_copy(inputs::InputTJLF{T}) where T<:Real
+function minimal_scalar_copy(inputs::InputTJLF{T}) where {T<:Real}
     # Create a new instance using the constructor that sets up NS and the number of ky points.
     local_inputs = InputTJLF{T}(inputs.NS, length(inputs.KY_SPECTRUM))
     # Loop over all fields and assign the value from the original.

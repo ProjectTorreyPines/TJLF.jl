@@ -209,13 +209,14 @@ function checkInput(inputTJLF::InputTJLF)
     end
 end
 
-function checkInput(inputTJLFVector::Vector{InputTJLF})
+function checkInput(inputTJLFVector::Vector{InputTJLF{T}}) where {T<:Real}
     for inputTJLF in inputTJLFVector
         checkInput(inputTJLF)
     end
 end
+
 """
-    save(input::Union{InputTJLF}, filename::AbstractString)
+    save(input::InputTJLF, filename::AbstractString)
 
 Write input_tjlf to file in InputTJLF format to be read by TJLF
 """

@@ -56,10 +56,10 @@ function run_tjlf(inputTJLF::InputTJLF)
 end
 
 """
-    run_tjlf(input_tjlfs::Vector{InputTJLF})
+    run_tjlf(input_tjlfs::Vector{InputTJLF{T}}) where {T<:Real}
 
 parameters:
-    input_tjlfs::Vector{InputTJLF}          - vector of InputTJLF structs
+    input_tjlfs::Vector{InputTJLF{T}}       - vector of InputTJLF structs
 
 outputs:
     outputs                                 - vector of fluxes (field, species, type)
@@ -68,7 +68,7 @@ description:
     Runs TJLF on a vector of InputTJLF structs, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
-function run_tjlf(input_tjlfs::Vector{InputTJLF})
+function run_tjlf(input_tjlfs::Vector{InputTJLF{T}}) where {T<:Real}
     checkInput(input_tjlfs)
     outputs = Vector{Array{Float64,3}}(undef, length(input_tjlfs))
     Threads.@threads for idx in eachindex(input_tjlfs)
