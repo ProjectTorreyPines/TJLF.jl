@@ -70,7 +70,7 @@ description:
 """
 function run_tjlf(input_tjlfs::Vector{InputTJLF{T}}) where {T<:Real}
     checkInput(input_tjlfs)
-    outputs = Vector{Array{Float64,3}}(undef, length(input_tjlfs))
+    outputs = Vector{Array{T,3}}(undef, length(input_tjlfs))
     Threads.@threads for idx in eachindex(input_tjlfs)
         outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
     end
