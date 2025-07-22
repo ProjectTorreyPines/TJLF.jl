@@ -175,172 +175,217 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     DAMP_SIG::T = 0.0
 end
 
-function InputTGLF()
-    return InputTGLF{Float64}()
-end
+Base.@kwdef mutable struct InputTJLF{T<:Real}
+    UNITS::Union{String,Missing} = missing
 
-mutable struct InputTJLF{T<:Real}
-    UNITS::Union{String,Missing}
+    USE_BPER::Union{Bool,Missing} = missing
+    USE_BPAR::Union{Bool,Missing} = missing
+    USE_MHD_RULE::Union{Bool,Missing} = missing
+    USE_BISECTION::Union{Bool,Missing} = missing
+    USE_INBOARD_DETRAPPED::Union{Bool,Missing} = missing
+    USE_AVE_ION_GRID::Union{Bool,Missing} = missing
+    NEW_EIKONAL::Union{Bool,Missing} = missing
+    FIND_WIDTH::Union{Bool,Missing} = missing
+    IFLUX::Union{Bool,Missing} = missing
+    ADIABATIC_ELEC::Union{Bool,Missing} = missing
 
-    USE_BPER::Union{Bool,Missing}
-    USE_BPAR::Union{Bool,Missing}
-    USE_MHD_RULE::Union{Bool,Missing}
-    USE_BISECTION::Union{Bool,Missing}
-    USE_INBOARD_DETRAPPED::Union{Bool,Missing}
-    USE_AVE_ION_GRID::Union{Bool,Missing}
-    NEW_EIKONAL::Union{Bool,Missing}
-    FIND_WIDTH::Union{Bool,Missing}
-    IFLUX::Union{Bool,Missing}
-    ADIABATIC_ELEC::Union{Bool,Missing}
+    SAT_RULE::Union{Int,Missing} = missing
+    NS::Union{Int,Missing} = missing
+    NMODES::Union{Int,Missing} = missing
+    NWIDTH::Union{Int,Missing} = missing
+    NBASIS_MAX::Union{Int,Missing} = missing
+    NBASIS_MIN::Union{Int,Missing} = missing
+    NXGRID::Union{Int,Missing} = missing
+    NKY::Union{Int,Missing} = missing
+    KYGRID_MODEL::Union{Int,Missing} = missing
+    XNU_MODEL::Union{Int,Missing} = missing
+    VPAR_MODEL::Union{Int,Missing} = missing
+    IBRANCH::Union{Int,Missing} = missing
 
-    SAT_RULE::Union{Int,Missing}
-    NS::Union{Int,Missing}
-    NMODES::Union{Int,Missing}
-    NWIDTH::Union{Int,Missing}
-    NBASIS_MAX::Union{Int,Missing}
-    NBASIS_MIN::Union{Int,Missing}
-    NXGRID::Union{Int,Missing}
-    NKY::Union{Int,Missing}
-    KYGRID_MODEL::Union{Int,Missing}
-    XNU_MODEL::Union{Int,Missing}
-    VPAR_MODEL::Union{Int,Missing}
-    IBRANCH::Union{Int,Missing}
-
-    ZS::Union{Vector{T},Missing}
-    MASS::Union{Vector{T},Missing}
-    RLNS::Union{Vector{T},Missing}
-    RLTS::Union{Vector{T},Missing}
-    TAUS::Union{Vector{T},Missing}
-    AS::Union{Vector{T},Missing}
-    VPAR::Union{Vector{T},Missing}
-    VPAR_SHEAR::Union{Vector{T},Missing}
+    ZS::Union{Vector{T},Missing} = missing
+    MASS::Union{Vector{T},Missing} = missing
+    RLNS::Union{Vector{T},Missing} = missing
+    RLTS::Union{Vector{T},Missing} = missing
+    TAUS::Union{Vector{T},Missing} = missing
+    AS::Union{Vector{T},Missing} = missing
+    VPAR::Union{Vector{T},Missing} = missing
+    VPAR_SHEAR::Union{Vector{T},Missing} = missing
 
     # NOT IN TGLF (or missing from InputTGLF structure)
-    WIDTH_SPECTRUM::Union{Vector{T},Missing}    # TJLF-specific
-    KY_SPECTRUM::Union{Vector{T},Missing}       # TJLF-specific  
-    EIGEN_SPECTRUM::Union{Vector{ComplexF64},Missing}  # TJLF-specific
-    FIND_EIGEN::Union{Bool,Missing}             # TGLF parameter but missing from InputTGLF
+    WIDTH_SPECTRUM::Union{Vector{T},Missing} = missing    # TJLF-specific
+    KY_SPECTRUM::Union{Vector{T},Missing} = missing       # TJLF-specific  
+    EIGEN_SPECTRUM::Union{Vector{ComplexF64},Missing} = missing  # TJLF-specific
+    FIND_EIGEN::Union{Bool,Missing} = missing             # TGLF parameter but missing from InputTGLF
     # NOT IN TGLF (or missing from InputTGLF structure)
 
-    SIGN_BT::Union{Int,Missing}
-    SIGN_IT::Union{Int,Missing}
-    KY::Union{T,Missing}
+    SIGN_BT::Union{Int,Missing} = missing
+    SIGN_IT::Union{Int,Missing} = missing
+    KY::Union{T,Missing} = missing
 
-    VEXB_SHEAR::Union{T,Missing}
-    BETAE::Union{T,Missing}
-    XNUE::Union{T,Missing}
-    ZEFF::Union{T,Missing}
-    DEBYE::Union{T,Missing}
+    VEXB_SHEAR::Union{T,Missing} = missing
+    BETAE::Union{T,Missing} = missing
+    XNUE::Union{T,Missing} = missing
+    ZEFF::Union{T,Missing} = missing
+    DEBYE::Union{T,Missing} = missing
 
-    ALPHA_MACH::Union{T,Missing}
-    ALPHA_E::Union{T,Missing}
-    ALPHA_P::Union{T,Missing}
-    ALPHA_QUENCH::Union{Int,Missing}
-    ALPHA_ZF::Union{T,Missing}
-    XNU_FACTOR::Union{T,Missing}
-    DEBYE_FACTOR::Union{T,Missing}
-    ETG_FACTOR::Union{T,Missing}
-    RLNP_CUTOFF::Union{T,Missing}
+    ALPHA_MACH::Union{T,Missing} = missing
+    ALPHA_E::Union{T,Missing} = missing
+    ALPHA_P::Union{T,Missing} = missing
+    ALPHA_QUENCH::Union{Int,Missing} = missing
+    ALPHA_ZF::Union{T,Missing} = missing
+    XNU_FACTOR::Union{T,Missing} = missing
+    DEBYE_FACTOR::Union{T,Missing} = missing
+    ETG_FACTOR::Union{T,Missing} = missing
+    RLNP_CUTOFF::Union{T,Missing} = missing
 
-    WIDTH::Union{T,Missing}
-    WIDTH_MIN::Union{T,Missing}
+    WIDTH::Union{T,Missing} = missing
+    WIDTH_MIN::Union{T,Missing} = missing
 
-    RMIN_LOC::Union{T,Missing}
-    RMAJ_LOC::Union{T,Missing}
-    ZMAJ_LOC::Union{T,Missing}
-    DRMINDX_LOC::Union{T,Missing}
-    DRMAJDX_LOC::Union{T,Missing}
-    DZMAJDX_LOC::Union{T,Missing}
-    Q_LOC::Union{T,Missing}
-    KAPPA_LOC::Union{T,Missing}
-    S_KAPPA_LOC::Union{T,Missing}
-    DELTA_LOC::Union{T,Missing}
-    S_DELTA_LOC::Union{T,Missing}
-    ZETA_LOC::Union{T,Missing}
-    S_ZETA_LOC::Union{T,Missing}
-    P_PRIME_LOC::Union{T,Missing}
-    Q_PRIME_LOC::Union{T,Missing}
-    BETA_LOC::Union{T,Missing}
-    KX0_LOC::Union{T,Missing}
+    RMIN_LOC::Union{T,Missing} = missing
+    RMAJ_LOC::Union{T,Missing} = missing
+    ZMAJ_LOC::Union{T,Missing} = missing
+    DRMINDX_LOC::Union{T,Missing} = missing
+    DRMAJDX_LOC::Union{T,Missing} = missing
+    DZMAJDX_LOC::Union{T,Missing} = missing
+    Q_LOC::Union{T,Missing} = missing
+    KAPPA_LOC::Union{T,Missing} = missing
+    S_KAPPA_LOC::Union{T,Missing} = missing
+    DELTA_LOC::Union{T,Missing} = missing
+    S_DELTA_LOC::Union{T,Missing} = missing
+    ZETA_LOC::Union{T,Missing} = missing
+    S_ZETA_LOC::Union{T,Missing} = missing
+    P_PRIME_LOC::Union{T,Missing} = missing
+    Q_PRIME_LOC::Union{T,Missing} = missing
+    BETA_LOC::Union{T,Missing} = missing
+    KX0_LOC::Union{T,Missing} = missing
 
-    DAMP_PSI::Union{T,Missing}
-    DAMP_SIG::Union{T,Missing}
-    WDIA_TRAPPED::Union{T,Missing}
-    PARK::Union{T,Missing}
-    GHAT::Union{T,Missing}
-    GCHAT::Union{T,Missing}
-    WD_ZERO::Union{T,Missing}
-    LINSKER_FACTOR::Union{T,Missing}
-    GRADB_FACTOR::Union{T,Missing}
-    FILTER::Union{T,Missing}
-    THETA_TRAPPED::Union{T,Missing}
-    SMALL::Union{T,Missing}
+    DAMP_PSI::Union{T,Missing} = missing
+    DAMP_SIG::Union{T,Missing} = missing
+    WDIA_TRAPPED::Union{T,Missing} = missing
+    PARK::Union{T,Missing} = missing
+    GHAT::Union{T,Missing} = missing
+    GCHAT::Union{T,Missing} = missing
+    WD_ZERO::Union{T,Missing} = missing
+    LINSKER_FACTOR::Union{T,Missing} = missing
+    GRADB_FACTOR::Union{T,Missing} = missing
+    FILTER::Union{T,Missing} = missing
+    THETA_TRAPPED::Union{T,Missing} = missing
+    SMALL::Union{T,Missing} = missing
 
     #MXH params
-    SHAPE_COS0::Union{T,Missing}
-    SHAPE_COS1::Union{T,Missing}
-    SHAPE_COS2::Union{T,Missing}
-    SHAPE_COS3::Union{T,Missing}
-    SHAPE_COS4::Union{T,Missing}
-    SHAPE_COS5::Union{T,Missing}
-    SHAPE_COS6::Union{T,Missing}
+    SHAPE_COS0::Union{T,Missing} = missing
+    SHAPE_COS1::Union{T,Missing} = missing
+    SHAPE_COS2::Union{T,Missing} = missing
+    SHAPE_COS3::Union{T,Missing} = missing
+    SHAPE_COS4::Union{T,Missing} = missing
+    SHAPE_COS5::Union{T,Missing} = missing
+    SHAPE_COS6::Union{T,Missing} = missing
 
-    SHAPE_SIN3::Union{T,Missing}
-    SHAPE_SIN4::Union{T,Missing}
-    SHAPE_SIN5::Union{T,Missing}
-    SHAPE_SIN6::Union{T,Missing}
+    SHAPE_SIN3::Union{T,Missing} = missing
+    SHAPE_SIN4::Union{T,Missing} = missing
+    SHAPE_SIN5::Union{T,Missing} = missing
+    SHAPE_SIN6::Union{T,Missing} = missing
 
-    SHAPE_S_COS0::Union{T,Missing}
-    SHAPE_S_COS1::Union{T,Missing}
-    SHAPE_S_COS2::Union{T,Missing}
-    SHAPE_S_COS3::Union{T,Missing}
-    SHAPE_S_COS4::Union{T,Missing}
-    SHAPE_S_COS5::Union{T,Missing}
-    SHAPE_S_COS6::Union{T,Missing}
+    SHAPE_S_COS0::Union{T,Missing} = missing
+    SHAPE_S_COS1::Union{T,Missing} = missing
+    SHAPE_S_COS2::Union{T,Missing} = missing
+    SHAPE_S_COS3::Union{T,Missing} = missing
+    SHAPE_S_COS4::Union{T,Missing} = missing
+    SHAPE_S_COS5::Union{T,Missing} = missing
+    SHAPE_S_COS6::Union{T,Missing} = missing
 
-    SHAPE_S_SIN3::Union{T,Missing}
-    SHAPE_S_SIN4::Union{T,Missing}
-    SHAPE_S_SIN5::Union{T,Missing}
-    SHAPE_S_SIN6::Union{T,Missing}
-end
-
-function InputTJLF()
-    return InputTJLF{Float64}()
-end
-
-function InputTJLF{T}() where {T<:Real}
-    InputTJLF{T}(
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-        missing,missing,missing,missing,missing)
-end
-
-#For list-format inputs:
-function InputTJLF{T}(inP::Bool) where {T<:Real}
-    if inP
-        InputTJLF{T}("CGYRO", false, false, false, true, false, true, true, true, true, false, 2, 3, 5, 21, 6, 4, 16, 12, 4, 3, 0, -1, [-1.0, 1.0, 6.0], [0.0002723125672605524, 1.0, 6.0], [0.9691383387573976, 1.078021414201318, 0.0733427635614379], [3.332037619158914, 2.0626412607995435, 2.0626412607995435], [1.0, 1.3661261082028286, 1.3661261082028286], [1.0, 0.8075398023805694, 0.030988644410732645], [0.30611236015079274, 0.30611236015079274, 0.30611236015079274], [1.5491649356389778, 1.5491649356389778, 1.5491649356389778], [1.65, 1.65, 1.65, 1.65, 0.9685467847385054, 0.7035623639735143, 0.6324554384084142, 0.591251466897806, 0.5250292077902518, 1.65, 1.65, 1.65, 1.65, 1.65, 1.65, 1.65, 1.551199191728457, 1.5603157485179238, 1.5643992899672103, 1.5643992899672103, 1.4832394778484315, 0.6324554384084142, 0.5390399200630244, 0.4845607815598427], [0.05994688615887238, 0.11989377231774476, 0.17984065847661712, 0.2397875446354895, 0.2997344307943619, 0.5395219754298515, 0.6594157477475961, 0.7793095200653409, 0.8992032923830857, 1.0190970647008304, 1.138990837018575, 1.25888460933632, 1.1989377231774476, 1.60763400555729, 2.1556474918269477, 2.890468908319081, 3.875777714879744, 5.196960552637156, 6.968510831252536, 9.343950702231606, 12.529135254288084, 16.80009186935815, 22.52694069387401, 30.205969167995068], ComplexF64[0.01903754432811539 - 0.03822460700618263im, 0.066744785730153 - 0.08638900959186772im, 0.12700366682079575 - 0.13466694388477374im, 0.17881630543473276 - 0.16774618757919235im, 0.21216108783162443 - 0.18009019917758487im, 0.33316817373508417 - 0.3198305942745321im, 0.34745089281285046 - 0.3955067169459169im, 0.3399817917167648 - 0.4616241685193869im, 0.3137572066001085 - 0.5077973469905399im, 0.28555930064941276 + 0.45333962118452586im, 0.34112248363191056 + 0.501904780504562im, 0.3914434522233301 + 0.5529917255055463im, 0.36420457375571014 + 0.5235784686127289im, 0.531883979920564 + 0.7034735644682284im, 0.7500443094115281 + 0.9612053548664551im, 1.0612410507865202 + 1.3223708279218578im, 1.2154632046734721 + 1.7048988962925355im, 1.8556234007580341 + 2.2437573929973844im, 2.891191856550966 + 3.1140102214419576im, 4.213253106128079 + 4.483889088628243im, 5.747152586787458 + 6.01284811393025im, 7.352163708936412 + 7.770351222625782im, 9.652984589008142 + 10.27500211396812im, 11.970055852084016 + 14.27560461246188im], true, -1, 1, 0.3, 0.148365431821359, 0.0009809454014984833, 0.2658337070903717, 1.9296593, 0.029821537734289975, 0.0, 1.0, 1.0, 0, -1.0, 1.0, 1.0, 1.25, 18.0, 1.65, 0.3, 0.8896452200962354, 2.8058920740841784, 0.0, 1.0, -0.19752155788650919, 0.0, 3.3106313319155714, 1.6054967596315595, 0.39307251195418547, 0.21740011375976812, 0.7746695322421236, -0.05113765116526302, -0.2388377806334241, -0.0011605489188390146, 35.13388509054382, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.1, 0.0, 0.0, 2.0, 0.7, 1.0e-12,  0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0)        else
-    end
+    SHAPE_S_SIN3::Union{T,Missing} = missing
+    SHAPE_S_SIN4::Union{T,Missing} = missing
+    SHAPE_S_SIN5::Union{T,Missing} = missing
+    SHAPE_S_SIN6::Union{T,Missing} = missing
 end
 
 function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
-    InputTJLF{T}("",
-    missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-    missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,missing,
-    fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),fill(NaN,(ns)),
-    fill(NaN,(nky)),fill(NaN,(nky)),fill(NaN*im,(nky)),missing,
-    0,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-    NaN,0,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-    NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-    NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,
-    NaN,NaN,NaN,NaN,NaN,NaN,NaN,1.0e-13,  0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0, 0.0)
+    InputTJLF{T}(;
+        UNITS = "",
+        NS = ns,
+        ZS = fill(T(NaN), ns),
+        MASS = fill(T(NaN), ns),
+        RLNS = fill(T(NaN), ns),
+        RLTS = fill(T(NaN), ns),
+        TAUS = fill(T(NaN), ns),
+        AS = fill(T(NaN), ns),
+        VPAR = fill(T(NaN), ns),
+        VPAR_SHEAR = fill(T(NaN), ns),
+        WIDTH_SPECTRUM = fill(T(NaN), nky),
+        KY_SPECTRUM = fill(T(NaN), nky),
+        EIGEN_SPECTRUM = fill(ComplexF64(NaN*im), nky),
+        SIGN_BT = 0,
+        SIGN_IT = 0,
+        KY = T(NaN),
+        VEXB_SHEAR = T(NaN),
+        BETAE = T(NaN),
+        XNUE = T(NaN),
+        ZEFF = T(NaN),
+        DEBYE = T(NaN),
+        ALPHA_MACH = T(NaN),
+        ALPHA_QUENCH = 0,
+        ALPHA_E = T(NaN),
+        ALPHA_P = T(NaN),
+        ALPHA_ZF = T(NaN),
+        XNU_FACTOR = T(NaN),
+        DEBYE_FACTOR = T(NaN),
+        ETG_FACTOR = T(NaN),
+        RLNP_CUTOFF = T(NaN),
+        WIDTH = T(NaN),
+        WIDTH_MIN = T(NaN),
+        RMIN_LOC = T(NaN),
+        RMAJ_LOC = T(NaN),
+        ZMAJ_LOC = T(NaN),
+        DRMINDX_LOC = T(NaN),
+        DRMAJDX_LOC = T(NaN),
+        DZMAJDX_LOC = T(NaN),
+        Q_LOC = T(NaN),
+        KAPPA_LOC = T(NaN),
+        S_KAPPA_LOC = T(NaN),
+        DELTA_LOC = T(NaN),
+        S_DELTA_LOC = T(NaN),
+        ZETA_LOC = T(NaN),
+        S_ZETA_LOC = T(NaN),
+        P_PRIME_LOC = T(NaN),
+        Q_PRIME_LOC = T(NaN),
+        BETA_LOC = T(NaN),
+        KX0_LOC = T(NaN),
+        DAMP_PSI = T(NaN),
+        DAMP_SIG = T(NaN),
+        WDIA_TRAPPED = T(NaN),
+        PARK = T(NaN),
+        GHAT = T(NaN),
+        GCHAT = T(NaN),
+        WD_ZERO = T(NaN),
+        LINSKER_FACTOR = T(NaN),
+        GRADB_FACTOR = T(NaN),
+        FILTER = T(NaN),
+        THETA_TRAPPED = T(NaN),
+        SMALL = T(1.0e-13),
+        SHAPE_COS0 = T(0.0),
+        SHAPE_COS1 = T(0.0),
+        SHAPE_COS2 = T(0.0),
+        SHAPE_COS3 = T(0.0),
+        SHAPE_COS4 = T(0.0),
+        SHAPE_COS5 = T(0.0),
+        SHAPE_COS6 = T(0.0),
+        SHAPE_SIN3 = T(0.0),
+        SHAPE_SIN4 = T(0.0),
+        SHAPE_SIN5 = T(0.0),
+        SHAPE_SIN6 = T(0.0),
+        SHAPE_S_COS0 = T(0.0),
+        SHAPE_S_COS1 = T(0.0),
+        SHAPE_S_COS2 = T(0.0),
+        SHAPE_S_COS3 = T(0.0),
+        SHAPE_S_COS4 = T(0.0),
+        SHAPE_S_COS5 = T(0.0),
+        SHAPE_S_COS6 = T(0.0),
+        SHAPE_S_SIN3 = T(0.0),
+        SHAPE_S_SIN4 = T(0.0),
+        SHAPE_S_SIN5 = T(0.0),
+        SHAPE_S_SIN6 = T(0.0)
+    )
 end
 
 """
