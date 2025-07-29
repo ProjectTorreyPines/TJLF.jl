@@ -1,7 +1,7 @@
 name = "TJLF"
 uuid = "12ecd31c-256b-4db5-a799-cd5afeb0bd7d"
 authors = ["Tom Neiser <neisert@fusion.gat.com>", "Danny Sun <dannysun@alumni.princeton.edu>"]
-version = "1.0.15"
+version = "1.0.16"
 
 [deps]
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
