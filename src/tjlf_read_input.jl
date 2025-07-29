@@ -168,13 +168,6 @@ function readInput(filename::String)::InputTJLF
         inputTJLF.FIND_EIGEN = true
     end
 
-    #If you want to test a long-format example (see tjlf_modules.jl), inP = true, otherwise, inP = false.
-    #This is overly simplistic but I didn't want to mess anything else up.
-    inP = false
-    if inP
-        inputTJLF = InputTJLF{Float64}(inP)
-    end
-
     #Maybe checkInput could be altered for inputting default values, or the struct in modules could be
     #Redefined as having 
     checkInput(inputTJLF)
@@ -209,13 +202,14 @@ function checkInput(inputTJLF::InputTJLF)
     end
 end
 
-function checkInput(inputTJLFVector::Vector{InputTJLF})
+function checkInput(inputTJLFVector::Vector{InputTJLF{T}}) where {T<:Real}
     for inputTJLF in inputTJLFVector
         checkInput(inputTJLF)
     end
 end
+
 """
-    save(input::Union{InputTJLF}, filename::AbstractString)
+    save(input::InputTJLF, filename::AbstractString)
 
 Write input_tjlf to file in InputTJLF format to be read by TJLF
 """
