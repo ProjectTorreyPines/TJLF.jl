@@ -5,7 +5,9 @@ version = "1.0.17"
 
 [deps]
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
@@ -13,7 +15,9 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 FastGaussQuadrature = "1.0.2"
+JSON = "0.21.4"
 KrylovKit = "0.9.5, 0.10"
+LaTeXStrings = "1.4.0"
 LinearMaps = "3.11.4"
 StaticArrays = "1"
 

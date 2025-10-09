@@ -406,9 +406,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     cb1 = 0.163*√(kparvthe*cnuei*(1.0 + 0.82*zeff_in))
     if(xnu_model_in==3)
         if(wdia_trapped_in==0.0)
-            cb1 = 0.50*(kparvthe^0.34)*(cnuei*(1.0 + 0.82*zeff_in))^0.66
+            # cb1 = 0.50*(kparvthe^0.34)*(cnuei*(1.0 + 0.82*zeff_in))^0.66 # free param
+            cb1 = inputs.C_B*(kparvthe^inputs.SIG_B)*(cnuei*(1.0 + 0.82*zeff_in))^(1-inputs.SIG_B)
         else
-            cb1 = 0.315*(kparvthe^0.34)*(cnuei*(1.0 + 0.82*zeff_in))^0.66
+            # cb1 = 0.315*(kparvthe^0.34)*(cnuei*(1.0 + 0.82*zeff_in))^0.66 #free param
+            cb1 = inputs.C_B*(kparvthe^inputs.SIG_B)*(cnuei*(1.0 + 0.82*zeff_in))^(1-inputs.SIG_B)
         end
     end
     cb1 = cb1*xnu_factor_in

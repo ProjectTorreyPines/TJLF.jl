@@ -344,7 +344,8 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
             wdia = abs(ky*rlns)/vs
             kpar = 2π/(Ly*√(2)*width_in)
             ft0 = √(1.0 - Bmin/Bmax)
-            cdt = 3*wdia_trapped_in*(1-ft0^2)
+            # cdt = 3*wdia_trapped_in*(1-ft0^2)
+            cdt = inputs.BOUNCE_COEFF*wdia_trapped_in*(1-ft0^2)
             kpar = kpar/max(theta_trapped_in,0.0001) + wdia*cdt
             bounce_y = min(Ly,π/kpar)
             B_bounce = Bmax

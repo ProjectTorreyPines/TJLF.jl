@@ -138,6 +138,13 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
 
     _Qgb::Union{T,Missing} = missing
 
+    # collisionality model parameters
+    C_B::Union{T,Missing} = missing
+    SIG_B::Union{T,Missing} = missing
+
+    # bounce coefficient
+    BOUNCE_COEFF::Union{T,Missing} = missing
+
     # missing
     USE_BISECTION::Bool = true
     USE_INBOARD_DETRAPPED::Bool = false
@@ -271,6 +278,13 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     FILTER::Union{T,Missing} = missing
     THETA_TRAPPED::Union{T,Missing} = missing
     SMALL::Union{T,Missing} = missing
+
+    # collisionality model parameters
+    C_B::Union{T,Missing} = missing
+    SIG_B::Union{T,Missing} = missing
+
+    # bounce coefficient
+    BOUNCE_COEFF::Union{T,Missing} = missing
 
     #MXH params
     SHAPE_COS0::Union{T,Missing} = missing
