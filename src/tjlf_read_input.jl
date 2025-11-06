@@ -141,7 +141,7 @@ function readInput(filename::String)::InputTJLF
     end
 
     # just hard coded for some reason lol
-    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+    if inputTJLF.SAT_RULE in (2, 3, 4)
         inputTJLF.UNITS = "CGYRO"
         ### WTF
         inputTJLF.XNU_MODEL = 3

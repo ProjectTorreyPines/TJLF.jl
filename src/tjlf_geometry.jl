@@ -58,7 +58,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
             a0 = 1.45
             kx0_e = -(0.53*vexb_shear_kx0./most_unstable_gamma .+
                     (0.25.*wE.*tanh.((0.69.*wE).^6)))
-        elseif(sat_rule_in==2 || sat_rule_in==3)
+        elseif(sat_rule_in in (2, 3, 4))
             a0=1.6
             # Use passed parameters if available, otherwise calculate them
             if !isnan(vzf_out_param) && !isnan(kymax_out_param)
@@ -146,7 +146,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
             kx0 = sign_Bt_in*kx0_e
         else
             if(sat_rule_in==1) kx0 = sign_Bt_in*kx0_e/(2.1) end
-            if(sat_rule_in==2 || sat_rule_in==3) kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out^2 end
+            if(sat_rule_in in (2, 3, 4)) kx0 = sign_Bt_in*kx0_e*0.7/grad_r0_out^2 end
         end
     end
 
@@ -464,7 +464,7 @@ function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
         SAT_geo2_out = 1.0
     else
         SAT_geo0_out = 0.946/qrat_geo[1]          # normed to GASTD with CGYRO
-        if(sat_rule_in==2 || sat_rule_in==3) SAT_geo0_out = 1.0 end
+        if(sat_rule_in in (2, 3, 4)) SAT_geo0_out = 1.0 end
     end
     ### line 276-277
     grad_r0_out = b_geo[1]/qrat_geo[1]

@@ -726,6 +726,49 @@ function intensity_sat(
                 end
                 gammaeff_out[j, i] = gammaeff
             end
+
+        elseif(sat_rule_in==4) # SAT4 = SAT2 lin x SAT0 for QLGYRO
+            # Scale invariant polarizability
+            pols = (ave_p0_out / abs(as[1] * zs[1] * zs[1]))^2
+            # Calibrated against 70 GYRO runs
+            cnorm_sat4 = 1.82770384 * pols
+            exponent1 = 1.39786897
+            c1 = 0.36017009
+            etg_factor_in = 1.25
+            ks = ky0 * sqrt(taus[1] * mass[2]) / abs(zs[1])
+
+            for i in 1:nmodes
+                gamma_j = 0.0
+                if alpha_quench_in != 0.0
+                    gamma_j = get_gamma_net(eigenvalue_spectrum_out[i, j, 1])
+                else
+                    gamma_j = eigenvalue_spectrum_out[i, j, 1]
+                end
+
+                measure_sat4 = sqrt(taus[1] * mass[2])
+                cnorm_local = cnorm_sat4
+                if ks > 1.0
+                    cnorm_local = cnorm_sat4 / (ks^etg_factor_in)
+                end
+
+                wd0 = ks * sqrt(taus[1] / mass[2]) / R_unit
+                gamma_net_j = gamma_j / wd0
+
+                intensity = (cnorm_local * (wd0^2) *
+                            (gamma_net_j^exponent1 + c1 * gamma_net_j) /
+                            (ky0^4))
+
+                # Apply spectral shift damping if no alpha quenching and spectral shift exists
+                if alpha_quench_in == 0.0 && abs(spectral_shift_out[j]) > 0.0
+                    kx0e = spectral_shift_out[j]
+                    intensity = intensity / ((1.0 + 0.56 * kx0e^2)^2)
+                    intensity = intensity / ((1.0 + (1.15 * kx0e)^4)^2)
+                end
+
+                intensity = intensity * SAT_geo0_out * measure_sat4
+                field_spectrum_out[j, i] = intensity
+                gammaeff_out[j, i] = 0.0  # Not used in SAT4
+            end
         end
     end
 
@@ -841,7 +884,7 @@ function sum_ky_spectrum(
     flux_spectrum = similar(QL_weights)
 
     # Multiply QL weights with desired intensity
-    if sat_rule_in >= 1 && sat_rule_in <= 3
+    if sat_rule_in >= 1 && sat_rule_in <= 4
         intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL_weights; vzf_out_param=vzf_out_param, kymax_out_param=kymax_out_param, jmax_out_param=jmax_out_param)
         # Ql size (nf,ns,nm,nky,ntype)
         # QLA_P and QLA_E are vectors of size (nm)
@@ -854,7 +897,7 @@ function sum_ky_spectrum(
     elseif sat_rule_in == 0
         flux_spectrum .= QL_weights
     else
-        throw(error("sat_rule_in must be 0,1,2,or 3, not $sat_rule_in"))
+        throw(error("sat_rule_in must be 0,1,2,3,or 4, not $sat_rule_in"))
     end
 
     

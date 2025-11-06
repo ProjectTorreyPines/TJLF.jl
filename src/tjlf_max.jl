@@ -50,7 +50,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     ### change input values
     inputs.IBRANCH = -1
 
-    if(sat_rule_in==2 || sat_rule_in==3)
+    if(sat_rule_in in (2, 3, 4))
         if (width_min_in > 0)
           inputs.USE_BPER = false
           inputs.USE_BPAR = false
@@ -283,7 +283,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         # use new nbasis value
         nbasis = inputs.NBASIS_MAX
         aves = new_aves(inputs, nbasis)
-        if(sat_rule_in==2 || sat_rule_in==3)
+        if(sat_rule_in in (2, 3, 4))
             inputs.USE_BPER = original_bper
             inputs.USE_BPAR = original_bpar
         end
@@ -321,7 +321,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
 
     if(gamma_max==0.0)
         inputs.WIDTH_SPECTRUM[ky_index] = original_width
-        if(sat_rule_in==2 || sat_rule_in==3)
+        if(sat_rule_in in (2, 3, 4))
             inputs.USE_BPER = original_bper
             inputs.USE_BPAR = original_bpar
         end
