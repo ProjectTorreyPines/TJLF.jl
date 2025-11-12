@@ -213,6 +213,22 @@ function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
 end
 
 """
+    get_gamma_net(gp::T, inputs::InputTJLF{T}, vexb_shear_s::T) where T<:Real
+
+description:
+    Apply ExB shear quenching to the growth rate for alpha_quench mode.
+    Returns the net growth rate after quenching.
+    Based on tglf_LS.f90:615-627
+"""
+function get_gamma_net(gp::T, inputs::InputTJLF{T}, vexb_shear_s::T) where T<:Real
+    alpha_exb = 0.3
+    if inputs.GEOMETRY == 1  # Miller geometry
+        alpha_exb = 0.3 * sqrt(inputs.KAPPA_LOC)
+    end
+    return max(gp - abs(alpha_exb * inputs.ALPHA_QUENCH * vexb_shear_s), 0.0)
+end
+
+"""
     intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T,5},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
 parameters:
@@ -249,7 +265,7 @@ function intensity_sat(
 
     ############ figure out how to make this prettier
     units_in = inputs.UNITS
-    if inputs.SAT_RULE == 2 || inputs.SAT_RULE == 3
+    if inputs.SAT_RULE == 2 || inputs.SAT_RULE == 3 || inputs.SAT_RULE == 4
         inputs.UNITS = "CGYRO"
         units_in = "CGYRO"
     end
@@ -660,9 +676,10 @@ function intensity_sat(
             end
             kx = kx*ky0/kx_width
         end
-        kx_width_out[j] = kx_width
-        sat_geo_factor_out[j] = sat_geo_factor
-
+        if(sat_rule_in==2 || sat_rule_in==3)
+            kx_width_out[j] = kx_width
+            sat_geo_factor_out[j] = sat_geo_factor
+        end
         if(sat_rule_in==1 || sat_rule_in==2)
             for i in 1:nmodes
                 gammaeff = 0.0
@@ -728,30 +745,36 @@ function intensity_sat(
             end
 
         elseif(sat_rule_in==4) # SAT4 = SAT2 lin x SAT0 for QLGYRO
+            # Calculate ave_p0 from pol (polarizability sum over species)
+            # This approximates ave_p0(1,1) which is a weighted average of (debye + pol)
+            ave_p0_approx = satParams.ave_p0
+
             # Scale invariant polarizability
-            pols = (ave_p0_out / abs(as[1] * zs[1] * zs[1]))^2
-            # Calibrated against 70 GYRO runs
-            cnorm_sat4 = 1.82770384 * pols
-            exponent1 = 1.39786897
-            c1 = 0.36017009
-            etg_factor_in = 1.25
-            ks = ky0 * sqrt(taus[1] * mass[2]) / abs(zs[1])
+            pols = (ave_p0_approx / abs(inputs.AS[1] * inputs.ZS[1] * inputs.ZS[1]))^2
+
+            # Calibrated constants (user can override via inputs, use Fortran defaults if missing)
+            c_norm_val = ismissing(inputs.C_NORM) ? 1.82770384 : inputs.C_NORM
+            c_exp_val = ismissing(inputs.C_EXP) ? 1.39786897 : inputs.C_EXP
+            c_coeff_val = ismissing(inputs.C_COEFF) ? 0.36017009 : inputs.C_COEFF
+            c_etg_val = ismissing(inputs.C_ETG) ? 1.25 : inputs.C_ETG
+
+            cnorm_sat4 = c_norm_val * pols
+            exponent1 = c_exp_val
+            c1 = c_coeff_val
+            etg_factor_in = c_etg_val
+            ks = ky0 * sqrt(inputs.TAUS[1] * inputs.MASS[2]) / abs(inputs.ZS[1])
 
             for i in 1:nmodes
-                gamma_j = 0.0
-                if alpha_quench_in != 0.0
-                    gamma_j = get_gamma_net(eigenvalue_spectrum_out[i, j, 1])
-                else
-                    gamma_j = eigenvalue_spectrum_out[i, j, 1]
-                end
+                # Get growth rate (currently no quenching applied - can be added later)
+                gamma_j = gamma_matrix[i, j]
 
-                measure_sat4 = sqrt(taus[1] * mass[2])
+                measure_sat4 = sqrt(inputs.TAUS[1] * inputs.MASS[2])
                 cnorm_local = cnorm_sat4
                 if ks > 1.0
                     cnorm_local = cnorm_sat4 / (ks^etg_factor_in)
                 end
 
-                wd0 = ks * sqrt(taus[1] / mass[2]) / R_unit
+                wd0 = ks * sqrt(inputs.TAUS[1] / inputs.MASS[2]) / satParams.R_unit
                 gamma_net_j = gamma_j / wd0
 
                 intensity = (cnorm_local * (wd0^2) *
@@ -759,10 +782,10 @@ function intensity_sat(
                             (ky0^4))
 
                 # Apply spectral shift damping if no alpha quenching and spectral shift exists
-                if alpha_quench_in == 0.0 && abs(spectral_shift_out[j]) > 0.0
-                    kx0e = spectral_shift_out[j]
-                    intensity = intensity / ((1.0 + 0.56 * kx0e^2)^2)
-                    intensity = intensity / ((1.0 + (1.15 * kx0e)^4)^2)
+                if alpha_quench == 0.0 && abs(kx0_e[j]) > 0.0
+                    kx0e_local = kx0_e[j]
+                    intensity = intensity / ((1.0 + 0.56 * kx0e_local^2)^2)
+                    intensity = intensity / ((1.0 + (1.15 * kx0e_local)^4)^2)
                 end
 
                 intensity = intensity * SAT_geo0_out * measure_sat4

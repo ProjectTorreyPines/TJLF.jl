@@ -471,10 +471,14 @@ function get_sat_params(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
     # Additional outputs for SAT2 G1(theta), Gq(theta)
     theta_out = t_s  # theta grid over which everything is calculated.
 
+    # ave_p0 will be calculated from matrix and passed as 1.0 for now
+    # It will be properly set when matrix calculation is available
+    ave_p0_default = T(1.0)
+
     return SaturationParameters{T}(SAT_geo0_out,SAT_geo1_out,SAT_geo2_out,
                                     y, R_unit, B_unit_out[end], q_unit,
                                     R, Bp, B,
-                                    Bt0_out, grad_r0_out,
+                                    Bt0_out, grad_r0_out, ave_p0_default,
                                     S_prime,kx_factor,
                                     b_geo, qrat_geo,
                                     sintheta_geo, costheta_geo, costheta_p_geo,

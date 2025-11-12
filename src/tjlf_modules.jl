@@ -145,6 +145,12 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     # bounce coefficient
     BOUNCE_COEFF::Union{T,Missing} = missing
 
+    # SAT 4
+    C_NORM::Union{T,Missing} = missing
+    C_EXP::Union{T,Missing} = missing
+    C_COEFF::Union{T,Missing} = missing
+    C_ETG::Union{T,Missing} = missing
+
     # missing
     USE_BISECTION::Bool = true
     USE_INBOARD_DETRAPPED::Bool = false
@@ -285,6 +291,12 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
 
     # bounce coefficient
     BOUNCE_COEFF::Union{T,Missing} = missing
+
+    # SAT 4
+    C_NORM::Union{T,Missing} = missing
+    C_EXP::Union{T,Missing} = missing
+    C_COEFF::Union{T,Missing} = missing
+    C_ETG::Union{T,Missing} = missing
 
     #MXH params
     SHAPE_COS0::Union{T,Missing} = missing
@@ -515,6 +527,7 @@ struct SaturationParameters{T<:Real}
 
     Bt0::T
     grad_r0::T
+    ave_p0::T
 
     S_prime::Vector{T}
     kx_factor::Vector{T}

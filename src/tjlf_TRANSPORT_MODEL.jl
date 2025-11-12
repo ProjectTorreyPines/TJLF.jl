@@ -109,9 +109,9 @@ Returns:
     kx0_e - spectral shift array for all ky values
 """
 function calculate_spectral_shift(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, firstPass_eigenvalue::Array{T,3}) where T<:Real
-    # CRITICAL FIX: For SAT_RULE=2 and SAT_RULE=3, calculate zonal mixing parameters from first pass
+    # CRITICAL FIX: For SAT_RULE=2, SAT_RULE=3, and SAT_RULE=4, calculate zonal mixing parameters from first pass
     # and pass them to xgrid_functions_geo for proper spectral shift calculation
-    if inputs.SAT_RULE == 2 || inputs.SAT_RULE == 3
+    if inputs.SAT_RULE == 2 || inputs.SAT_RULE == 3 || inputs.SAT_RULE == 4
         # Calculate zonal mixing parameters from first pass eigenvalues
         most_unstable_gamma_first_pass = firstPass_eigenvalue[1, :, 1]
         vzf_out_first_pass, kymax_out_first_pass, jmax_out_first_pass = get_zonal_mixing(inputs, satParams, most_unstable_gamma_first_pass)            
