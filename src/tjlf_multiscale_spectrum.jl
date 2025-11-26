@@ -47,7 +47,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
         kymin = 0.173 * √(2.0) / rho_ion 
     end
     # saturation rules
-    if sat_rule_in==2 || sat_rule_in==3
+    if sat_rule_in==2 || sat_rule_in==3 || sat_rule_in==4
         grad_r0 = satParams.grad_r0
         kycut = grad_r0 * kycut
         kymin = grad_r0 * kymin

@@ -1,24 +1,30 @@
 name = "TJLF"
 uuid = "12ecd31c-256b-4db5-a799-cd5afeb0bd7d"
-authors = ["Tom Neiser <neisert@fusion.gat.com>", "Danny Sun <dannysun@alumni.princeton.edu>"]
 version = "1.0.17"
+authors = ["Tom Neiser <neisert@fusion.gat.com>", "Danny Sun <dannysun@alumni.princeton.edu>"]
 
 [deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
+ArgParse = "1.2.0"
+DelimitedFiles = "1.9.1"
 FastGaussQuadrature = "1.0.2"
 JSON = "0.21.4"
 KrylovKit = "0.9.5, 0.10"
 LaTeXStrings = "1.4.0"
 LinearMaps = "3.11.4"
+Optim = "1.13.2"
 StaticArrays = "1"
 
 [extras]
