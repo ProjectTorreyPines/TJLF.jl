@@ -15,10 +15,17 @@ function ask_yes_no(question::String)
 end
 
 # Use it
-use_gpu = ask_yes_no("Use GPU?")
-println("GPU: $use_gpu")
+gpu_node = ask_yes_no("Running on GPU node?")
+if gpu_node
+    use_gpu = ask_yes_no("Use GPU?")
+else
+    use_gpu = false
+end
+
 if use_gpu
     processor = "GPU"
+elseif gpu_node && !use_gpu
+    processor = "CPU(GPU_node)"
 else
     processor = "CPU"
 end

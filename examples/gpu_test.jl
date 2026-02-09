@@ -1,5 +1,5 @@
 
-A = rand(1000, 1000) * 10
+A = rand(10, 10) * 10
 
 using LinearAlgebra
 
@@ -28,8 +28,8 @@ for i in 1:10
 
     using CUDA
 
-    A_gpu = cu(Array(A))
-    eig_gpu = @time CUSOLVER.syevd!('V', 'U', copy(A_gpu))
+    A_gpu = CuArray(A)
+    eig_gpu = @time CUSOLVER.syevd!('V', 'U', A_gpu)
     lambdas_gpu = eig_gpu[1]
     evecs_gpu = eig_gpu[2]
 

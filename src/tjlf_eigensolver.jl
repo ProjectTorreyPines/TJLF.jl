@@ -2724,35 +2724,33 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
 
     if use_gpu && CUDA.functional()
         try
-            if inputs.IFLUX || find_eigenvector
-                amat_copy = copy(amat)
-                bmat_copy = copy(bmat)
+            # Trasnfer to GPU
+            println("Transferring to GPU...")
+            amat_gpu = CUDA.CuArray(amat)
+            bmat_gpu = CUDA.CuArray(bmat)
 
-                amat_gpu = CUDA.CuArray(amat_copy)
-                bmat_gpu = CUDA.CuArray(bmat_copy)
+            # solve on GPU
+            println("Solving on GPU...")
+            (amat_gpu, bmat_gpu,_) = CUDA.CUSOLVER.gesv!(bmat_gpu, amat_gpu)
+            alpha = CUDA.CUSOLVER.geev!('N','N',amat_gpu)[1]; nothing
 
-                (amat_gpu, bmat_gpu,_) = CUDA.CUSOLVER.gesv!(bmat_gpu, amat_gpu)
-                alpha = CUDA.CUSOLVER.geev!('N','N',amat_gpu)[1]
+            # transfer back to CPU
+            println("Transferring back to CPU...")
+            alpha = Array(alpha)
 
-                alpha = Array(alpha)
-            else
-                amat_gpu = CUDA.CuArray(amat)
-                bmat_gpu = CUDA.CuArray(bmat)
-
-                (amat_gpu, bmat_gpu,_) = CUDA.CUSOLVER.gesv!(bmat_gpu, amat_gpu)
-                alpha = CUDA.CUSOLVER.geev!('N','N',amat_gpu)[1]
-
-                alpha = Array(alpha)
-                amat .= Array(amat_gpu)
-                bmat .= Array(bmat_gpu)
+            if !(inputs.IFLUX || find_eigenvector)
+                # transfer back only if needed to modify original matrices
+                copyto!(amat, amat_gpu)
+                copyto!(bmat, bmat_gpu)
             end
+
         catch e
             @warn "GPU eigensolver failed for ky = $(inputs.KY_SPECTRUM[ky_index]), falling back to CPU: $(e)"
             use_gpu = false
+
             if inputs.IFLUX || find_eigenvector
                 amat_copy = copy(amat)
                 bmat_copy = copy(bmat)
-
                 (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
                 alpha = geev!('N','N',amat_copy)[1]
             else
