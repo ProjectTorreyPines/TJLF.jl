@@ -1,3 +1,4 @@
+
 """
     tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,aveGrad::AveGrad{T},aveGradB::AveGradB{T},nbasis::Int, ky::T,amat::Matrix{K},bmat::Matrix{K},ky_index::Int) where T<:Real where K<:Complex
 
@@ -15,6 +16,7 @@ outputs:
 description:
     uses the structs calculated in tjlf_matrix.jl to populate matrix amat and bmat, solves the generalized eigenvalue problem for only the eigenvalues, returns those eigenvalues
 """
+
 function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},
                         ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,
                         aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,
@@ -22,7 +24,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         nbasis::Int, ky::T,
                         amat::Matrix{K},bmat::Matrix{K},
                         ky_index::Int,
-                        find_eigenvector::Bool) where T<:Real where K<:Complex
+                        find_eigenvector::Bool; use_gpu::Bool=false) where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2720,17 +2722,58 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
     end
 
-    if inputs.IFLUX || find_eigenvector
-        amat_copy = copy(amat)
-        bmat_copy = copy(bmat)
+    if use_gpu && CUDA.functional()
+        try
+            if inputs.IFLUX || find_eigenvector
+                amat_copy = copy(amat)
+                bmat_copy = copy(bmat)
 
-        (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
-        alpha = geev!('N','N',amat_copy)[1]
+                amat_gpu = CUDA.CuArray(amat_copy)
+                bmat_gpu = CUDA.CuArray(bmat_copy)
+
+                (amat_gpu, bmat_gpu,_) = CUDA.CUSOLVER.gesv!(bmat_gpu, amat_gpu)
+                alpha = CUDA.CUSOLVER.geev!('N','N',amat_gpu)[1]
+
+                alpha = Array(alpha)
+            else
+                amat_gpu = CUDA.CuArray(amat)
+                bmat_gpu = CUDA.CuArray(bmat)
+
+                (amat_gpu, bmat_gpu,_) = CUDA.CUSOLVER.gesv!(bmat_gpu, amat_gpu)
+                alpha = CUDA.CUSOLVER.geev!('N','N',amat_gpu)[1]
+
+                alpha = Array(alpha)
+                amat .= Array(amat_gpu)
+                bmat .= Array(bmat_gpu)
+            end
+        catch e
+            @warn "GPU eigensolver failed for ky = $(inputs.KY_SPECTRUM[ky_index]), falling back to CPU: $(e)"
+            use_gpu = false
+            if inputs.IFLUX || find_eigenvector
+                amat_copy = copy(amat)
+                bmat_copy = copy(bmat)
+
+                (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
+                alpha = geev!('N','N',amat_copy)[1]
+            else
+                (amat, bmat,_) = gesv!(bmat, amat)
+                alpha = geev!('N','N',amat)[1]
+            end
+        end
     else
-        (amat, bmat,_) = gesv!(bmat, amat)
-        alpha = geev!('N','N',amat)[1]
+        if inputs.IFLUX || find_eigenvector
+            amat_copy = copy(amat)
+            bmat_copy = copy(bmat)
+
+            (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
+            alpha = geev!('N','N',amat_copy)[1]
+        else
+            (amat, bmat,_) = gesv!(bmat, amat)
+            alpha = geev!('N','N',amat)[1]
+        end
     end
 
     return alpha, fill(NaN*im,(1,1))
 
 end
+

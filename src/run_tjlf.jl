@@ -1,9 +1,9 @@
-function run(inputTJLF::InputTJLF)
+function run(inputTJLF::InputTJLF; use_gpu::Bool=false)
     checkInput(inputTJLF)
     outputHermite = gauss_hermite(inputTJLF)
     satParams = get_sat_params(inputTJLF)
     inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
-    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite; return_both_eigenvalues=true)
+    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite; return_both_eigenvalues=true, use_gpu=use_gpu)
     
     # Use appropriate eigenvalues for flux calculation
     # For two-pass case (ALPHA_QUENCH=0 and VEXB_SHEAR≠0), use second pass eigenvalues
@@ -33,13 +33,13 @@ function run(inputTJLF::InputTJLF)
     return (QL_weights=QL_weights, eigenvalue=firstPass_eigenvalue, QL_flux_out=QL_flux_out, flux_spectrum=flux_spectrum)
 end
 
-function run(inputTGLF::InputTGLF)
+function run(inputTGLF::InputTGLF; use_gpu::Bool=false)
     inputTJLF = InputTJLF{Float64}(inputTGLF)
-    return run(inputTJLF)
+    return run(inputTJLF; use_gpu=use_gpu)
 end
 
 """
-    run_tjlf(inputTJLF::InputTJLF)
+    run_tjlf(inputTJLF::InputTJLF; use_gpu::Bool=false)
 
 parameters:
     input_tjlfs::InputTJLF                  - InputTJLF struct
@@ -51,12 +51,17 @@ description:
     Runs TJLF on a single InputTJLF struct, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
-function run_tjlf(inputTJLF::InputTJLF)
-    return run(inputTJLF).QL_flux_out
+function run_tjlf(inputTJLF::InputTJLF; use_gpu::Bool=false)
+    return run(inputTJLF; use_gpu=use_gpu).QL_flux_out
+end
+
+function run_tjlf(inputTGLF::InputTGLF; use_gpu::Bool=false)
+    inputTJLF = InputTJLF{Float64}(inputTGLF)
+    return run_tjlf(inputTJLF; use_gpu=use_gpu)
 end
 
 """
-    run_tjlf(input_tjlfs::Vector{InputTJLF{T}}) where {T<:Real}
+    run_tjlf(input_tjlfs::Vector{InputTJLF{T}}; use_gpu::Bool=false) where {T<:Real}
 
 parameters:
     input_tjlfs::Vector{InputTJLF{T}}       - vector of InputTJLF structs
@@ -68,11 +73,11 @@ description:
     Runs TJLF on a vector of InputTJLF structs, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
-function run_tjlf(input_tjlfs::Vector{InputTJLF{T}}) where {T<:Real}
+function run_tjlf(input_tjlfs::Vector{InputTJLF{T}}; use_gpu::Bool=false) where {T<:Real}
     checkInput(input_tjlfs)
     outputs = Vector{Array{T,3}}(undef, length(input_tjlfs))
     Threads.@threads for idx in eachindex(input_tjlfs)
-        outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
+        outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx]; use_gpu=use_gpu)
     end
     return outputs
 end

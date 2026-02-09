@@ -8,6 +8,7 @@ using StaticArrays
 using FastGaussQuadrature
 using LinearMaps
 import KrylovKit
+import CUDA
 
 # @show BLAS.get_config()
 BLAS.set_num_threads(1)

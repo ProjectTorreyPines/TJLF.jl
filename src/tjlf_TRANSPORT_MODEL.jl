@@ -20,7 +20,7 @@ description:
     Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity, and fluxes.
     For backward compatibility, by default only returns first pass eigenvalues.
 """
-function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}; return_both_eigenvalues::Bool=false) where T<:Real
+function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}; return_both_eigenvalues::Bool=false, use_gpu::Bool=false) where T<:Real
 
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR * inputs.SIGN_IT
@@ -40,7 +40,7 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
             onePass!(local_inputs, satParams, outputHermite, vexb_shear_s,
-                     firstPass_eigenvalue, QL_weights, ky_index)
+                     firstPass_eigenvalue, QL_weights, ky_index; use_gpu=use_gpu)
         end
         # No second pass needed for single-pass cases
         secondPass_eigenvalue .= firstPass_eigenvalue
@@ -49,7 +49,7 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         inputs.IFLUX = false
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
-            widthPass!(local_inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
+            widthPass!(local_inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index; use_gpu=use_gpu)
         end
         # Initialize secondPass_eigenvalue with firstPass results before spectral shift
         secondPass_eigenvalue .= firstPass_eigenvalue
@@ -60,7 +60,7 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
             secondPass!(local_inputs, satParams, outputHermite, kx0_e[ky_index],
-                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index)
+                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index; use_gpu=use_gpu)
         end
 
     else
@@ -68,7 +68,7 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         inputs.IFLUX = false
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
-            firstPass!(local_inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index)
+            firstPass!(local_inputs, satParams, outputHermite, firstPass_eigenvalue, ky_index; use_gpu=use_gpu)
         end
         # Initialize secondPass_eigenvalue with firstPass results before spectral shift
         secondPass_eigenvalue .= firstPass_eigenvalue
@@ -79,7 +79,7 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
             secondPass!(local_inputs, satParams, outputHermite, kx0_e[ky_index],
-                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index)
+                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index; use_gpu=use_gpu)
         end
     end
 
@@ -157,7 +157,7 @@ description:
 """
 function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
     vexb_shear_s::T,
-    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
+    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int; use_gpu::Bool = false) where T<:Real
 
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
@@ -183,7 +183,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         # println("this is XII")
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-        ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
+        ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index; use_gpu=use_gpu)
 
         if(inputs.USE_INBOARD_DETRAPPED && inputs.IBRANCH==-1) # check for inward ballooning modes
             b_geo = satParams.B_geo
@@ -198,7 +198,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 # println("this is XIII")
                 nmodes_out, gamma_out, freq_out,
                 particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-                _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo, use_gpu=use_gpu)
             end
         end
     end
@@ -242,7 +242,7 @@ outputs (writen to, not outputed):
 description:
     calculate the widths and eigenvalues with vexb_shear = 0.0
 """
-function firstPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
+function firstPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int; use_gpu::Bool=false) where T<:Real
 
     # increment through the ky_spectrum and find the width/eigenvalues of each k
     ky = inputs.KY_SPECTRUM[ky_index]
@@ -290,7 +290,7 @@ outputs (writen to, not outputed):
 description:
     calculate the eigenvalues to calculate the spectral shift (kx0_e) on secondPass
 """
-function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int) where T<:Real
+function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}, firstPass_eigenvalue::Array{T,3}, ky_index::Int; use_gpu::Bool=false) where T<:Real
 
     if(!inputs.NEW_EIKONAL)
         error("not sure what this flag is -DSUN")
@@ -305,7 +305,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
     # calculate the eigenvalues with no shear
     nbasis = inputs.NBASIS_MAX
     nmodes_out, gamma_out, freq_out,
-    _,_,_,_,_,ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
+    _,_,_,_,_,ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index; use_gpu=use_gpu)
 
     if(inputs.IBRANCH==-1) # check for inward ballooning modes
         if(inputs.USE_INBOARD_DETRAPPED) ####### find ft_test and modB_test
@@ -321,7 +321,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
                     @warn "NOT TESTED max.jl ln 302"
                     # println("this is XIII")
                     nmodes_out, gamma_out, freq_out,
-                    _,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                    _,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo, use_gpu=use_gpu)
                 end
             end
         end
@@ -365,7 +365,8 @@ description:
 """
 function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
     kx0_e::T,
-    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
+    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int;
+    use_gpu::Bool = false) where T<:Real
 
     # input values
     ns = inputs.NS
@@ -391,7 +392,7 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
         _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
-                            kx0_e, gamma_reference_kx0, freq_reference_kx0)
+                            kx0_e, gamma_reference_kx0, freq_reference_kx0, use_gpu=use_gpu)
 
         gamma_nb_min_out = gamma_out[1]
     else

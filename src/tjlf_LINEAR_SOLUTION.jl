@@ -40,7 +40,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             freq_reference_kx0::Vector{T} = T[],
             outputGeo::Union{OutputGeometry{T},Missing} = missing,
             find_eigenvector::Bool = false,
-            aves = new_aves(inputs, nbasis)) where T <: Real
+            aves = new_aves(inputs, nbasis),
+            use_gpu::Bool = false) where T <: Real
 
     epsilon1 = 1.0e-12
     nmodes_in = inputs.NMODES
@@ -105,7 +106,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     amat = Matrix{ComplexF64}(undef, iur, iur)
     bmat = Matrix{ComplexF64}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
-    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector)
+
+    eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector; use_gpu=use_gpu)
 
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
