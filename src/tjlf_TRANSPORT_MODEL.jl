@@ -21,7 +21,7 @@ description:
     For backward compatibility, by default only returns first pass eigenvalues.
 """
 function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}; return_both_eigenvalues::Bool=false, use_gpu::Bool=false) where T<:Real
-
+    
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR * inputs.SIGN_IT
     ns = inputs.NS
@@ -171,7 +171,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             # println("this is 1")
             nmodes_out, gamma_nb_min_out,
             gamma_out, freq_out,
-            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index)
+            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index; use_gpu=use_gpu)
         else
             error("NOT IMPLEMENTED YET -DSUN")
         end
@@ -181,6 +181,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         nbasis = inputs.NBASIS_MAX
         gamma_nb_min_out = NaN
         # println("this is XII")
+
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
         ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index; use_gpu=use_gpu)
@@ -198,6 +199,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 # println("this is XIII")
                 nmodes_out, gamma_out, freq_out,
                 particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
+
                 _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo, use_gpu=use_gpu)
             end
         end
@@ -251,7 +253,7 @@ function firstPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
         # println("this is 1")
         nmodes_out, gamma_nb_min_out,
         gamma_out, freq_out,
-        _,_,_,_,_ = tjlf_max(inputs, satParams, outputHermite, ky, 0.0, ky_index)
+        _,_,_,_,_ = tjlf_max(inputs, satParams, outputHermite, ky, 0.0, ky_index; use_gpu=use_gpu)
     else
         error("NOT IMPLEMENTED YET -DSUN")
     end
@@ -304,6 +306,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
 
     # calculate the eigenvalues with no shear
     nbasis = inputs.NBASIS_MAX
+
     nmodes_out, gamma_out, freq_out,
     _,_,_,_,_,ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index; use_gpu=use_gpu)
 
@@ -320,6 +323,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
                     outputGeo.fts .= ft_min
                     @warn "NOT TESTED max.jl ln 302"
                     # println("this is XIII")
+
                     nmodes_out, gamma_out, freq_out,
                     _,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo, use_gpu=use_gpu)
                 end

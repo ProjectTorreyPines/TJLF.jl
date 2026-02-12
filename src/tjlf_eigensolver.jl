@@ -2722,30 +2722,63 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
     end
 
+
+
     if use_gpu && CUDA.functional()
+        # println("GPU Eigensolve Debug Info:")
+        # println("  Matrix dimensions: amat=$(size(amat)), bmat=$(size(bmat))")
+        # println("  Matrix types: amat=$(eltype(amat)), bmat=$(eltype(bmat))")
+        # println("  GPU memory available: $(CUDA.available_memory() / 1e9) GB")
+        # println("  GPU memory total: $(CUDA.total_memory() / 1e9) GB")
+        
+        size_a = shape(amat)
+        size_b = shape(bmat)
+        prinlntln("  Size of amat: $size_a, Size of bmat: $size_b")
+
         try
-            # Trasnfer to GPU
-            println("Transferring to GPU...")
-            amat_gpu = CUDA.CuArray(amat)
-            bmat_gpu = CUDA.CuArray(bmat)
+            # Transfer to GPU
+            # println("Transferring to GPU...")
+            amat_gpu = CUDA.CuArray(amat); nothing
+            bmat_gpu = CUDA.CuArray(bmat); nothing
 
             # solve on GPU
-            println("Solving on GPU...")
-            (amat_gpu, bmat_gpu,_) = CUDA.CUSOLVER.gesv!(bmat_gpu, amat_gpu)
-            alpha = CUDA.CUSOLVER.geev!('N','N',amat_gpu)[1]; nothing
+            # println("Solving on GPU...")
+            # CUSOLVER might not have gesv! - use getrf! + getrs! instead
+            # Or try direct division: amat_gpu = bmat_gpu \ amat_gpu
+            ipiv = CUDA.CuArray{Int32}(undef, size(bmat_gpu, 1)); nothing
+            bmat_gpu_factored, ipiv, info = CUDA.CUSOLVER.getrf!(bmat_gpu, ipiv); nothing
+            amat_gpu = CUDA.CUSOLVER.getrs!('N', bmat_gpu_factored, ipiv, amat_gpu); nothing
 
-            # transfer back to CPU
-            println("Transferring back to CPU...")
-            alpha = Array(alpha)
+            # println("Transferring back to CPU...")
+            amat = Array(amat_gpu); nothing
+            
+            # Now compute eigenvalues of the result
+            alpha = geev!('N','N',amat)[1]; nothing
+
+            # # transfer back to CPU
+            # println("Transferring back to CPU...")
+            # alpha = Array(alpha); nothing
 
             if !(inputs.IFLUX || find_eigenvector)
                 # transfer back only if needed to modify original matrices
-                copyto!(amat, amat_gpu)
-                copyto!(bmat, bmat_gpu)
+                copyto!(amat, amat_gpu); nothing
+                copyto!(bmat, bmat_gpu); nothing
             end
 
         catch e
-            @warn "GPU eigensolver failed for ky = $(inputs.KY_SPECTRUM[ky_index]), falling back to CPU: $(e)"
+            @warn "GPU eigensolver failed for ky = $(inputs.KY_SPECTRUM[ky_index]), falling back to CPU"
+            @warn "Error type: $(typeof(e))"
+            @warn "Error message: $(e)"
+            @warn "Matrix sizes: amat=$(size(amat)), bmat=$(size(bmat))"
+            @warn "Matrix types: amat=$(eltype(amat)), bmat=$(eltype(bmat))"
+            @warn "Contains NaN: amat=$(any(isnan, amat)), bmat=$(any(isnan, bmat))"
+            @warn "Contains Inf: amat=$(any(isinf, amat)), bmat=$(any(isinf, bmat))"
+            if isa(e, CUDA.CUDAError)
+                @warn "CUDA error code: $(e.code)"
+            end
+            println(stderr, "Full stacktrace:")
+            showerror(stderr, e, catch_backtrace())
+            println(stderr)
             use_gpu = false
 
             if inputs.IFLUX || find_eigenvector
@@ -2760,13 +2793,24 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
     else
         if inputs.IFLUX || find_eigenvector
+            # println("stayed in if")
             amat_copy = copy(amat)
             bmat_copy = copy(bmat)
 
-            (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
+            # (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
+            ipiv = Array{Int32}(undef, size(bmat_copy, 1)); nothing
+            bmat_factored, ipiv, info = LAPACK.getrf!(bmat_copy); nothing
+            amat_copy = LAPACK.getrs!('N', bmat_factored, ipiv, amat_copy); nothing
+            
+            # alpha = geev!('N','N',amat)[1]
             alpha = geev!('N','N',amat_copy)[1]
         else
-            (amat, bmat,_) = gesv!(bmat, amat)
+            # println("went to else")
+            # (amat, bmat,_) = gesv!(bmat, amat)
+            # ipiv = Array{Int32}(undef, size(bmat, 1)); nothing
+            bmat_factored, ipiv, info = LAPACK.getrf!(bmat); nothing
+            amat = LAPACK.getrs!('N', bmat_factored, ipiv, amat); nothing
+            # alpha = geev!('N','N',amat)[1]
             alpha = geev!('N','N',amat)[1]
         end
     end

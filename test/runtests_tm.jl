@@ -67,8 +67,11 @@ for dir_name in tests
         inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
 
         fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+        println("eig shape: ", size(eigenvalue))
         gammaJulia = eigenvalue[:, :, 1]
+        println("gamma shape: ", size(gammaJulia))
         freqJulia = eigenvalue[:, :, 2]
+        println("freq shape: ", size(freqJulia))
 
         for i in eachindex(fluxes[1, :, :, :, :])
             @test isapprox(QL_data[i], (fluxes[1, :, :, :, :])[i], atol=1e-6)

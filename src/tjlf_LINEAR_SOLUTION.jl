@@ -1,5 +1,7 @@
 """
-    tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T;kx0_e::T = NaN,gamma_reference_kx0::Vector{T} = T[],freq_reference_kx0::Vector{T} = T[],outputGeo::Union{OutputGeometry{T},Missing} = missing) where T <: Real
+    tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},ky::T,nbasis::Int,vexb_shear_s::T;kx0_e::T = NaN,gamma_reference_kx0::Vector{T} = T[],freq_reference_kx0::Vector{T} = T[],outputGeo::Union{OutputGeometry{T},Missing} = missing, find_eigenvector::Bool = false,
+            aves = new_aves(inputs, nbasis),
+            use_gpu::Bool = false) where T <: Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
