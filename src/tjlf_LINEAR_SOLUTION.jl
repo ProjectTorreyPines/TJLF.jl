@@ -354,28 +354,31 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         end
         phi_bar_out .*= reduce # this does nothing for the reason above ^^^
 
-        if inputs.SAT_RULE==0 && nmodes_out > 0
-            particle_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-            energy_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-            stress_tor_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-            stress_par_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-            exchange_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
-        end
+        # if inputs.SAT_RULE==0 && nmodes_out > 0
+        #     particle_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        #     energy_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        #     stress_tor_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        #     stress_par_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        #     exchange_QL_out .*= reshape(phi_bar_out,(1,1,nmodes_out))
+        # end
+        phi_bar_output = reshape(phi_bar_out,(1,1,nmodes_out))
 
         return nmodes_out, gamma_out, freq_out,
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
-        ft_test
+        ft_test, field_weight_out, phi_bar_output
     end
 
+    phi_bar_output= reshape(phi_bar_out,(1,1,nmodes_out))
     particle_QL_out = fill(NaN, (3, ns, nmodes_in))
     energy_QL_out = fill(NaN, (3, ns, nmodes_in))
     stress_par_QL_out = fill(NaN, (3, ns, nmodes_in))
     stress_tor_QL_out = fill(NaN, (3, ns, nmodes_in))
     exchange_QL_out = fill(NaN, (3, ns, nmodes_in))
+    field_weight_out = fill(NaN, (3, nbasis, nmodes_in))
 
     return nmodes_out, gamma_out, freq_out,
     particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
-    NaN
+    NaN, field_weight_out, phi_bar_output
     # return  gamma_out,
     #         freq_out,
     #         v_QL_out,
