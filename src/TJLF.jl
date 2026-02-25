@@ -28,7 +28,7 @@ include("tjlf_max.jl")
 include("tjlf_TRANSPORT_MODEL.jl")
 include("run_tjlf.jl")
 
-export readInput
+export readInput, run, get_wavefunction
 export gauss_hermite, get_sat_params, get_ky_spectrum, get_ky_spectrum_size, tjlf_TM
 export sum_ky_spectrum, xgrid_functions_geo
 
