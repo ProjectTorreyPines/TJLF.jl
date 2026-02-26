@@ -279,6 +279,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
 
     ### reset values
     inputs.IBRANCH = original_ibranch
+    phi_bar_out = reshape(zeros(T, 1), (1, 1, 1))  # default; overwritten if gamma_max != 0
     if(gamma_max!=0.0) # refine eigenvalue with more basis functions
         # use new nbasis value
         nbasis = inputs.NBASIS_MAX
@@ -337,6 +338,7 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
 
 
     return nmodes_out, gamma_nb_min_out, gamma_out, freq_out,
-    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out
+    particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
+    phi_bar_out
 
 end

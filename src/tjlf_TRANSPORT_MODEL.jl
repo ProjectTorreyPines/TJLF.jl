@@ -180,7 +180,8 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             # println("this is 1")
             nmodes_out, gamma_nb_min_out,
             gamma_out, freq_out,
-            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index)
+            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
+            phi_bar_out = tjlf_max(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index)
         else
             error("NOT IMPLEMENTED YET -DSUN")
         end

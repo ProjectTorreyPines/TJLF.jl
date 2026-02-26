@@ -357,13 +357,13 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         phi_bar_out .*= reduce # this does nothing for the reason above ^^^
 
         phi_bar_output = reshape(phi_bar_out,(1,1,nmodes_out))
-        if inputs.SAT_RULE==0 && nmodes_out > 0
-            particle_QL_out .*= phi_bar_output
-            energy_QL_out .*= phi_bar_output
-            stress_tor_QL_out .*= phi_bar_output
-            stress_par_QL_out .*= phi_bar_output
-            exchange_QL_out .*= phi_bar_output
-        end
+        # if inputs.SAT_RULE==0 && nmodes_out > 0
+        #     particle_QL_out .*= phi_bar_output
+        #     energy_QL_out .*= phi_bar_output
+        #     stress_tor_QL_out .*= phi_bar_output
+        #     stress_par_QL_out .*= phi_bar_output
+        #     exchange_QL_out .*= phi_bar_output
+        # end
 
         return nmodes_out, gamma_out, freq_out,
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,

@@ -854,8 +854,11 @@ function sum_ky_spectrum(
         flux_spectrum[:,:,:,:,4] = QL_weights[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
         flux_spectrum[:,:,:,:,5] = QL_weights[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
     elseif sat_rule_in == 0
-        # For SAT_RULE=0, phi_bar is already multiplied into QL_weights by tjlf_LS
-        flux_spectrum .= QL_weights
+        # phi_bar_matrix is (nmodes, nky); multiply each ky slice of QL_weights by the corresponding phi_bar values
+        for ky_index in 1:nky
+            phi = reshape(phi_bar_matrix[:, ky_index], (1, 1, nm, 1))  # (1,1,nmodes,1) for broadcasting
+            flux_spectrum[:,:,:,ky_index,:] .= QL_weights[:,:,:,ky_index,:] .* phi
+        end
     else
         throw(error("sat_rule_in must be 0,1,2,or 3, not $sat_rule_in"))
     end
