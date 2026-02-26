@@ -855,10 +855,8 @@ function sum_ky_spectrum(
         flux_spectrum[:,:,:,:,5] = QL_weights[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
     elseif sat_rule_in == 0
         # phi_bar_matrix is (nmodes, nky); multiply each ky slice of QL_weights by the corresponding phi_bar values
-        for ky_index in 1:nky
-            phi = reshape(phi_bar_matrix[:, ky_index], (1, 1, nm, 1))  # (1,1,nmodes,1) for broadcasting
-            flux_spectrum[:,:,:,ky_index,:] .= QL_weights[:,:,:,ky_index,:] .* phi
-        end
+        phi = reshape(phi_bar_matrix, 1, 1, nm, nky, 1)
+        flux_spectrum .= QL_weights .* phi
     else
         throw(error("sat_rule_in must be 0,1,2,or 3, not $sat_rule_in"))
     end
