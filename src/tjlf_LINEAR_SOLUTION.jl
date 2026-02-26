@@ -357,13 +357,6 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         phi_bar_out .*= reduce # this does nothing for the reason above ^^^
 
         phi_bar_output = reshape(phi_bar_out,(1,1,nmodes_out))
-        # if inputs.SAT_RULE==0 && nmodes_out > 0
-        #     particle_QL_out .*= phi_bar_output
-        #     energy_QL_out .*= phi_bar_output
-        #     stress_tor_QL_out .*= phi_bar_output
-        #     stress_par_QL_out .*= phi_bar_output
-        #     exchange_QL_out .*= phi_bar_output
-        # end
 
         return nmodes_out, gamma_out, freq_out,
         particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
@@ -420,14 +413,6 @@ end
 #--------------------------------------------------------------
 
 function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, field_weight_out::Array{ComplexF64, 3}) where T<:Real 
-    # The tglf version of this function depends on tglf_dimensions, tglf_global, and tglf_sgrid. The wavefunction writing process is 
-    # entirely removed from TJLF. It was omitted (see deletedFields in the readInput function). I could either try to complete this
-    # without consideration for the wavefunction writing as is done in TJLFEP, or I could take a long detour and write the wavefunction
-    # details for TJLF. I think first, I want to get the actual process completed, so if I can avoid it, I want to not write the wavefunction
-    # in TJLF. My concern is that I might not be able to do this.
-    #ms = 128
-    # Variables that fortran says aren't from the modules:
-    # n, i, j, k, np, npi, j0, imax, dx, hp0, hp(nb,max_plot), xp(max_plot)
     ms = 128
     npi = 9
     np = Int(ms/8)
