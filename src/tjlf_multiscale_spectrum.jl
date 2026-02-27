@@ -829,8 +829,7 @@ function sum_ky_spectrum(
     vzf_out_param::T=NaN,
     kymax_out_param::T=NaN,
     jmax_out_param::Int=0,
-    phi_bar_matrix::Matrix{Float64}=zeros(Float64,0,0),
-    
+    phi_bar_matrix::Matrix{Float64}=Matrix{Float64}(undef, 0, 0)
 )where T <: Real
 
     sat_rule_in = inputs.SAT_RULE
@@ -854,7 +853,7 @@ function sum_ky_spectrum(
         flux_spectrum[:,:,:,:,4] = QL_weights[:,:,:,:,4] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # parallel stress
         flux_spectrum[:,:,:,:,5] = QL_weights[:,:,:,:,5] .* reshape((QLA_O .* intensity_factor'),(1,1,nm,nky)) # exchange
     elseif sat_rule_in == 0
-        # phi_bar_matrix is (nmodes, nky); multiply each ky slice of QL_weights by the corresponding phi_bar values
+        @assert !isempty(phi_bar_matrix) "phi_bar_matrix must be provided for SAT_RULE=0"
         phi = reshape(phi_bar_matrix, 1, 1, nm, nky, 1)
         flux_spectrum .= QL_weights .* phi
     else

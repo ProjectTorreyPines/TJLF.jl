@@ -66,7 +66,10 @@ for dir_name in tests
         satParams = get_sat_params(inputTJLF)
         inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
 
-        fluxes, eigenvalue, field_weight_out = tjlf_TM(inputTJLF, satParams, outputHermite)
+        tm = tjlf_TM(inputTJLF, satParams, outputHermite)
+        fluxes = tm.QL_weights
+        eigenvalue = tm.firstPass_eigenvalue
+        field_weight_out = tm.field_weight_out
         gammaJulia = eigenvalue[:, :, 1]
         freqJulia = eigenvalue[:, :, 2]
 

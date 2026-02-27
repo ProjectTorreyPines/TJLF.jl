@@ -54,7 +54,10 @@ const RTOL = 0.0005  # 0.05% tolerance for NT core case
     
     outputHermite = gauss_hermite(input_tjlf)
     
-    QL_weights, firstPass_eigenvalue, secondPass_eigenvalue = tjlf_TM(input_tjlf, satParams, outputHermite; return_both_eigenvalues=true)
+    tm = tjlf_TM(input_tjlf, satParams, outputHermite)
+    QL_weights           = tm.QL_weights
+    firstPass_eigenvalue  = tm.firstPass_eigenvalue
+    secondPass_eigenvalue = tm.secondPass_eigenvalue
     
     # For eigenvalue comparison, use first pass eigenvalues (matches TGLF printed output)
     gammaJulia = firstPass_eigenvalue[:, :, 1]
