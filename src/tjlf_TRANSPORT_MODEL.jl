@@ -11,7 +11,7 @@ outputs (named tuple):
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
     firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type), type: (gamma, frequency)
     secondPass_eigenvalue               - 3d array of second pass eigenvalues (mode, ky, type), type: (gamma, frequency)
-    field_weight_out                    - 3d array of field weights (field, basis, mode)
+    field_weight_out                    - 4d array of field weights (field, basis, mode, ky)
     phi_bar_matrix                      - 2d array of phi_bar values (mode, ky), only meaningful for SAT_RULE=0
 
 description:
@@ -34,7 +34,7 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
     firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2)
     secondPass_eigenvalue = zeros(Float64, nmodes, nky, 2)  # Separate array for second pass results
     QL_weights = zeros(Float64, 3, ns, nmodes, nky, 5)
-    field_weight_out = zeros(ComplexF64, 3, nbasis, nmodes)
+    field_weight_out = zeros(ComplexF64, 3, nbasis, nmodes, nky)
     phi_bar_matrix = inputs.SAT_RULE == 0 ? zeros(Float64, nmodes, nky) : Matrix{Float64}(undef, 0, 0)
 
     if alpha_quench_in != 0.0 || vexb_shear_s == 0.0
@@ -162,7 +162,7 @@ description:
 """
 function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
     vexb_shear_s::T,
-    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{ComplexF64,3};
+    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{ComplexF64,4};
     phi_bar_matrix::Matrix{Float64} = Matrix{Float64}(undef, 0, 0)) where T<:Real
 
     ns = inputs.NS
@@ -192,7 +192,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
         ft_test, local_fwo, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
-        field_weight_out[:,:,1:nmodes_out] .= local_fwo
+        field_weight_out[:,:,1:nmodes_out,ky_index] .= local_fwo
 
         if(inputs.USE_INBOARD_DETRAPPED && inputs.IBRANCH==-1) # check for inward ballooning modes
             b_geo = satParams.B_geo
@@ -208,7 +208,7 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 nmodes_out, gamma_out, freq_out,
                 particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
                 _, local_fwo, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
-                field_weight_out[:,:,1:nmodes_out] .= local_fwo
+                field_weight_out[:,:,1:nmodes_out,ky_index] .= local_fwo
             end
         end
     end
@@ -378,7 +378,7 @@ description:
 """
 function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
     kx0_e::T,
-    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{ComplexF64,3};
+    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{ComplexF64,4};
     phi_bar_matrix::Matrix{Float64} = Matrix{Float64}(undef, 0, 0)) where T<:Real
 
     # input values
@@ -406,7 +406,7 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
         _, local_fwo, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
                     kx0_e, gamma_reference_kx0, freq_reference_kx0)
-        field_weight_out[:,:,1:nmodes_out] .= local_fwo
+        field_weight_out[:,:,1:nmodes_out,ky_index] .= local_fwo
 
         gamma_nb_min_out = gamma_out[1]
     else

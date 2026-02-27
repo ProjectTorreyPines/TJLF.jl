@@ -87,9 +87,10 @@ for dir_name in tests
         @test isapprox(juliaEnergy, fortranEnergy, rtol=1e-3)
 
         if dir_name == "simple_test"
-            @test size(field_weight_out) == (3, inputTJLF.NBASIS_MAX, inputTJLF.NMODES)
+            nky = length(inputTJLF.KY_SPECTRUM)
+            @test size(field_weight_out) == (3, inputTJLF.NBASIS_MAX, inputTJLF.NMODES, nky)
 
-            plot_field_out, plot_angle_out, max_plot, nmodes_out = get_wavefunction(inputTJLF, satParams, field_weight_out)
+            plot_field_out, plot_angle_out, max_plot, nmodes_out = get_wavefunction(inputTJLF, satParams, field_weight_out[:,:,:,1])
             @test nmodes_out == inputTJLF.NMODES
             @test size(plot_field_out) == (inputTJLF.NMODES, 3, max_plot)
             @test length(plot_angle_out) == max_plot
