@@ -53,7 +53,9 @@ const RTOL = 0.00001  # 1% tolerance for EM case
     input_tjlf.KY_SPECTRUM .= get_ky_spectrum(input_tjlf, satParams.grad_r0)
     
     outputHermite = gauss_hermite(input_tjlf)
-    fluxes, eigenvalue = tjlf_TM(input_tjlf, satParams, outputHermite)
+    tm = tjlf_TM(input_tjlf, satParams, outputHermite)
+    fluxes = tm.QL_weights
+    eigenvalue = tm.firstPass_eigenvalue
     gammaJulia = eigenvalue[:, :, 1]
     freqJulia = eigenvalue[:, :, 2]
 

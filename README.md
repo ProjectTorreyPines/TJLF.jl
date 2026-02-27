@@ -130,14 +130,6 @@ There are some 3D and 5D arrays where the indices are not obvious. They are spec
 <pre>modes: 1 = most unstable</pre>
 The order of the indices try to take advantage of Julia's column major memory usage
 
-# Other Notes from DSUN
-
-For SAT0, TM() does not return the value of QL_weights (aka "QL_flux_spectrum_out" in TGLF) and instead returns the value of what TGLF refers to as flux_spectrum_out. This is because the saturation rule calculation is done in a different place (LS.jl instead of multiscale_spectrum.jl), and otherwise, I would have to pass this extra Array through multiple functions just for SAT0 which is tedious and ugly. Plus SAT0 isn't really used apparently. So, if you are trying to compare the QL_weights for a SAT0 run, make sure you keep this in mind.
-
-The name of the SaturationParameters struct is probably not a great struct name since it doesn't really relate to the saturation rules at all and instead are more related to the Miller Geometry, not sure what a better name would be since OutputGeometry is already used.
-
-Currently, InputTJLF's IFLUX parameter tells the code whether it is going to calculate eigenvectors. This is bad and I should probably change it into a local variable instead of a struct parameter. Ran into an issue multithreading with onePass() since it changes IFLUX in the middle of its function. The code is currently fixed with an extra "find_eigenvector" variable, but this should just be the standard IMO. I will try and implement this before I leave and delete the IFLUX parameter, but if this is still in the README I have not done it yet.
-
 ## Online documentation
 For more details, see the [online documentation](https://projecttorreypines.github.io/TJLF.jl/dev).
 

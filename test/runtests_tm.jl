@@ -66,7 +66,10 @@ for dir_name in tests
         satParams = get_sat_params(inputTJLF)
         inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
 
-        fluxes, eigenvalue = tjlf_TM(inputTJLF, satParams, outputHermite)
+        tm = tjlf_TM(inputTJLF, satParams, outputHermite)
+        fluxes = tm.QL_weights
+        eigenvalue = tm.firstPass_eigenvalue
+        field_weight_out = tm.field_weight_out
         gammaJulia = eigenvalue[:, :, 1]
         freqJulia = eigenvalue[:, :, 2]
 
@@ -82,6 +85,17 @@ for dir_name in tests
         juliaEnergy = sum(QL_flux_out; dims=1)[1, :, 2]
         fortranEnergy = fluxesFortran[2, :]
         @test isapprox(juliaEnergy, fortranEnergy, rtol=1e-3)
+
+        if dir_name == "simple_test"
+            nky = length(inputTJLF.KY_SPECTRUM)
+            @test size(field_weight_out) == (3, inputTJLF.NBASIS_MAX, inputTJLF.NMODES, nky)
+
+            plot_field_out, plot_angle_out, max_plot, nmodes_out = get_wavefunction(inputTJLF, satParams, field_weight_out[:,:,:,1])
+            @test nmodes_out == inputTJLF.NMODES
+            @test size(plot_field_out) == (inputTJLF.NMODES, 3, max_plot)
+            @test length(plot_angle_out) == max_plot
+            @test any(!iszero, plot_field_out)
+        end
 
 
         #*******************************************************************************************************0

@@ -1,32 +1,31 @@
 """
-    tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}; return_both_eigenvalues::Bool=false) where T<:Real
+    tjlf_TM(inputs::InputTJLF{T},satParams::SaturationParameters{T},outputHermite::OutputHermite{T}) where T<:Real
 
 parameters:
     inputs::InputTJLF{T}                - InputTJLF struct constructed in tjlf_read_input.jl
     satParams::SaturationParameters{T}  - SaturationParameters struct constructed in tjlf_geometry.jl
     outputHermite::OutputHermite{T}     - OutputHermite struct constructed in tjlf_hermite.jl
-    return_both_eigenvalues::Bool       - If true, returns both first and second pass eigenvalues (default: false)
 
-outputs:
+outputs (named tuple):
     QL_weights                          - 5d array of QL weights (field, species, mode, ky, type),
                                           type: (particle, energy, torodial stress, parallel stress, exchange)
-    firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type)
-                                          type: (gamma, frequency)
-    secondPass_eigenvalue               - 3d array of second pass eigenvalues (mode, ky, type) [only if return_both_eigenvalues=true]
-                                          type: (gamma, frequency)
+    firstPass_eigenvalue                - 3d array of eigenvalues (mode, ky, type), type: (gamma, frequency)
+    secondPass_eigenvalue               - 3d array of second pass eigenvalues (mode, ky, type), type: (gamma, frequency)
+    field_weight_out                    - 4d array of field weights (field, basis, mode, ky)
+    phi_bar_matrix                      - 2d array of phi_bar values (mode, ky), only meaningful for SAT_RULE=0
 
 description:
     Main transport model function.
     Calls linear TGLF over a spectrum of ky's and computes spectral integrals of field, intensity, and fluxes.
-    For backward compatibility, by default only returns first pass eigenvalues.
 """
-function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}; return_both_eigenvalues::Bool=false) where T<:Real
+function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T}) where T<:Real
 
     alpha_quench_in = inputs.ALPHA_QUENCH
     vexb_shear_s = inputs.VEXB_SHEAR * inputs.SIGN_IT
     ns = inputs.NS
     nmodes = inputs.NMODES
     ky_spect = inputs.KY_SPECTRUM
+    nbasis = inputs.NBASIS_MAX
     nky = length(ky_spect)
 
     original_iflux = inputs.IFLUX
@@ -35,12 +34,15 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
     firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2)
     secondPass_eigenvalue = zeros(Float64, nmodes, nky, 2)  # Separate array for second pass results
     QL_weights = zeros(Float64, 3, ns, nmodes, nky, 5)
+    field_weight_out = zeros(ComplexF64, 3, nbasis, nmodes, nky)
+    phi_bar_matrix = inputs.SAT_RULE == 0 ? zeros(Float64, nmodes, nky) : Matrix{Float64}(undef, 0, 0)
 
     if alpha_quench_in != 0.0 || vexb_shear_s == 0.0
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
             onePass!(local_inputs, satParams, outputHermite, vexb_shear_s,
-                     firstPass_eigenvalue, QL_weights, ky_index)
+                     firstPass_eigenvalue, QL_weights, ky_index, field_weight_out;
+                     phi_bar_matrix)
         end
         # No second pass needed for single-pass cases
         secondPass_eigenvalue .= firstPass_eigenvalue
@@ -60,7 +62,8 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
             secondPass!(local_inputs, satParams, outputHermite, kx0_e[ky_index],
-                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index)
+                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index, field_weight_out;
+                        phi_bar_matrix)
         end
 
     else
@@ -79,7 +82,8 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         Threads.@threads for ky_index in eachindex(ky_spect)
             local_inputs = minimal_scalar_copy(inputs)
             secondPass!(local_inputs, satParams, outputHermite, kx0_e[ky_index],
-                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index)
+                        firstPass_eigenvalue, secondPass_eigenvalue, QL_weights, ky_index, field_weight_out;
+                        phi_bar_matrix)
         end
     end
 
@@ -90,12 +94,13 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
         @debug "Using SAT0 means the return value of TM is not the QL weights, but actually flux_spectrum_out = QL_weights * phi_bar_out. Notice the difference near LS return statement."
     end
 
-    # Return eigenvalue arrays based on flag
-    if return_both_eigenvalues
-        return QL_weights, firstPass_eigenvalue, secondPass_eigenvalue
-    else
-        return QL_weights, firstPass_eigenvalue
-    end
+    return (
+        QL_weights           = QL_weights,
+        firstPass_eigenvalue  = firstPass_eigenvalue,
+        secondPass_eigenvalue = secondPass_eigenvalue,
+        field_weight_out      = field_weight_out,
+        phi_bar_matrix        = phi_bar_matrix,
+    )
 end
 
 """
@@ -157,13 +162,15 @@ description:
 """
 function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
     vexb_shear_s::T,
-    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
+    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{ComplexF64,4};
+    phi_bar_matrix::Matrix{Float64} = Matrix{Float64}(undef, 0, 0)) where T<:Real
 
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
 
     # increment through the ky_spectrum and find the width/eigenvalues of each ky
     ky = inputs.KY_SPECTRUM[ky_index]
+    phi_bar_out = T[]
 
     if(inputs.FIND_WIDTH)
         inputs.IFLUX = false
@@ -171,7 +178,8 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             # println("this is 1")
             nmodes_out, gamma_nb_min_out,
             gamma_out, freq_out,
-            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out = tjlf_max(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index)
+            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
+            phi_bar_out = tjlf_max(inputs, satParams, outputHermite, ky, vexb_shear_s, ky_index)
         else
             error("NOT IMPLEMENTED YET -DSUN")
         end
@@ -183,7 +191,8 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         # println("this is XII")
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-        ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
+        ft_test, local_fwo, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index)
+        field_weight_out[:,:,1:nmodes_out,ky_index] .= local_fwo
 
         if(inputs.USE_INBOARD_DETRAPPED && inputs.IBRANCH==-1) # check for inward ballooning modes
             b_geo = satParams.B_geo
@@ -198,7 +207,8 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
                 # println("this is XIII")
                 nmodes_out, gamma_out, freq_out,
                 particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-                _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                _, local_fwo, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                field_weight_out[:,:,1:nmodes_out,ky_index] .= local_fwo
             end
         end
     end
@@ -215,6 +225,9 @@ function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
         QL_weights[:,ns0:ns,1:nmodes_out,ky_index,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
         QL_weights[:,ns0:ns,1:nmodes_out,ky_index,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
         QL_weights[:,ns0:ns,1:nmodes_out,ky_index,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
+        if !isempty(phi_bar_matrix) && !isempty(phi_bar_out)
+            phi_bar_matrix[1:nmodes_out,ky_index] .= vec(phi_bar_out)
+        end
     end
 
 end
@@ -305,7 +318,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
     # calculate the eigenvalues with no shear
     nbasis = inputs.NBASIS_MAX
     nmodes_out, gamma_out, freq_out,
-    _,_,_,_,_,ft_test = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
+    _,_,_,_,_,ft_test,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index)
 
     if(inputs.IBRANCH==-1) # check for inward ballooning modes
         if(inputs.USE_INBOARD_DETRAPPED) ####### find ft_test and modB_test
@@ -321,7 +334,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
                     @warn "NOT TESTED max.jl ln 302"
                     # println("this is XIII")
                     nmodes_out, gamma_out, freq_out,
-                    _,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
+                    _,_,_,_,_,_,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;outputGeo)
                 end
             end
         end
@@ -365,7 +378,8 @@ description:
 """
 function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
     kx0_e::T,
-    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int) where T<:Real
+    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{ComplexF64,4};
+    phi_bar_matrix::Matrix{Float64} = Matrix{Float64}(undef, 0, 0)) where T<:Real
 
     # input values
     ns = inputs.NS
@@ -390,8 +404,9 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
 
         nmodes_out, gamma_out, freq_out,
         particle_QL_out,energy_QL_out,stress_tor_QL_out,stress_par_QL_out,exchange_QL_out,
-        _ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
-                            kx0_e, gamma_reference_kx0, freq_reference_kx0)
+        _, local_fwo, phi_bar_out = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, vexb_shear_s, ky_index;
+                    kx0_e, gamma_reference_kx0, freq_reference_kx0)
+        field_weight_out[:,:,1:nmodes_out,ky_index] .= local_fwo
 
         gamma_nb_min_out = gamma_out[1]
     else
@@ -433,6 +448,9 @@ function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},ou
         @views QL_weights[:,ns0:ns,1:nmodes_out,ky_index,3] .= stress_tor_QL_out[:,ns0:ns,1:nmodes_out]
         @views QL_weights[:,ns0:ns,1:nmodes_out,ky_index,4] .= stress_par_QL_out[:,ns0:ns,1:nmodes_out]
         @views QL_weights[:,ns0:ns,1:nmodes_out,ky_index,5] .= exchange_QL_out[:,ns0:ns,1:nmodes_out]
+        if !isempty(phi_bar_matrix)
+            phi_bar_matrix[1:nmodes_out,ky_index] .= vec(phi_bar_out)
+        end
 
     end
 
