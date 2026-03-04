@@ -298,6 +298,8 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     SHAPE_S_SIN4::Union{T,Missing} = missing
     SHAPE_S_SIN5::Union{T,Missing} = missing
     SHAPE_S_SIN6::Union{T,Missing} = missing
+
+    USE_TRANSPORT_MODEL::Union{Bool,Missing} = missing
 end
 
 function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
@@ -384,7 +386,8 @@ function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
         SHAPE_S_SIN3 = T(0.0),
         SHAPE_S_SIN4 = T(0.0),
         SHAPE_S_SIN5 = T(0.0),
-        SHAPE_S_SIN6 = T(0.0)
+        SHAPE_S_SIN6 = T(0.0),
+        USE_TRANSPORT_MODEL = true
     )
 end
 

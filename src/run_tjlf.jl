@@ -1,43 +1,68 @@
 function run(inputTJLF::InputTJLF)
-    checkInput(inputTJLF)
-    outputHermite = gauss_hermite(inputTJLF)
-    satParams = get_sat_params(inputTJLF)
-    inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
+    use_tm = ismissing(inputTJLF.USE_TRANSPORT_MODEL) ? true : inputTJLF.USE_TRANSPORT_MODEL
+    if use_tm
+        checkInput(inputTJLF)
+        outputHermite = gauss_hermite(inputTJLF)
+        satParams = get_sat_params(inputTJLF)
+        inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
+        tm = tjlf_TM(inputTJLF, satParams, outputHermite)
+        QL_weights            = tm.QL_weights
+        firstPass_eigenvalue  = tm.firstPass_eigenvalue
+        secondPass_eigenvalue = tm.secondPass_eigenvalue
+        field_weight_out      = tm.field_weight_out
+        phi_bar_matrix        = tm.phi_bar_matrix
 
-    tm = tjlf_TM(inputTJLF, satParams, outputHermite)
-    QL_weights          = tm.QL_weights
-    firstPass_eigenvalue  = tm.firstPass_eigenvalue
-    secondPass_eigenvalue = tm.secondPass_eigenvalue
-    field_weight_out    = tm.field_weight_out
-    phi_bar_matrix      = tm.phi_bar_matrix
-    
-    # Use appropriate eigenvalues for flux calculation
-    # For two-pass case (ALPHA_QUENCH=0 and VEXB_SHEAR≠0), use second pass eigenvalues
-    # For single-pass case, first and second pass are identical
-    vexb_shear_s = inputTJLF.VEXB_SHEAR * inputTJLF.SIGN_IT
-    if inputTJLF.ALPHA_QUENCH == 0.0 && vexb_shear_s != 0.0
-        # Two-pass case: use second pass eigenvalues for flux calculation
-        eigenvalue_for_flux = secondPass_eigenvalue
+        vexb_shear_s = inputTJLF.VEXB_SHEAR * inputTJLF.SIGN_IT
+        if inputTJLF.ALPHA_QUENCH == 0.0 && vexb_shear_s != 0.0
+            eigenvalue_for_flux = secondPass_eigenvalue
+        else
+            eigenvalue_for_flux = firstPass_eigenvalue
+        end
+
+        if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+            most_unstable_gamma_first_pass = firstPass_eigenvalue[1, :, 1]
+            vzf_out_first_pass, kymax_out_first_pass, jmax_out_first_pass = get_zonal_mixing(inputTJLF, satParams, most_unstable_gamma_first_pass)
+            QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights;
+                                                         vzf_out_param=vzf_out_first_pass,
+                                                         kymax_out_param=kymax_out_first_pass,
+                                                         jmax_out_param=jmax_out_first_pass)
+        else
+            QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights;
+                                                         phi_bar_matrix=phi_bar_matrix)
+        end
+        return (QL_weights=QL_weights, eigenvalue=firstPass_eigenvalue, QL_flux_out=QL_flux_out,
+                flux_spectrum=flux_spectrum, field_weight_out=field_weight_out)
     else
-        # Single-pass case: use first pass eigenvalues
-        eigenvalue_for_flux = firstPass_eigenvalue
+        checkInput(inputTJLF)
+        outputHermite = gauss_hermite(inputTJLF)
+        satParams = get_sat_params(inputTJLF)
+        inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
+        ns     = inputTJLF.NS
+        nmodes = inputTJLF.NMODES
+        nbasis = inputTJLF.NBASIS_MAX
+        nmodes_out, gamma_out, freq_out,
+            particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
+            _ft, field_weight_out_3d, _phi = tjlf_LS(inputTJLF, satParams, outputHermite,
+                                                      inputTJLF.KY, nbasis, inputTJLF.VEXB_SHEAR, 1)
+
+        eigenvalue       = zeros(Float64, nmodes, 1, 2)
+        QL_weights       = zeros(Float64, 3, ns, nmodes, 1, 5)
+        field_weight_out = zeros(ComplexF64, 3, nbasis, nmodes, 1)
+
+        eigenvalue[:, 1, 1]                      .= gamma_out
+        eigenvalue[:, 1, 2]                      .= freq_out
+        QL_weights[:, :, 1:nmodes_out, 1, 1]    .= particle_QL_out[:, :, 1:nmodes_out]
+        QL_weights[:, :, 1:nmodes_out, 1, 2]    .= energy_QL_out[:, :, 1:nmodes_out]
+        QL_weights[:, :, 1:nmodes_out, 1, 3]    .= stress_tor_QL_out[:, :, 1:nmodes_out]
+        QL_weights[:, :, 1:nmodes_out, 1, 4]    .= stress_par_QL_out[:, :, 1:nmodes_out]
+        QL_weights[:, :, 1:nmodes_out, 1, 5]    .= exchange_QL_out[:, :, 1:nmodes_out]
+        field_weight_out[:, :, 1:nmodes_out, 1] .= field_weight_out_3d[:, :, 1:nmodes_out]
+
+        QL_flux_out   = Array{Float64}(undef, 0, 0, 0)
+        flux_spectrum = Array{Float64}(undef, 0, 0, 0)
+        return (QL_weights=QL_weights, eigenvalue=eigenvalue, QL_flux_out=QL_flux_out,
+                flux_spectrum=flux_spectrum, field_weight_out=field_weight_out)
     end
-    
-    # Calculate fluxes with proper zonal mixing for SAT_RULE 2/3
-    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
-        most_unstable_gamma_first_pass = firstPass_eigenvalue[1, :, 1]
-        vzf_out_first_pass, kymax_out_first_pass, jmax_out_first_pass = get_zonal_mixing(inputTJLF, satParams, most_unstable_gamma_first_pass)
-        QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights; 
-                                                    vzf_out_param=vzf_out_first_pass, 
-                                                    kymax_out_param=kymax_out_first_pass, 
-                                                    jmax_out_param=jmax_out_first_pass)
-    else
-        QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights;
-                                                    phi_bar_matrix=phi_bar_matrix)
-    end
-    
-    # Return first pass eigenvalues for output (matching TGLF behavior)
-    return (QL_weights=QL_weights, eigenvalue=firstPass_eigenvalue, QL_flux_out=QL_flux_out, flux_spectrum=flux_spectrum, field_weight_out=field_weight_out)
 end
 
 function run(inputTGLF::InputTGLF)

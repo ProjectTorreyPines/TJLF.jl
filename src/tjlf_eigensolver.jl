@@ -2720,6 +2720,18 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
     end
 
+    use_tm = ismissing(inputs.USE_TRANSPORT_MODEL) ? true : inputs.USE_TRANSPORT_MODEL
+    if !use_tm
+        if inputs.IFLUX || find_eigenvector
+            amat_copy = copy(amat)
+            bmat_copy = copy(bmat)
+            (alpha, beta, _, _) = ggev!('N','N', amat_copy, bmat_copy)
+        else
+            (alpha, beta, _, _) = ggev!('N','N', amat, bmat)
+        end
+        return alpha./beta, fill(NaN*im,(1,1))
+    end
+
     if inputs.IFLUX || find_eigenvector
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
