@@ -3,6 +3,7 @@ module TJLF
 using LinearAlgebra
 import LinearAlgebra.LAPACK.gesv!
 import LinearAlgebra.LAPACK.geev!
+import LinearAlgebra.LAPACK.ggev!
 using SparseArrays
 using StaticArrays
 using FastGaussQuadrature

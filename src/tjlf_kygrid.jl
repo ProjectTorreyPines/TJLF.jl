@@ -55,7 +55,8 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
         nky = nky_in
         ky_spectrum = Vector{Float64}(undef,nky)
         dky_spectrum = Vector{Float64}(undef,nky)
-        ky1 = ky_in
+        # ky1 = ky_in
+        ky1 = inputs.KY * ky_factor
         dky0 = ky1/nky_in
         for i = 1:nky
             ky_spectrum[i] = i*dky0
