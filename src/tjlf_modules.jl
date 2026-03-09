@@ -173,6 +173,33 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     ETG_FACTOR::T = 1.25
     DAMP_PSI::T = 0.0
     DAMP_SIG::T = 0.0
+
+    #MXH params
+    SHAPE_COS0::Union{T,Missing} = missing
+    SHAPE_COS1::Union{T,Missing} = missing
+    SHAPE_COS2::Union{T,Missing} = missing
+    SHAPE_COS3::Union{T,Missing} = missing
+    SHAPE_COS4::Union{T,Missing} = missing
+    SHAPE_COS5::Union{T,Missing} = missing
+    SHAPE_COS6::Union{T,Missing} = missing
+
+    SHAPE_SIN3::Union{T,Missing} = missing
+    SHAPE_SIN4::Union{T,Missing} = missing
+    SHAPE_SIN5::Union{T,Missing} = missing
+    SHAPE_SIN6::Union{T,Missing} = missing
+
+    SHAPE_S_COS0::Union{T,Missing} = missing
+    SHAPE_S_COS1::Union{T,Missing} = missing
+    SHAPE_S_COS2::Union{T,Missing} = missing
+    SHAPE_S_COS3::Union{T,Missing} = missing
+    SHAPE_S_COS4::Union{T,Missing} = missing
+    SHAPE_S_COS5::Union{T,Missing} = missing
+    SHAPE_S_COS6::Union{T,Missing} = missing
+
+    SHAPE_S_SIN3::Union{T,Missing} = missing
+    SHAPE_S_SIN4::Union{T,Missing} = missing
+    SHAPE_S_SIN5::Union{T,Missing} = missing
+    SHAPE_S_SIN6::Union{T,Missing} = missing
 end
 
 Base.@kwdef mutable struct InputTJLF{T<:Real}
@@ -427,6 +454,13 @@ function update_input_tjlf!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) 
     # These are either TJLF-specific parameters OR TGLF parameters missing from InputTGLF structure
     input_tjlf.FIND_EIGEN = true    # TGLF parameter but missing from InputTGLF structure
     input_tjlf.NXGRID = 16         # TJLF-specific parameter
+
+    # MXH SHAPE_* fields not set by lower MXH_modes default to 0.0
+    for fname in fieldnames(typeof(input_tjlf))
+        if startswith(string(fname), "SHAPE_") && ismissing(getfield(input_tjlf, fname))
+            setfield!(input_tjlf, fname, T(0.0))
+        end
+    end
 
     # check converison
     checkInput(input_tjlf)
