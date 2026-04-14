@@ -177,13 +177,13 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
 end
 
 """
-    mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where T<:Real
+    mode_transition_function(x, y1, y2, x_ITG, x_TEM)
 
 description:
     helper function that returns either the smaller value if x is less than, larger value if x is greater than, 
     or a linear interpolation of the two if x is within the bounds
 """
-function mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where T<:Real
+function mode_transition_function(x, y1, y2, x_ITG, x_TEM)
 
     if (x < x_ITG)
         y = y1
@@ -197,13 +197,13 @@ function mode_transition_function(x::T, y1::T, y2::T, x_ITG::T, x_TEM::T) where 
 end
 
 """
-    linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
+    linear_interpolation(x::AbstractVector, y::AbstractVector, x0)
 
 description:
     helper function that returns either the linear interpolated y value
     at a x0 value given the x and y arrays
 """
-function linear_interpolation(x::Array{T}, y::Array{T}, x0::T) where T<: Real
+function linear_interpolation(x::AbstractVector, y::AbstractVector, x0)
     i = 1
     while (x[i] <= x0)
         i += 1
@@ -241,10 +241,10 @@ function intensity_sat(
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
     QL_weights::Array{T,5},
-    expsub::T=2.0,
+    expsub=T(2.0),
     return_phi_params::Bool=false;
-    vzf_out_param::T=NaN,
-    kymax_out_param::T=NaN,
+    vzf_out_param=T(NaN),
+    kymax_out_param=T(NaN),
     jmax_out_param::Int=0) where T<:Real
 
     ############ figure out how to make this prettier
@@ -404,13 +404,13 @@ function intensity_sat(
        
         scal = 0.82 # Q(SAT3 GA D) / (2 * QLA(ITG,Q) * Q(SAT2 GA D))
 
-        Ys = Vector{Float64}(undef, nmodes)
-        xs = Vector{Float64}(undef, nmodes)
+        Ys = Vector{T}(undef, nmodes)
+        xs = Vector{T}(undef, nmodes)
 
         for k in 1:nmodes
 
 
-            sum_W_i = zeros(length(QL_weights[1, 1, k, :, 2]))
+            sum_W_i = zeros(T, length(QL_weights[1, 1, k, :, 2]))
 
             for is in 2:size(QL_weights)[2] # sum over ion species, requires electrons to be species 1
 
@@ -462,7 +462,7 @@ function intensity_sat(
     end
 
     # if(!first_pass)  # second pass for spectral shift model
-    gamma_net = Vector{Float64}(undef,nky)
+    gamma_net = Vector{T}(undef,nky)
     for i in 1:nky
         kx = kx0_e[i]
         if(sat_rule_in==2 || sat_rule_in==3)
@@ -490,8 +490,8 @@ function intensity_sat(
     jmax1 = jmax_out
     vzf1 = vzf_out
 
-    gamma_mix1 = Vector{Float64}(undef,nky)
-    gamma = Vector{Float64}(undef,nky)
+    gamma_mix1 = Vector{T}(undef,nky)
+    gamma = Vector{T}(undef,nky)
 
     if(sat_rule_in==1)
         gamma .= ifelse.(ky_spect.<kymax1,
@@ -583,10 +583,10 @@ function intensity_sat(
 
     # generate SAT2 potential for SAT3 to connect to for electron scale
 
-    YTs = Vector{Float64}(undef, nmodes)
+    YTs = Vector{T}(undef, nmodes)
     if(sat_rule_in==3)
         if(ky_spect[nky] >= kT)
-            dummy_interp = zeros(size(ky_spect))
+            dummy_interp = zeros(T, size(ky_spect)...)
             k = 1
             while ky_spect[k] < kT
                 k += 1
@@ -636,10 +636,10 @@ function intensity_sat(
 
     # intensity model
 
-    field_spectrum_out = Matrix{Float64}(undef, nky,nmodes)
-    gammaeff_out = Matrix{Float64}(undef, nky,nmodes)
-    kx_width_out = Vector{Float64}(undef, nky)
-    sat_geo_factor_out = Vector{Float64}(undef, nky)
+    field_spectrum_out = Matrix{T}(undef, nky,nmodes)
+    gammaeff_out = Matrix{T}(undef, nky,nmodes)
+    kx_width_out = Vector{T}(undef, nky)
+    sat_geo_factor_out = Vector{T}(undef, nky)
 
     for j in 1:nky
         gamma0 = most_unstable_gamma[j]  # Use original eigenvalue for gamma0 reference
@@ -731,8 +731,8 @@ function intensity_sat(
 
 	#SAT3 QLA here
     if(sat_rule_in==3)
-        QLA_P = zeros(nmodes)
-	    QLA_E = zeros(nmodes)
+        QLA_P = zeros(T, nmodes)
+	    QLA_E = zeros(T, nmodes)
 	    for k in 1:nmodes
 	        # factor of 2 included for real symmetry
             QLA_P[k] = 2 * mode_transition_function(xs[k], 1.1, 0.6, x_ITG, x_TEM)
@@ -826,10 +826,10 @@ function sum_ky_spectrum(
     satParams::SaturationParameters{T},
     gamma_matrix::Matrix{T},
     QL_weights::Array{T,5};
-    vzf_out_param::T=NaN,
-    kymax_out_param::T=NaN,
+    vzf_out_param=T(NaN),
+    kymax_out_param=T(NaN),
     jmax_out_param::Int=0,
-    phi_bar_matrix::Matrix{Float64}=Matrix{Float64}(undef, 0, 0)
+    phi_bar_matrix::Matrix{T}=Matrix{T}(undef, 0, 0)
 )where T <: Real
 
     sat_rule_in = inputs.SAT_RULE
@@ -862,10 +862,10 @@ function sum_ky_spectrum(
     
 
     # outputs
-    q_low_out = zeros((ns, nm))
-    QL_flux_out = zeros(Float64, nf, ns, 5)
-    dky0 = 0.0
-    ky0 = 0.0
+    q_low_out = zeros(T, (ns, nm))
+    QL_flux_out = zeros(T, nf, ns, 5)
+    dky0 = zero(T)
+    ky0 = zero(T)
     for i in eachindex(ky_spect)
         ky = ky_spect[i]
         ky1 = ky

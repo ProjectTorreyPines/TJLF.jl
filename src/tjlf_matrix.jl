@@ -1,17 +1,17 @@
 function new_aves(inputs::InputTJLF{T}, nbasis::Int) where {T<:Real}
     ns::Int = inputs.NS
 
-    ave = Ave{Float64}(ns, nbasis)
-    aveH = AveH{Float64}(ns, nbasis)
-    aveWH = AveWH{Float64}(ns, nbasis)
-    aveKH = AveKH(ns, nbasis)
+    ave = Ave{T}(ns, nbasis)
+    aveH = AveH{T}(ns, nbasis)
+    aveWH = AveWH{T}(ns, nbasis)
+    aveKH = AveKH{Complex{T}}(ns, nbasis)
 
-    aveG = AveG{Float64}(ns, nbasis)
-    aveWG = AveWG{Float64}(ns, nbasis)
-    aveKG = AveKG(ns, nbasis)
+    aveG = AveG{T}(ns, nbasis)
+    aveWG = AveWG{T}(ns, nbasis)
+    aveKG = AveKG{Complex{T}}(ns, nbasis)
 
-    aveGrad = AveGrad{Float64}(ns, nbasis)
-    aveGradB = AveGradB{Float64}(ns, nbasis)
+    aveGrad = AveGrad{T}(ns, nbasis)
+    aveGradB = AveGradB{T}(ns, nbasis)
     return ave, aveH, aveWH, aveKH, aveG, aveWG, aveKG, aveGrad, aveGradB
 end
 
@@ -136,26 +136,26 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
     wx = outputHermite.wx
     h = outputHermite.h[1:nbasis,:]
 
-    hxn = zeros(Float64, ns, nx)
-    hxp1 = zeros(Float64, ns, nx)
-    hxp3 = zeros(Float64, ns, nx)
-    hxr11 = zeros(Float64, ns, nx)
-    hxr13 = zeros(Float64, ns, nx)
-    hxr33 = zeros(Float64, ns, nx)
-    hxw113 = zeros(Float64, ns, nx)
-    hxw133 = zeros(Float64, ns, nx)
-    hxw333 = zeros(Float64, ns, nx)
+    hxn = zeros(T, ns, nx)
+    hxp1 = zeros(T, ns, nx)
+    hxp3 = zeros(T, ns, nx)
+    hxr11 = zeros(T, ns, nx)
+    hxr13 = zeros(T, ns, nx)
+    hxr33 = zeros(T, ns, nx)
+    hxw113 = zeros(T, ns, nx)
+    hxw133 = zeros(T, ns, nx)
+    hxw333 = zeros(T, ns, nx)
     nroot = 15 ###### hardcoded
     if(nroot>6)
-        gxn = zeros(Float64, ns, nx)
-        gxp1 = zeros(Float64, ns, nx)
-        gxp3 = zeros(Float64, ns, nx)
-        gxr11 = zeros(Float64, ns, nx)
-        gxr13 = zeros(Float64, ns, nx)
-        gxr33 = zeros(Float64, ns, nx)
-        gxw113 = zeros(Float64, ns, nx)
-        gxw133 = zeros(Float64, ns, nx)
-        gxw333 = zeros(Float64, ns, nx)
+        gxn = zeros(T, ns, nx)
+        gxp1 = zeros(T, ns, nx)
+        gxp3 = zeros(T, ns, nx)
+        gxr11 = zeros(T, ns, nx)
+        gxr13 = zeros(T, ns, nx)
+        gxr33 = zeros(T, ns, nx)
+        gxw113 = zeros(T, ns, nx)
+        gxw133 = zeros(T, ns, nx)
+        gxw333 = zeros(T, ns, nx)
     end
 
     fth = 1.0
@@ -187,7 +187,7 @@ function FLR_xgrid!(inputs::InputTJLF{T}, outputGeo::OutputGeometry{T}, outputHe
             #***************************************************************
             if(nroot>6)
                 fts = outputGeo.fts
-                ftx::Float64 = fts[is]
+                ftx = fts[is]
                 ft2 = ftx^2
                 gxn[is,i]    = FLR_Hn(ftx, b; b2, b25)
                 gxp1[is,i]   = FLR_dHp1(ftx, b; b2, b25)  + ft2*gxn[is,i]
@@ -318,7 +318,7 @@ function get_ave!(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},outputHermit
     pol = sum(zs.^2 .* as./taus)
     U0 = sum((alpha_mach_in*sign_it_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
 
-    p0x = Vector{Float64}(undef, nx)
+    p0x = Vector{T}(undef, nx)
     for i = 1:nx
         debye = debye_factor_in*b0x[i]*(ky*debye_s)^2
         p0x[i] = debye + pol
@@ -427,7 +427,7 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
     # find the eigenvalues of ave.wdh
     wdh = Symmetric(ave.wdh)
-    wh, ah = eigen!(wdh)
+    wh, ah = eigen(wdh)
     # if abs(wh)<wd_zero, make it +- wd_zero. otherwise keep the wh
     @. wh .= sign(wh) * max(abs(wh), wd_zero_in)
     @inbounds @simd for j in eachindex(wh)
@@ -439,7 +439,7 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
     ### now for wdg
     wdg = Symmetric(ave.wdg)
-    wg, ag = eigen!(wdg)
+    wg, ag = eigen(wdg)
     # if abs(wg)<wd_zero, make it +- wd_zero. otherwise keep the wg
     @. wg = sign(wg) * max(abs(wg), wd_zero_in)
     @inbounds @simd for j in eachindex(wg)
@@ -469,10 +469,10 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     else
     # find the eigenvalues and eigenvectors
         if(vpar_model_in!=1)
-            a = Hermitian(im.*ave.kpar)
-            eigen = eigen!(a)
-            w = Diagonal(eigen.values)
-            a = eigen.vectors
+            a_herm = im.*ave.kpar
+            eig = eigen(a_herm)
+            w = Diagonal(eig.values)
+            a = eig.vectors
             b = a * abs.(w) * adjoint(a)
             ave.modkpar .= real.(b)
             for is = ns0:ns
@@ -481,10 +481,10 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
         else
             for is = ns0:ns
-                a = Hermitian(im.*ave.kpar_eff[is,:,:])
-                eigen = eigen!(a)
-                w = Diagonal(eigen.values)
-                a = eigen.vectors
+                a_herm = im.*ave.kpar_eff[is,:,:]
+                eig = eigen(a_herm)
+                w = Diagonal(eig.values)
+                a = eig.vectors
                 b = a * abs.(w) * adjoint(a)
                 ave.modkpar_eff[is,:,:] .= b
             end

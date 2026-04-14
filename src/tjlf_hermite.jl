@@ -21,8 +21,9 @@ function gauss_hermite(inputs::InputTJLF{T}) where T<:Real
     # set up the hermite basis x-grid
     nbasis = inputs.NBASIS_MAX
     nx = 2*inputs.NXGRID -1
-    x, wx = gausshermite(nx)
-    wx = 0.5*wx
+    x0, wx0 = gausshermite(nx)
+    x = T.(x0)
+    wx = T.(0.5*wx0)
 
     #--------------------------------------------------------------
 

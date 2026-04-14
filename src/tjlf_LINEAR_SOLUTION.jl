@@ -35,7 +35,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
             nbasis::Int,
             vexb_shear_s::T,
             ky_index::Int;
-            kx0_e::T = NaN,
+            kx0_e = T(NaN),
             gamma_reference_kx0::Vector{T} = T[],
             freq_reference_kx0::Vector{T} = T[],
             outputGeo::Union{OutputGeometry{T},Missing} = missing,
@@ -102,8 +102,9 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         aveGrad, aveGradB = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis, ky_index; aves)
     end
 
-    amat = Matrix{ComplexF64}(undef, iur, iur)
-    bmat = Matrix{ComplexF64}(undef, iur, iur)
+    K = Complex{T}
+    amat = Matrix{K}(undef, iur, iur)
+    bmat = Matrix{K}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
     eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector)
 
@@ -128,8 +129,8 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     jmax = zeros(Int, nmodes_in)
     if size(gamma_reference_kx0,1) == 0
-        gamma_out = zeros(Float64, nmodes_in)
-        freq_out = zeros(Float64, nmodes_in)
+        gamma_out = zeros(T, nmodes_in)
+        freq_out = zeros(T, nmodes_in)
     else
         gamma_out = similar(gamma_reference_kx0)
         freq_out = similar(freq_reference_kx0)
@@ -211,43 +212,43 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
     # get the fluxes for the most unstable modes
     if (inputs.IFLUX || find_eigenvector)
         #  initalize output to zero
-        phi_bar_out = zeros(Float64, nmodes_out)
-        a_par_bar_out = zeros(Float64, nmodes_out)
-        b_par_bar_out = zeros(Float64, nmodes_out)
-        v_bar_out = zeros(Float64, nmodes_out)
-        ne_te_phase_out = zeros(Float64, nmodes_out)
+        phi_bar_out = zeros(T, nmodes_out)
+        a_par_bar_out = zeros(T, nmodes_out)
+        b_par_bar_out = zeros(T, nmodes_out)
+        v_bar_out = zeros(T, nmodes_out)
+        ne_te_phase_out = zeros(T, nmodes_out)
 
-        field_weight_out = zeros(ComplexF64, 3, nbasis, nmodes_out)
+        field_weight_out = zeros(K, 3, nbasis, nmodes_out)
 
-        particle_QL_out = zeros(Float64, 3, ns, nmodes_out)
-        energy_QL_out = zeros(Float64, 3, ns, nmodes_out)
-        stress_par_QL_out = zeros(Float64, 3, ns, nmodes_out)
-        stress_tor_QL_out = zeros(Float64, 3, ns, nmodes_out)
-        exchange_QL_out = zeros(Float64, 3, ns, nmodes_out)
+        particle_QL_out = zeros(T, 3, ns, nmodes_out)
+        energy_QL_out = zeros(T, 3, ns, nmodes_out)
+        stress_par_QL_out = zeros(T, 3, ns, nmodes_out)
+        stress_tor_QL_out = zeros(T, 3, ns, nmodes_out)
+        exchange_QL_out = zeros(T, 3, ns, nmodes_out)
 
-        N_QL_out = zeros(Float64, ns, nmodes_out)
-        T_QL_out = zeros(Float64, ns, nmodes_out)
-        U_QL_out = zeros(Float64, ns, nmodes_out)
-        Q_QL_out = zeros(Float64, ns, nmodes_out)
-        N_bar_out = zeros(Float64, ns, nmodes_out)
-        T_bar_out = zeros(Float64, ns, nmodes_out)
-        U_bar_out = zeros(Float64, ns, nmodes_out)
-        Q_bar_out = zeros(Float64, ns, nmodes_out)
-        Ns_Ts_phase_out = zeros(Float64, ns, nmodes_out)
+        N_QL_out = zeros(T, ns, nmodes_out)
+        T_QL_out = zeros(T, ns, nmodes_out)
+        U_QL_out = zeros(T, ns, nmodes_out)
+        Q_QL_out = zeros(T, ns, nmodes_out)
+        N_bar_out = zeros(T, ns, nmodes_out)
+        T_bar_out = zeros(T, ns, nmodes_out)
+        U_bar_out = zeros(T, ns, nmodes_out)
+        Q_bar_out = zeros(T, ns, nmodes_out)
+        Ns_Ts_phase_out = zeros(T, ns, nmodes_out)
 
-        wd_bar_out = zeros(Float64, nmodes_out)
-        b0_bar_out = zeros(Float64, nmodes_out)
-        modB_bar_out = zeros(Float64, nmodes_out)
-        v_QL_out = zeros(Float64, nmodes_out)
-        a_par_QL_out = zeros(Float64, nmodes_out)
-        b_par_QL_out = zeros(Float64, nmodes_out)
-        kx_bar_out = zeros(Float64, nmodes_out)
-        kpar_bar_out = zeros(Float64, nmodes_out)
+        wd_bar_out = zeros(T, nmodes_out)
+        b0_bar_out = zeros(T, nmodes_out)
+        modB_bar_out = zeros(T, nmodes_out)
+        v_QL_out = zeros(T, nmodes_out)
+        a_par_QL_out = zeros(T, nmodes_out)
+        b_par_QL_out = zeros(T, nmodes_out)
+        kx_bar_out = zeros(T, nmodes_out)
+        kpar_bar_out = zeros(T, nmodes_out)
 
         # used for computing eigenvector
         if inputs.SMALL != 0.0
             zmat = similar(amat)
-            eigenvector = Vector{ComplexF64}(undef,iur)
+            eigenvector = Vector{K}(undef,iur)
         end
         for imax = 1:nmodes_out
             if (jmax[imax] > 0)
@@ -257,7 +258,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     # alpha and beta from eigensolver.jl
                     @. zmat = amat - (inputs.SMALL + rr[jmax[imax]] + im * ri[jmax[imax]]) * bmat
 
-                    gesv!(zmat,eigenvector)
+                    eigenvector .= zmat \ eigenvector
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])
                         nev1 = size(amat)[1]                           
@@ -594,12 +595,12 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     alpha_p_in = inputs.ALPHA_P
     freq_QL = im * eigenvalue
 
-    n = zeros(ComplexF64, nbasis, ns)
-    u_par = zeros(ComplexF64, nbasis, ns)
-    p_par = zeros(ComplexF64, nbasis, ns)
-    p_tot = zeros(ComplexF64, nbasis, ns)
-    q_par = zeros(ComplexF64, nbasis, ns)
-    q_tot = zeros(ComplexF64, nbasis, ns)
+    n = zeros(K, nbasis, ns)
+    u_par = zeros(K, nbasis, ns)
+    p_par = zeros(K, nbasis, ns)
+    p_tot = zeros(K, nbasis, ns)
+    q_par = zeros(K, nbasis, ns)
+    q_tot = zeros(K, nbasis, ns)
 
     for is = ns0:ns
         j = (is - ns0) * nroot * nbasis
@@ -648,9 +649,9 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
         betae_sig = 0.5 * betae_s
     end
 
-    phi = zeros(ComplexF64, nbasis)
-    psi = zeros(ComplexF64, nbasis)
-    bsig = zeros(ComplexF64, nbasis)
+    phi = zeros(K, nbasis)
+    psi = zeros(K, nbasis)
+    bsig = zeros(K, nbasis)
     U0 = sum((alpha_mach_in * sign_It_in) .* vpar .* zs .^ 2 .* as ./ taus) ### defined in startup.f90
     @views phi .= sum(ave.p0inv * (n[:, ns0:ns] * Diagonal((as.*zs)[ns0:ns])), dims=2)
     if (inputs.USE_BPER)
@@ -678,7 +679,7 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     end
 
     #save the field weights
-    field_weight_QL_out = Matrix{ComplexF64}(undef, 3, nbasis)
+    field_weight_QL_out = Matrix{K}(undef, 3, nbasis)
     field_weight_QL_out[1, :] .= phi .* (im / √(phi_norm))
     field_weight_QL_out[2, :] .= psi .* (im / √(phi_norm))
     field_weight_QL_out[3, :] .= bsig .* (im / √(phi_norm))
@@ -698,10 +699,10 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
 
     # fill the stress moments
-    stress_par = zeros(ComplexF64, nbasis, ns, 2)
-    stress_per = zeros(ComplexF64, nbasis, ns, 2)
+    stress_par = zeros(K, nbasis, ns, 2)
+    stress_per = zeros(K, nbasis, ns, 2)
 
-    stress_correction = fill(1.0, ns - ns0 + 1)
+    stress_correction = fill(one(T), ns - ns0 + 1)
     if (sat_rule_in == 0)
         @views wp = (ky * abs(alpha_p_in)) .* aveH.hp1[ns0:ns, 1, 1] .* vpar_shear ./ vs
         stress_correction .= (imag(freq_QL) .+ 2.0 .* wp) ./ (imag(freq_QL) .+ wp)
@@ -715,11 +716,11 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
 
     # compute the quasilinear weights for the fluxes
-    particle_weight = zeros(Float64, 3, ns)
-    energy_weight = zeros(Float64, 3, ns)
-    stress_par_weight = zeros(Float64, 3, ns)
-    stress_tor_weight = zeros(Float64, 3, ns)
-    exchange_weight = zeros(Float64, 3, ns)
+    particle_weight = zeros(T, 3, ns)
+    energy_weight = zeros(T, 3, ns)
+    stress_par_weight = zeros(T, 3, ns)
+    stress_tor_weight = zeros(T, 3, ns)
+    exchange_weight = zeros(T, 3, ns)
 
     ### real() with an im in it is funky
     #### CHECK THIS PLEASE
@@ -766,17 +767,17 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
 
     #### outputs
     # compute the density and temperature amplitude weights
-    N_weight = zeros(Float64, ns)
-    T_weight = zeros(Float64, ns)
-    U_weight = zeros(Float64, ns)
-    Q_weight = zeros(Float64, ns)
-    temp = Matrix{ComplexF64}(undef, nbasis, ns)
+    N_weight = zeros(T, ns)
+    T_weight = zeros(T, ns)
+    U_weight = zeros(T, ns)
+    Q_weight = zeros(T, ns)
+    temp = Matrix{K}(undef, nbasis, ns)
 
     temp .= p_tot .- n
-    N_weight .= vec(sum(abs.(n) .^ 2, dims=1)) ./ phi_norm
-    T_weight .= vec(sum(abs.(temp) .^ 2, dims=1)) ./ phi_norm
-    U_weight .= vec(sum(abs.(u_par) .^ 2, dims=1)) ./ phi_norm
-    Q_weight .= vec(sum(abs.(q_tot) .^ 2, dims=1)) ./ phi_norm
+    N_weight .= vec(sum(abs2.(n), dims=1)) ./ phi_norm
+    T_weight .= vec(sum(abs2.(temp), dims=1)) ./ phi_norm
+    U_weight .= vec(sum(abs2.(u_par), dims=1)) ./ phi_norm
+    Q_weight .= vec(sum(abs2.(q_tot), dims=1)) ./ phi_norm
     v_weight = vnorm / phi_norm
     a_par_weight = psi_norm / phi_norm
     b_par_weight = bsig_norm / phi_norm
@@ -788,9 +789,9 @@ function get_QL_weights(inputs::InputTJLF{T}, ave::Ave{T}, aveH::AveH{T},
     Ne_Te_phase = atan(Ne_Te_sin, Ne_Te_cos)
 
     #compute species density-temperature phase
-    Ns_Ts_phase = zeros(Float64, ns)
-    Ns_Ts_cos = zeros(Float64, ns)
-    Ns_Ts_sin = zeros(Float64, ns)
+    Ns_Ts_phase = zeros(T, ns)
+    Ns_Ts_cos = zeros(T, ns)
+    Ns_Ts_sin = zeros(T, ns)
 
     temp2 = @views @. conj(n[:, ns0:ns]) .* temp[:, ns0:ns]
     @views Ns_Ts_cos .= vec(sum(real(temp2), dims=1))

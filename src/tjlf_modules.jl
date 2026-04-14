@@ -241,7 +241,7 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     # NOT IN TGLF (or missing from InputTGLF structure)
     WIDTH_SPECTRUM::Union{Vector{T},Missing} = missing    # TJLF-specific
     KY_SPECTRUM::Union{Vector{T},Missing} = missing       # TJLF-specific  
-    EIGEN_SPECTRUM::Union{Vector{ComplexF64},Missing} = missing  # TJLF-specific
+    EIGEN_SPECTRUM::Union{Vector{Complex{T}},Missing} = missing  # TJLF-specific
     FIND_EIGEN::Union{Bool,Missing} = missing             # TGLF parameter but missing from InputTGLF
     # NOT IN TGLF (or missing from InputTGLF structure)
 
@@ -343,7 +343,7 @@ function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
         VPAR_SHEAR = fill(T(NaN), ns),
         WIDTH_SPECTRUM = fill(T(NaN), nky),
         KY_SPECTRUM = fill(T(NaN), nky),
-        EIGEN_SPECTRUM = fill(ComplexF64(NaN*im), nky),
+        EIGEN_SPECTRUM = fill(Complex{T}(NaN*im), nky),
         SIGN_BT = 0,
         SIGN_IT = 0,
         KY = T(NaN),
@@ -582,8 +582,8 @@ mutable struct Ave{T<:Real} <: AbstractAve{T}
 
     kpar::Matrix{T}
     modkpar::Matrix{T}
-    kpar_eff::Array{ComplexF64,3}
-    modkpar_eff::Array{ComplexF64,3}
+    kpar_eff::Array{Complex{T},3}
+    modkpar_eff::Array{Complex{T},3}
 end
 
 function Ave{T}(ns::Int, nbasis::Int) where {T<:Real}
@@ -605,8 +605,8 @@ function Ave{T}(ns::Int, nbasis::Int) where {T<:Real}
     c_tor_per = zeros(T, nbasis, nbasis)
     kpar = zeros(T, nbasis, nbasis)
     modkpar = zeros(T, nbasis, nbasis)
-    kpar_eff = zeros(ComplexF64, ns, nbasis, nbasis)
-    modkpar_eff = zeros(ComplexF64, ns, nbasis, nbasis)
+    kpar_eff = zeros(Complex{T}, ns, nbasis, nbasis)
+    modkpar_eff = zeros(Complex{T}, ns, nbasis, nbasis)
 
     Ave{T}(kx,
         wdh, modwdh, wdg, modwdg,
@@ -800,56 +800,59 @@ function AveWH{T}(ns::Int, nbasis::Int) where {T<:Real}
     )
 end
 
-mutable struct AveKH <: AbstractAve{ComplexF64}
+mutable struct AveKH{K<:Complex} <: AbstractAve{K}
 
-    kparhnp0::Array{ComplexF64,3}
-    kparhp1p0::Array{ComplexF64,3}
-    kparhp3p0::Array{ComplexF64,3}
-    kparhu1::Array{ComplexF64,3}
-    kparhu3::Array{ComplexF64,3}
-    kparht1::Array{ComplexF64,3}
-    kparht3::Array{ComplexF64,3}
-    modkparhu1::Array{ComplexF64,3}
-    modkparhu3::Array{ComplexF64,3}
+    kparhnp0::Array{K,3}
+    kparhp1p0::Array{K,3}
+    kparhp3p0::Array{K,3}
+    kparhu1::Array{K,3}
+    kparhu3::Array{K,3}
+    kparht1::Array{K,3}
+    kparht3::Array{K,3}
+    modkparhu1::Array{K,3}
+    modkparhu3::Array{K,3}
 
-    kparhp1b0::Array{ComplexF64,3}
-    kparhr11b0::Array{ComplexF64,3}
-    kparhr13b0::Array{ComplexF64,3}
+    kparhp1b0::Array{K,3}
+    kparhr11b0::Array{K,3}
+    kparhr13b0::Array{K,3}
 
-    kparhnbp::Array{ComplexF64,3}
-    kparhp3bp::Array{ComplexF64,3}
-    kparhp1bp::Array{ComplexF64,3}
-    kparhr11bp::Array{ComplexF64,3}
-    kparhr13bp::Array{ComplexF64,3}
+    kparhnbp::Array{K,3}
+    kparhp3bp::Array{K,3}
+    kparhp1bp::Array{K,3}
+    kparhr11bp::Array{K,3}
+    kparhr13bp::Array{K,3}
 end
 
-function AveKH(ns::Int, nbasis::Int)
-    kparhnp0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhp1p0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhp3p0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhu1 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhu3 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparht1 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparht3 = zeros(ComplexF64, ns, nbasis, nbasis)
-    modkparhu1 = zeros(ComplexF64, ns, nbasis, nbasis)
-    modkparhu3 = zeros(ComplexF64, ns, nbasis, nbasis)
+function AveKH{K}(ns::Int, nbasis::Int) where {K<:Complex}
+    kparhnp0 = zeros(K, ns, nbasis, nbasis)
+    kparhp1p0 = zeros(K, ns, nbasis, nbasis)
+    kparhp3p0 = zeros(K, ns, nbasis, nbasis)
+    kparhu1 = zeros(K, ns, nbasis, nbasis)
+    kparhu3 = zeros(K, ns, nbasis, nbasis)
+    kparht1 = zeros(K, ns, nbasis, nbasis)
+    kparht3 = zeros(K, ns, nbasis, nbasis)
+    modkparhu1 = zeros(K, ns, nbasis, nbasis)
+    modkparhu3 = zeros(K, ns, nbasis, nbasis)
 
-    kparhp1b0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhr11b0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhr13b0 = zeros(ComplexF64, ns, nbasis, nbasis)
+    kparhp1b0 = zeros(K, ns, nbasis, nbasis)
+    kparhr11b0 = zeros(K, ns, nbasis, nbasis)
+    kparhr13b0 = zeros(K, ns, nbasis, nbasis)
 
-    kparhnbp = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhp3bp = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhp1bp = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhr11bp = zeros(ComplexF64, ns, nbasis, nbasis)
-    kparhr13bp = zeros(ComplexF64, ns, nbasis, nbasis)
+    kparhnbp = zeros(K, ns, nbasis, nbasis)
+    kparhp3bp = zeros(K, ns, nbasis, nbasis)
+    kparhp1bp = zeros(K, ns, nbasis, nbasis)
+    kparhr11bp = zeros(K, ns, nbasis, nbasis)
+    kparhr13bp = zeros(K, ns, nbasis, nbasis)
 
-    AveKH(
+    AveKH{K}(
         kparhnp0, kparhp1p0, kparhp3p0, kparhu1, kparhu3, kparht1, kparht3, modkparhu1, modkparhu3,
         kparhp1b0, kparhr11b0, kparhr13b0,
         kparhnbp, kparhp3bp, kparhp1bp, kparhr11bp, kparhr13bp
     )
 end
+
+# Convenience constructor defaulting to ComplexF64
+AveKH(ns::Int, nbasis::Int) = AveKH{ComplexF64}(ns, nbasis)
 
 
 mutable struct AveG{T<:Real} <: AbstractAve{T}
@@ -1040,56 +1043,59 @@ function AveWG{T}(ns::Int, nbasis::Int) where {T<:Real}
     )
 end
 
-mutable struct AveKG <: AbstractAve{ComplexF64}
+mutable struct AveKG{K<:Complex} <: AbstractAve{K}
 
-    kpargnp0::Array{ComplexF64,3}
-    kpargp1p0::Array{ComplexF64,3}
-    kpargp3p0::Array{ComplexF64,3}
-    kpargu1::Array{ComplexF64,3}
-    kpargu3::Array{ComplexF64,3}
-    kpargt1::Array{ComplexF64,3}
-    kpargt3::Array{ComplexF64,3}
-    modkpargu1::Array{ComplexF64,3}
-    modkpargu3::Array{ComplexF64,3}
+    kpargnp0::Array{K,3}
+    kpargp1p0::Array{K,3}
+    kpargp3p0::Array{K,3}
+    kpargu1::Array{K,3}
+    kpargu3::Array{K,3}
+    kpargt1::Array{K,3}
+    kpargt3::Array{K,3}
+    modkpargu1::Array{K,3}
+    modkpargu3::Array{K,3}
 
-    kpargp1b0::Array{ComplexF64,3}
-    kpargr11b0::Array{ComplexF64,3}
-    kpargr13b0::Array{ComplexF64,3}
+    kpargp1b0::Array{K,3}
+    kpargr11b0::Array{K,3}
+    kpargr13b0::Array{K,3}
 
-    kpargnbp::Array{ComplexF64,3}
-    kpargp3bp::Array{ComplexF64,3}
-    kpargp1bp::Array{ComplexF64,3}
-    kpargr11bp::Array{ComplexF64,3}
-    kpargr13bp::Array{ComplexF64,3}
+    kpargnbp::Array{K,3}
+    kpargp3bp::Array{K,3}
+    kpargp1bp::Array{K,3}
+    kpargr11bp::Array{K,3}
+    kpargr13bp::Array{K,3}
 end
 
-function AveKG(ns::Int, nbasis::Int)
-    kpargnp0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargp1p0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargp3p0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargu1 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargu3 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargt1 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargt3 = zeros(ComplexF64, ns, nbasis, nbasis)
-    modkpargu1 = zeros(ComplexF64, ns, nbasis, nbasis)
-    modkpargu3 = zeros(ComplexF64, ns, nbasis, nbasis)
+function AveKG{K}(ns::Int, nbasis::Int) where {K<:Complex}
+    kpargnp0 = zeros(K, ns, nbasis, nbasis)
+    kpargp1p0 = zeros(K, ns, nbasis, nbasis)
+    kpargp3p0 = zeros(K, ns, nbasis, nbasis)
+    kpargu1 = zeros(K, ns, nbasis, nbasis)
+    kpargu3 = zeros(K, ns, nbasis, nbasis)
+    kpargt1 = zeros(K, ns, nbasis, nbasis)
+    kpargt3 = zeros(K, ns, nbasis, nbasis)
+    modkpargu1 = zeros(K, ns, nbasis, nbasis)
+    modkpargu3 = zeros(K, ns, nbasis, nbasis)
 
-    kpargp1b0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargr11b0 = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargr13b0 = zeros(ComplexF64, ns, nbasis, nbasis)
+    kpargp1b0 = zeros(K, ns, nbasis, nbasis)
+    kpargr11b0 = zeros(K, ns, nbasis, nbasis)
+    kpargr13b0 = zeros(K, ns, nbasis, nbasis)
 
-    kpargnbp = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargp3bp = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargp1bp = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargr11bp = zeros(ComplexF64, ns, nbasis, nbasis)
-    kpargr13bp = zeros(ComplexF64, ns, nbasis, nbasis)
+    kpargnbp = zeros(K, ns, nbasis, nbasis)
+    kpargp3bp = zeros(K, ns, nbasis, nbasis)
+    kpargp1bp = zeros(K, ns, nbasis, nbasis)
+    kpargr11bp = zeros(K, ns, nbasis, nbasis)
+    kpargr13bp = zeros(K, ns, nbasis, nbasis)
 
-    AveKG(
+    AveKG{K}(
         kpargnp0, kpargp1p0, kpargp3p0, kpargu1, kpargu3, kpargt1, kpargt3, modkpargu1, modkpargu3,
         kpargp1b0, kpargr11b0, kpargr13b0,
         kpargnbp, kpargp3bp, kpargp1bp, kpargr11bp, kpargr13bp
     )
 end
+
+# Convenience constructor defaulting to ComplexF64
+AveKG(ns::Int, nbasis::Int) = AveKG{ComplexF64}(ns, nbasis)
 
 
 mutable struct AveGrad{T<:Real}  <: AbstractAve{T}

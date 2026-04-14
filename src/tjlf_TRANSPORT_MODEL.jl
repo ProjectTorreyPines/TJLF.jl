@@ -31,11 +31,11 @@ function tjlf_TM(inputs::TJLF.InputTJLF{T}, satParams::SaturationParameters{T}, 
     original_iflux = inputs.IFLUX
 
     # Output arrays
-    firstPass_eigenvalue = zeros(Float64, nmodes, nky, 2)
-    secondPass_eigenvalue = zeros(Float64, nmodes, nky, 2)  # Separate array for second pass results
-    QL_weights = zeros(Float64, 3, ns, nmodes, nky, 5)
-    field_weight_out = zeros(ComplexF64, 3, nbasis, nmodes, nky)
-    phi_bar_matrix = inputs.SAT_RULE == 0 ? zeros(Float64, nmodes, nky) : Matrix{Float64}(undef, 0, 0)
+    firstPass_eigenvalue = zeros(T, nmodes, nky, 2)
+    secondPass_eigenvalue = zeros(T, nmodes, nky, 2)  # Separate array for second pass results
+    QL_weights = zeros(T, 3, ns, nmodes, nky, 5)
+    field_weight_out = zeros(Complex{T}, 3, nbasis, nmodes, nky)
+    phi_bar_matrix = inputs.SAT_RULE == 0 ? zeros(T, nmodes, nky) : Matrix{T}(undef, 0, 0)
 
     if alpha_quench_in != 0.0 || vexb_shear_s == 0.0
         Threads.@threads for ky_index in eachindex(ky_spect)
@@ -162,8 +162,8 @@ description:
 """
 function onePass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outputHermite::OutputHermite{T},
     vexb_shear_s::T,
-    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{ComplexF64,4};
-    phi_bar_matrix::Matrix{Float64} = Matrix{Float64}(undef, 0, 0)) where T<:Real
+    eigenvalue_spectrum_out::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{Complex{T},4};
+    phi_bar_matrix::Matrix{T} = Matrix{T}(undef, 0, 0)) where T<:Real
 
     ns = inputs.NS
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
@@ -264,7 +264,7 @@ function firstPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
         # println("this is 1")
         nmodes_out, gamma_nb_min_out,
         gamma_out, freq_out,
-        _,_,_,_,_ = tjlf_max(inputs, satParams, outputHermite, ky, 0.0, ky_index)
+        _,_,_,_,_ = tjlf_max(inputs, satParams, outputHermite, ky, zero(T), ky_index)
     else
         error("NOT IMPLEMENTED YET -DSUN")
     end
@@ -378,8 +378,8 @@ description:
 """
 function secondPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T},outputHermite::OutputHermite{T},
     kx0_e::T,
-    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{ComplexF64,4};
-    phi_bar_matrix::Matrix{Float64} = Matrix{Float64}(undef, 0, 0)) where T<:Real
+    firstPass_eigenvalue::Array{T,3}, secondPass_eigenvalue::Array{T,3}, QL_weights::Array{T,5}, ky_index::Int, field_weight_out::Array{Complex{T},4};
+    phi_bar_matrix::Matrix{T} = Matrix{T}(undef, 0, 0)) where T<:Real
 
     # input values
     ns = inputs.NS

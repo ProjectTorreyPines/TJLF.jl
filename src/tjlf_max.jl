@@ -89,8 +89,8 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
     dt = (tmax-tmin)/(nt-1)
     tp = tmin
 
-    gamma_n = zeros(Float64, nt)
-    width_n = zeros(Float64, nt)
+    gamma_n = zeros(T, nt)
+    width_n = zeros(T, nt)
     for i = 1:nt
         tp = tmin + (i-1)*dt
         inputs.WIDTH_SPECTRUM[ky_index] = 10.0^tp
@@ -327,8 +327,8 @@ function tjlf_max(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outp
             inputs.USE_BPAR = original_bpar
         end
         maxmodes = 16 #### from tglf_modules
-        gamma_out = zeros(Float64,maxmodes)
-        freq_out = zeros(Float64,maxmodes)
+        gamma_out = zeros(T,maxmodes)
+        freq_out = zeros(T,maxmodes)
         particle_QL_out = fill(NaN, (3, ns, maxmodes))
         energy_QL_out = fill(NaN, (3, ns, maxmodes))
         stress_par_QL_out = fill(NaN, (3, ns, maxmodes))
