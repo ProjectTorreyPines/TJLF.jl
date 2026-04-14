@@ -125,4 +125,31 @@ using ForwardDiff
             @test relerr < 1e-4
         end
     end
+
+    # --- Tests 5-7: SAT_RULE=1,2,3 (reuse tglf01 input, override SAT_RULE) ---
+    # The IFT eigen dispatch is already compiled from SAT_RULE=0 above;
+    # SAT_RULE only affects the saturation formula, so these compile quickly.
+    for sat in [1, 2, 3]
+        @testset "∂Qe/∂RLTS_2 (SAT_RULE=$sat)" begin
+            input_tjlf_sat = deepcopy(input_tjlf)
+            input_tjlf_sat.SAT_RULE = sat
+
+            function tjlf_Qe_sat(x::T) where {T<:Real}
+                inp = convert_input_tjlf(T, input_tjlf_sat)
+                inp.RLTS[2] = x
+                QL = TJLF.run_tjlf(inp)
+                return TJLF.Qe(QL)
+            end
+
+            x0 = input_tjlf_sat.RLTS[2]
+            h = 1e-5
+            dQe_fd = (tjlf_Qe_sat(x0 + h) - tjlf_Qe_sat(x0 - h)) / (2h)
+            dQe_ad = ForwardDiff.derivative(tjlf_Qe_sat, x0)
+
+            @test isfinite(dQe_ad)
+            @test isfinite(dQe_fd)
+            relerr = abs(dQe_fd) > 0 ? abs(dQe_ad - dQe_fd) / abs(dQe_fd) : abs(dQe_ad - dQe_fd)
+            @test relerr < 1e-4
+        end
+    end
 end
