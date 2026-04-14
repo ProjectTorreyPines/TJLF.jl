@@ -16,7 +16,7 @@ location:
     tjlf_geometry.jl
 """
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T};
-    small::T=0.00000001, vzf_out_param::T=NaN, kymax_out_param::T=NaN) where T<:Real
+    small=T(0.00000001), vzf_out_param=T(NaN), kymax_out_param=T(NaN)) where T<:Real
     sign_IT = inputs.SIGN_IT
     vexb_shear = inputs.VEXB_SHEAR
     sat_rule_in = inputs.SAT_RULE
@@ -74,7 +74,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         end
 
         kx0_e = ifelse.(abs.(kx0_e) .> a0 , a0.*kx0_e./abs.(kx0_e) , kx0_e)
-        kx0_e = ifelse.(isnan.(kx0_e) .|| isinf.(kx0_e), 0.0 , kx0_e)
+        kx0_e = ifelse.(isnan.(kx0_e) .|| isinf.(kx0_e), zero(T) , kx0_e)
 
     end
 
@@ -103,7 +103,7 @@ location:
 """
 function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outHermite::OutputHermite{T},
     ky::T, ky_index::Int;
-    kx0_e::T=NaN, ms::Int=128) where T<:Real
+    kx0_e=T(NaN), ms::Int=128) where T<:Real
 
     width_in = inputs.WIDTH_SPECTRUM[ky_index]
     sat_rule_in = inputs.SAT_RULE
@@ -163,7 +163,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         thx = width_in * x[i]
         sign_theta = ifelse(thx>=0, 1.0, -1.0)
 
-        loops = round(Int, abs(thx/(2π)), RoundDown)
+        loops = floor(Int, abs(thx/(2π)))
         y_x = Ly*(abs(thx) - loops*2π)/ (2π)
         if(thx<0.0)
             y_x = Ly - y_x
@@ -298,7 +298,7 @@ function xgrid_functions_geo(inputs::InputTJLF{T}, satParams::SaturationParamete
         end
     end
 
-    delta_y = Vector{Float64}(undef, nb_grid+1)
+    delta_y = Vector{T}(undef, nb_grid+1)
     delta_y[1] = 0
     for i = 2:nb_grid+1
         if(y[pm[1,i]]>y[pm[2,i]])
@@ -742,7 +742,7 @@ function mercier_luc(inputs::InputTJLF{T}; ms::Int=128) where T<:Real
 end
 
 
-function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where T<:Real
+function miller_geo(inputs::InputTJLF{T}; mts::Real=5.0, ms::Int=128)  where T<:Real
 
     ## Modified 8/2024 to include Miller eXtended Harmonic (MXH) parameterization (Arbon et al PPCF 2021)
 
@@ -929,7 +929,7 @@ function miller_geo(inputs::InputTJLF{T}; mts::Float64=5.0, ms::Int=128)  where 
 end
 
 
-function get_argR(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
+function get_argR(theta, inputs::InputTJLF{T}) where {T<:Real}
     sh_cos0 = inputs.SHAPE_COS0::T
     sh_cos1 = inputs.SHAPE_COS1::T
     sh_cos2 = inputs.SHAPE_COS2::T
@@ -961,7 +961,7 @@ function get_argR(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
     return get_arg
 end
 
-function get_argR_t(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
+function get_argR_t(theta, inputs::InputTJLF{T}) where {T<:Real}
 
     sh_cos1 = inputs.SHAPE_COS1::T
     sh_cos2 = inputs.SHAPE_COS2::T
@@ -992,7 +992,7 @@ function get_argR_t(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
     return get_arg
 end
 
-function get_argR_r(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
+function get_argR_r(theta, inputs::InputTJLF{T}) where {T<:Real}
 
     delta_loc = inputs.DELTA_LOC::T #gacode.io doesn't def this, but del is usually for triangularity, so a default value of 0 doesn't make much sense...
     sh_s_cos0 = inputs.SHAPE_S_COS0::T
@@ -1025,7 +1025,7 @@ function get_argR_r(theta::Float64, inputs::InputTJLF{T}) where {T<:Real}
     return get_arg
 end
 
-function get_theta0(theta::Float64, inputs::InputTJLF{T}; small::Float64=1e-12) where {T<:Real}
+function get_theta0(theta, inputs::InputTJLF{T}; small::Real=1e-12) where {T<:Real}
     theta1 = theta
     argR = get_argR(theta, inputs)
     i = 0

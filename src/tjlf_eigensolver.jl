@@ -35,12 +35,12 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     ns0 = ifelse(inputs.ADIABATIC_ELEC, 2, 1)
     nroot = 15 #### hardcoded
 
-    vpar::Vector{Float64} = inputs.VPAR
-    mass::Vector{Float64} = inputs.MASS
-    rlns::Vector{Float64} = inputs.RLNS
-    taus::Vector{Float64} = inputs.TAUS
-    zs::Vector{Float64} = inputs.ZS
-    as::Vector{Float64} = inputs.AS
+    vpar = inputs.VPAR
+    mass = inputs.MASS
+    rlns = inputs.RLNS
+    taus = inputs.TAUS
+    zs = inputs.ZS
+    as = inputs.AS
 
 
     vs2 = √(taus[2] / mass[2])
@@ -70,7 +70,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     B_unit = satParams.B_unit
     q_unit = satParams.q_unit
 
-    U0::Float64 = sum((alpha_mach_in*sign_it_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
+    U0 = sum((alpha_mach_in*sign_it_in).*vpar.*zs.^2 .* as./taus) ### defined in startup.f90
 
     #*************************************************************
     # START
@@ -91,9 +91,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         hw113b0 = 0.0
         hw133b0 = 0.0
         hw333b0 = 0.0
-        kpar_hp1b0::ComplexF64 = 0.0
-        kpar_hr11b0::ComplexF64 = 0.0
-        kpar_hr13b0::ComplexF64 = 0.0
+        kpar_hp1b0 = zero(K)
+        kpar_hr11b0 = zero(K)
+        kpar_hr13b0 = zero(K)
         wdhp1b0 = 0.0
         wdhr11b0 = 0.0
         wdhr13b0 = 0.0
@@ -106,9 +106,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         gw113b0 = 0.0
         gw133b0 = 0.0
         gw333b0 = 0.0
-        kpar_gp1b0::ComplexF64 = 0.0
-        kpar_gr11b0::ComplexF64 = 0.0
-        kpar_gr13b0::ComplexF64 = 0.0
+        kpar_gp1b0 = zero(K)
+        kpar_gr11b0 = zero(K)
+        kpar_gr13b0 = zero(K)
         wdgp1b0 = 0.0
         wdgr11b0 = 0.0
         wdgr13b0 = 0.0
@@ -138,11 +138,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         wdhp1bp = 0.0
         wdhr11bp = 0.0
         wdhr13bp = 0.0
-        kpar_hnbp::ComplexF64 = 0.0
-        kpar_hp1bp::ComplexF64 = 0.0
-        kpar_hp3bp::ComplexF64 = 0.0
-        kpar_hr11bp::ComplexF64 = 0.0
-        kpar_hr13bp::ComplexF64 = 0.0
+        kpar_hnbp = zero(K)
+        kpar_hp1bp = zero(K)
+        kpar_hp3bp = zero(K)
+        kpar_hr11bp = zero(K)
+        kpar_hr13bp = zero(K)
         gnbp = 0.0
         gp1bp = 0.0
         gp3bp = 0.0
@@ -155,11 +155,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         wdgp1bp = 0.0
         wdgr11bp = 0.0
         wdgr13bp = 0.0
-        kpar_gnbp::ComplexF64 = 0.0
-        kpar_gp1bp::ComplexF64 = 0.0
-        kpar_gp3bp::ComplexF64 = 0.0
-        kpar_gr11bp::ComplexF64 = 0.0
-        kpar_gr13bp::ComplexF64 = 0.0
+        kpar_gnbp = zero(K)
+        kpar_gp1bp = zero(K)
+        kpar_gp3bp = zero(K)
+        kpar_gr11bp = zero(K)
+        kpar_gr13bp = zero(K)
     end
 
     betae_psi = 0.0
@@ -171,7 +171,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             betae_psi = 0.5*betae_s/ky^2
         end
     end
-    betae_sig::Float64 = 0.0
+    betae_sig = zero(T)
     damp_sig = 0.0 ##### this is just never assigned a different value....
     if(use_bpar_in)
         if(nbasis==2)
@@ -181,7 +181,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
     end
 
-    linsker::Float64 = 0.5*linsker_factor_in
+    linsker = 0.5*linsker_factor_in
     if(nbasis==1) linsker=0.0 end
 
     am = 1.0
@@ -249,8 +249,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     d33 = (d1 - d3)/3.0
 
     # include R(theta)/R0 factor like gyro convetions. Note that sign_Bt_in is in ave_c_tor_par
-    vpar_shear = Vector{Float64}(undef, ns)
-    vpar = Vector{Float64}(undef, ns)
+    vpar_shear = Vector{T}(undef, ns)
+    vpar = Vector{T}(undef, ns)
     for is = 1:ns
         vpar_shear_in = inputs.VPAR_SHEAR[is]
         vpar_in = inputs.VPAR[is]
@@ -403,12 +403,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     cb3=0.0
     cb5 =0.0
 
-    cb1 = 0.163*√(kparvthe*cnuei*(1.0 + 0.82*zeff_in))
+    _cb1_arg = kparvthe*cnuei*(1.0 + 0.82*zeff_in)
+    cb1 = _cb1_arg > 0 ? 0.163*√(_cb1_arg) : zero(_cb1_arg)
     if(xnu_model_in==3)
+        _cb1_arg2 = cnuei*(1.0 + 0.82*zeff_in)
         if(wdia_trapped_in==0.0)
-            cb1 = 0.50*(kparvthe^0.34)*(cnuei*(1.0 + 0.82*zeff_in))^0.66
+            cb1 = _cb1_arg2 > 0 ? 0.50*(kparvthe^0.34)*(_cb1_arg2)^0.66 : zero(_cb1_arg2)
         else
-            cb1 = 0.315*(kparvthe^0.34)*(cnuei*(1.0 + 0.82*zeff_in))^0.66
+            cb1 = _cb1_arg2 > 0 ? 0.315*(kparvthe^0.34)*(_cb1_arg2)^0.66 : zero(_cb1_arg2)
         end
     end
     cb1 = cb1*xnu_factor_in
@@ -478,16 +480,16 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     # amat = Matrix{ComplexF64}(undef, iur, iur)
     # bmat = Matrix{ComplexF64}(undef, iur, iur)
     if(nroot>6)
-        v = Vector{Float64}(undef, 20)
-        vb = Vector{Float64}(undef, 20)
+        v = Vector{T}(undef, 20)
+        vb = Vector{T}(undef, 20)
     end
     for is = ns0:ns
-        rlnsIS::Float64 = inputs.RLNS[is]
-        rltsIS::Float64 = inputs.RLTS[is]
-        tausIS::Float64 = inputs.TAUS[is]
-        massIS::Float64 = inputs.MASS[is]
-        vsIS::Float64 = √(tausIS / massIS)
-        zsIS::Float64 = inputs.ZS[is]
+        rlnsIS = inputs.RLNS[is]
+        rltsIS = inputs.RLTS[is]
+        tausIS = inputs.TAUS[is]
+        massIS = inputs.MASS[is]
+        vsIS = √(tausIS / massIS)
+        zsIS = inputs.ZS[is]
 
         ### i hate it here (this is necessary)
         ft = outputGeo.fts[is]  # electrons
@@ -497,7 +499,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         ft5 = ft^5
 
         if(nroot>6)
-            index = round(Int, 20*ft, RoundDown) + 1
+            index = floor(Int, 20*ft) + 1
             if(index==21) index=20 end
             df = (ft-uv_constants.fm[index])/(uv_constants.fm[index+1]-uv_constants.fm[index])
 
@@ -572,11 +574,11 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         # start of loop over basis ib,jb for amat
         #*************************************************************
         for js = ns0:ns
-            tausJS::Float64 = inputs.TAUS[js]
-            massJS::Float64 = inputs.MASS[js]
-            vsJS::Float64 = √(tausJS / massJS)
-            zsJS::Float64 = inputs.ZS[js]
-            asJS::Float64 = inputs.AS[js]
+            tausJS = inputs.TAUS[js]
+            massJS = inputs.MASS[js]
+            vsJS = √(tausJS / massJS)
+            zsJS = inputs.ZS[js]
+            asJS = inputs.AS[js]
 
             for ib = 1:nbasis
                 for jb = 1:nbasis
@@ -1020,14 +1022,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         phi_A = phi_A + N_j*E_i*kpar_hnp0*vpar[is]
                     end
                     phi_B = -hn*E_i*N_j
-                    sig_A::ComplexF64 = 0.0
-                    sig_B::ComplexF64 = 0.0
-                    psi_A::ComplexF64 = 0.0
-                    psi_B::ComplexF64 = 0.0
-                    phi_AU::ComplexF64 = 0.0
-                    phi_BU::ComplexF64 = 0.0
-                    psi_AN::ComplexF64 = 0.0
-                    psi_BN::ComplexF64 = 0.0
+                    sig_A = zero(K)
+                    sig_B = zero(K)
+                    psi_A = zero(K)
+                    psi_B = zero(K)
+                    phi_AU = zero(K)
+                    phi_BU = zero(K)
+                    psi_AN = zero(K)
+                    psi_BN = zero(K)
                     if(use_bpar_in)
                         sig_A = -(betae_sig*(asJS*tausJS*zsIS/massIS) *
                             (im*w_s*(rlnsIS*h10n + rltsIS*1.5*(h10p3-h10n))))
@@ -2725,24 +2727,42 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         if inputs.IFLUX || find_eigenvector
             amat_copy = copy(amat)
             bmat_copy = copy(bmat)
-            (alpha, beta, _, _) = ggev!('N','N', amat_copy, bmat_copy)
+            alpha = _generalized_eigenvalues(amat_copy, bmat_copy)
         else
-            (alpha, beta, _, _) = ggev!('N','N', amat, bmat)
+            alpha = _generalized_eigenvalues(amat, bmat)
         end
-        return alpha./beta, fill(NaN*im,(1,1))
+        return alpha, fill(NaN*im,(1,1))
     end
 
     if inputs.IFLUX || find_eigenvector
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
-
-        (amat_copy, bmat_copy,_) = gesv!(bmat_copy, amat_copy)
-        alpha = geev!('N','N',amat_copy)[1]
+        alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy)
     else
-        (amat, bmat,_) = gesv!(bmat, amat)
-        alpha = geev!('N','N',amat)[1]
+        alpha = _standard_eigenvalues_via_solve(amat, bmat)
     end
 
     return alpha, fill(NaN*im,(1,1))
 
+end
+
+# Fast path: use LAPACK for ComplexF64, generic Julia otherwise
+function _generalized_eigenvalues(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
+    (alpha, beta, _, _) = ggev!('N','N', A, B)
+    return alpha ./ beta
+end
+
+function _generalized_eigenvalues(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}
+    F = eigen(A, B)
+    return F.values
+end
+
+function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
+    (A, B, _) = gesv!(B, A)
+    return geev!('N','N', A)[1]
+end
+
+function _standard_eigenvalues_via_solve(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}
+    alpha = eigen(B \ A).values
+    return alpha
 end

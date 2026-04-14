@@ -53,8 +53,8 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
 
     if(spectrum_type == 0)
         nky = nky_in
-        ky_spectrum = Vector{Float64}(undef,nky)
-        dky_spectrum = Vector{Float64}(undef,nky)
+        ky_spectrum = Vector{T}(undef,nky)
+        dky_spectrum = Vector{T}(undef,nky)
         # ky1 = inputs.KY * ky_factor # KYGRID_MODEL=0: plain linear grid, no grad_r0 scaling (matches Fortran TGLF)
         ky1 = inputs.KY
         dky0 = ky1/nky_in
@@ -65,8 +65,8 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
 
     elseif(spectrum_type == 1)   # APS07 spectrum
         nky = 9 #Initialize low ky steps.
-        ky_spectrum = Vector{Float64}(undef,nky + nky_in)
-        dky_spectrum = Vector{Float64}(undef,nky + nky_in)
+        ky_spectrum = Vector{T}(undef,nky + nky_in)
+        dky_spectrum = Vector{T}(undef,nky + nky_in)
 
         ky_max = 0.9*ky_factor/rho_ion # Not exactly sure on this definition. It is a maximum ky for low ky presumably. In GYRO units (which most cases seem to use), factor is just 1 as grad r0 is normalized.
         dky0 = ky_max/nky
@@ -98,8 +98,8 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
         nky2 = 7
         nky = nky1 + nky2
 
-        ky_spectrum = Vector{Float64}(undef,nky + nky_in)
-        dky_spectrum = Vector{Float64}(undef,nky + nky_in)
+        ky_spectrum = Vector{T}(undef,nky + nky_in)
+        dky_spectrum = Vector{T}(undef,nky + nky_in)
 
         dky0 = 0.05*ky_factor/rho_ion
         for i = 1:nky1
@@ -131,11 +131,11 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
 
     elseif(spectrum_type == 3)   # ky_min=ky_in spectrum similar to APS07
         ky_max = ky_factor/rho_ion
-        nky1 = round(Int, ky_max/ky_in, RoundDown) - 1
+        nky1 = floor(Int, ky_max/ky_in) - 1
         nky2 = 1
         nky = nky1 + nky2
-        ky_spectrum = Vector{Float64}(undef,nky + nky_in)
-        dky_spectrum = Vector{Float64}(undef,nky + nky_in)
+        ky_spectrum = Vector{T}(undef,nky + nky_in)
+        dky_spectrum = Vector{T}(undef,nky + nky_in)
 
         ky_min = ky_in
         dky0 = ky_min
@@ -178,8 +178,8 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
         nky2 = 7
         nky = nky1 + nky2
 
-        ky_spectrum = Vector{Float64}(undef,nky + nky_in)
-        dky_spectrum = Vector{Float64}(undef,nky + nky_in)
+        ky_spectrum = Vector{T}(undef,nky + nky_in)
+        dky_spectrum = Vector{T}(undef,nky + nky_in)
 
         ky_min = 0.05*ky_factor/rho_ion
         for i = 1:6      # Hard-coding for now :: nky1
