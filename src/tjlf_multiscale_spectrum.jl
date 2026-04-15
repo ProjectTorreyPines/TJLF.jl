@@ -865,13 +865,14 @@ function sum_ky_spectrum(
     q_low_out = zeros(T, (ns, nm))
     QL_flux_out = zeros(T, nf, ns, 5)
     dky0 = zero(T)
+    dky1 = zero(T)
     ky0 = zero(T)
     for i in eachindex(ky_spect)
         ky = ky_spect[i]
         ky1 = ky
         if i == 1
             dky1 = ky1
-        else
+        elseif inputs.KYGRID_MODEL != 0
             dky = log(ky1 / ky0) / (ky1 - ky0)
             dky1 = ky1 * (1.0 - ky0 * dky)
             dky0 = ky0 * (ky1 * dky - 1.0)
