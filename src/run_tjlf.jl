@@ -1,11 +1,11 @@
-function run(inputTJLF::InputTJLF)
+function run(inputTJLF::InputTJLF; use_gpu::Bool=false)
     use_tm = ismissing(inputTJLF.USE_TRANSPORT_MODEL) ? true : inputTJLF.USE_TRANSPORT_MODEL
     if use_tm
         checkInput(inputTJLF)
         outputHermite = gauss_hermite(inputTJLF)
         satParams = get_sat_params(inputTJLF)
         inputTJLF.KY_SPECTRUM .= get_ky_spectrum(inputTJLF, satParams.grad_r0)
-        tm = tjlf_TM(inputTJLF, satParams, outputHermite)
+        tm = tjlf_TM(inputTJLF, satParams, outputHermite; use_gpu=use_gpu)
         QL_weights            = tm.QL_weights
         firstPass_eigenvalue  = tm.firstPass_eigenvalue
         secondPass_eigenvalue = tm.secondPass_eigenvalue
@@ -43,7 +43,7 @@ function run(inputTJLF::InputTJLF)
         nmodes_out, gamma_out, freq_out,
             particle_QL_out, energy_QL_out, stress_tor_QL_out, stress_par_QL_out, exchange_QL_out,
             _ft, field_weight_out_3d, _phi = tjlf_LS(inputTJLF, satParams, outputHermite,
-                                                      inputTJLF.KY, nbasis, inputTJLF.VEXB_SHEAR, 1)
+                                                      inputTJLF.KY, nbasis, inputTJLF.VEXB_SHEAR, 1; use_gpu=use_gpu)
 
         eigenvalue       = zeros(Float64, nmodes, 1, 2)
         QL_weights       = zeros(Float64, 3, ns, nmodes, 1, 5)
@@ -65,9 +65,9 @@ function run(inputTJLF::InputTJLF)
     end
 end
 
-function run(inputTGLF::InputTGLF)
+function run(inputTGLF::InputTGLF; use_gpu::Bool=false)
     inputTJLF = InputTJLF{Float64}(inputTGLF)
-    return run(inputTJLF)
+    return run(inputTJLF; use_gpu=use_gpu)
 end
 
 """
@@ -83,8 +83,8 @@ description:
     Runs TJLF on a single InputTJLF struct, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
-function run_tjlf(inputTJLF::InputTJLF)
-    return run(inputTJLF).QL_flux_out
+function run_tjlf(inputTJLF::InputTJLF; use_gpu::Bool=false)
+    return run(inputTJLF; use_gpu=use_gpu).QL_flux_out
 end
 
 """
@@ -100,11 +100,11 @@ description:
     Runs TJLF on a vector of InputTJLF structs, during the run, will save the width spectrum and eigenvalue spectrum to the InputTJLF struct.
     If you want to use these widths and eigenvalues in future runs, there is a flag: FIND_WIDTH and FIND_EIGEN that you set to false
 """
-function run_tjlf(input_tjlfs::Vector{InputTJLF{T}}) where {T<:Real}
+function run_tjlf(input_tjlfs::Vector{InputTJLF{T}}; use_gpu::Bool=false) where {T<:Real}
     checkInput(input_tjlfs)
     outputs = Vector{Array{T,3}}(undef, length(input_tjlfs))
     Threads.@threads for idx in eachindex(input_tjlfs)
-        outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx])
+        outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx]; use_gpu=use_gpu)
     end
     return outputs
 end
@@ -121,3 +121,30 @@ Qi(QL_flux_out::Array{<:Real}) = sum(QL_flux_out[:, 2:end, 2])
 Γe(QL_flux_out::Array{<:Real}) = sum(QL_flux_out[:, 1, 1])
 
 Γi(QL_flux_out::Array{<:Real}) = [sum(QL_flux_out[:, k, 1]) for k in 2:size(QL_flux_out)[2]]
+
+
+"""
+    pick_device(mode::Symbol)
+
+parameters:
+    mode::Symbol - :cpu, :gpu, or :auto
+
+outputs:
+    device::Symbol - :cpu or :gpu
+
+description:
+    Determines the device to use based on the mode and CUDA availability.
+"""
+function pick_device(mode::Symbol)
+    if mode === :cpu
+        return :cpu
+    elseif mode === :gpu
+        (_cuda_functional() && _cuda_device_count() > 0) || error("GPU requested, but CUDA is not functional")
+        return :gpu
+    elseif mode === :auto
+        return _cuda_functional() ? :gpu : :cpu
+    else
+        error("Unknown mode: $mode")
+    end
+end
+

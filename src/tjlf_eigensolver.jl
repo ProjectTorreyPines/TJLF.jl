@@ -22,7 +22,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         nbasis::Int, ky::T,
                         amat::Matrix{K},bmat::Matrix{K},
                         ky_index::Int,
-                        find_eigenvector::Bool) where T<:Real where K<:Complex
+                        find_eigenvector::Bool; use_gpu::Bool=false) where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2737,9 +2737,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     if inputs.IFLUX || find_eigenvector
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
-        alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy)
+        alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
     else
-        alpha = _standard_eigenvalues_via_solve(amat, bmat)
+        alpha = _standard_eigenvalues_via_solve(amat, bmat; use_gpu=use_gpu)
     end
 
     return alpha, fill(NaN*im,(1,1))
@@ -2757,7 +2757,15 @@ function _generalized_eigenvalues(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}
     return F.values
 end
 
-function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
+function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64}; use_gpu::Bool=false)
+    if use_gpu && _cuda_functional()
+        try
+            A = _gpu_solve!(A, B)
+            return geev!('N','N', A)[1]
+        catch e
+            @warn "GPU eigensolver failed, falling back to CPU: $(e)"
+        end
+    end
     (A, B, _) = gesv!(B, A)
     return geev!('N','N', A)[1]
 end

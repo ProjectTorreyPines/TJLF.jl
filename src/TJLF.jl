@@ -10,6 +10,13 @@ using FastGaussQuadrature
 using LinearMaps
 import KrylovKit
 
+# Stubs overridden by TJLFCUDAExt when CUDA is loaded
+_cuda_functional() = false
+_cuda_device_count() = 0
+function _gpu_solve!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
+    error("CUDA extension not loaded")
+end
+
 # @show BLAS.get_config()
 BLAS.set_num_threads(1)
 
@@ -30,7 +37,7 @@ include("tjlf_max.jl")
 include("tjlf_TRANSPORT_MODEL.jl")
 include("run_tjlf.jl")
 
-export readInput, run, get_wavefunction
+export readInput, run, get_wavefunction, pick_device
 export gauss_hermite, get_sat_params, get_ky_spectrum, get_ky_spectrum_size, tjlf_TM
 export sum_ky_spectrum, xgrid_functions_geo
 
