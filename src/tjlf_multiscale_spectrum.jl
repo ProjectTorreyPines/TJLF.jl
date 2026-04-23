@@ -224,11 +224,21 @@ parameters:
     expsub::T (opt)                     - float for the exponent
     return_phi_params::T (opt)          - boolean flag to change how much is output
 
-outputs: (FIX TO HAVE SAME RETURN TYPE)
-    phinorm           - intensity of the saturation rule (nky,nmodes)
-    QLA_P             - QLA particle value
-    QLA_E             - QLA energy value
-    QLA_O             - QLA value
+outputs:
+  If return_phi_params=false (default): tuple (phinorm, QLA_P, QLA_E, QLA_O)
+    phinorm           - intensity of the saturation rule (nky, nmodes)
+    QLA_P             - QLA particle value (nmodes)
+    QLA_E             - QLA energy value (nmodes)
+    QLA_O             - QLA stress / exchange value (nmodes)
+
+  If return_phi_params=true: NamedTuple with fields needed to reconstruct
+  |phi|^2(kx, ky, mode) from the Staebler SAT kx-Lorentzian shape
+    phinorm   [nky, nmodes] - SAT intensity at the kx peak (kx = kx0_e)
+    kx_width  [nky]         - Lorentzian kx width (kx rms width)
+    gammaeff  [nky, nmodes] - effective growth rate
+    kx0_e     [nky]         - spectral shift (peak of kx distribution)
+    ax, ay, exp_ax          - SAT Lorentzian coefficients
+    (SAT2 adds d1, d2, kycut, b3 geometry parameters)
 
 description:
     takes in the input.tglf file, ky values, gammas, quasilinear weights, and
@@ -748,17 +758,18 @@ function intensity_sat(
     phinorm = field_spectrum_out
     # so the normal behavior doesn't change,
     if return_phi_params
-        out = Dict(
-            (kx_width=kx_width_out),  # [nky] kx_model (kx rms width)
-            (gammaeff=gammaeff_out),  # [nky, nmodes] effective growthrate
-            (kx0_e=kx0_e),  # [nky] spectral shift in kx
-            (ax=ax),  # SAT1 (cx), SAT2 (alpha_x)
-            (ay=ay),  # SAT1 (cy)
-            (exp_ax=exp_ax),  # SAT2 (sigma_x)
+        out = (;
+            phinorm      = phinorm,        # [nky, nmodes] SAT intensity at kx peak (= kx0_e)
+            kx_width     = kx_width_out,   # [nky] kx_model (kx rms width)
+            gammaeff     = gammaeff_out,   # [nky, nmodes] effective growthrate
+            kx0_e        = kx0_e,          # [nky] spectral shift in kx
+            ax           = ax,             # SAT1 (cx), SAT2 (alpha_x)
+            ay           = ay,             # SAT1 (cy)
+            exp_ax       = exp_ax,         # SAT2 (sigma_x)
         )
         if sat_rule_in == 2
             # add bonus geometry params,
-            merge!(out,Dict((d1=d1), (d2=d2), (kycut=kycut), (b3=b3)))
+            out = (; out..., d1=d1, d2=d2, kycut=kycut, b3=b3)
         end
     else
         out = phinorm, QLA_P, QLA_E, QLA_O  # SAT123 intensity and QLA params
