@@ -2723,23 +2723,37 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     end
 
     use_tm = ismissing(inputs.USE_TRANSPORT_MODEL) ? true : inputs.USE_TRANSPORT_MODEL
-    if !use_tm
+    if !use_gpu
+        if !use_tm
+            if inputs.IFLUX || find_eigenvector
+                amat_copy = copy(amat)
+                bmat_copy = copy(bmat)
+                alpha = _generalized_eigenvalues(amat_copy, bmat_copy)
+            else
+                alpha = _generalized_eigenvalues(amat, bmat)
+            end
+            return alpha, fill(NaN*im,(1,1))
+        end
+
         if inputs.IFLUX || find_eigenvector
             amat_copy = copy(amat)
             bmat_copy = copy(bmat)
-            alpha = _generalized_eigenvalues(amat_copy, bmat_copy)
+            alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
         else
-            alpha = _generalized_eigenvalues(amat, bmat)
+            alpha = _standard_eigenvalues_via_solve(amat, bmat; use_gpu=use_gpu)
         end
-        return alpha, fill(NaN*im,(1,1))
-    end
 
-    if inputs.IFLUX || find_eigenvector
+    else
+        println("GPU eigensolver path taken")
+        if !use_tm
+            amat_copy = copy(amat)
+            bmat_copy = copy(bmat)
+            alpha = _generalized_eigenvalues(amat_copy, bmat_copy)
+        end
+
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
         alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
-    else
-        alpha = _standard_eigenvalues_via_solve(amat, bmat; use_gpu=use_gpu)
     end
 
     return alpha, fill(NaN*im,(1,1))
@@ -2758,16 +2772,21 @@ function _generalized_eigenvalues(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}
 end
 
 function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64}; use_gpu::Bool=false)
-    if use_gpu && _cuda_functional()
+    if use_gpu
         try
+            println("GPU path taken")
             A = _gpu_solve!(A, B)
+            println("success")
             return geev!('N','N', A)[1]
         catch e
             @warn "GPU eigensolver failed, falling back to CPU: $(e)"
+            (A, B, _) = gesv!(B, A)
+            return geev!('N','N', A)[1]
         end
+    else
+        (A, B, _) = gesv!(B, A)
+        return geev!('N','N', A)[1]
     end
-    (A, B, _) = gesv!(B, A)
-    return geev!('N','N', A)[1]
 end
 
 function _standard_eigenvalues_via_solve(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}

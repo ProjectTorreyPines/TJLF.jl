@@ -1,10 +1,11 @@
+__precompile__(false)
 module TJLFCUDAExt
 
 using TJLF
 using CUDA
 
 TJLF._cuda_functional() = CUDA.functional()
-TJLF._cuda_device_count() = CUDA.device_count()
+TJLF._cuda_device_count() = length(CUDA.devices())
 
 function TJLF._gpu_solve!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
     A_gpu = CUDA.CuArray(A)
