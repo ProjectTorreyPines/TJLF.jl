@@ -1,6 +1,12 @@
+using Pkg
+Pkg.activate("..")
+Pkg.instantiate()
 using Test
 using TJLF
+Pkg.add("ForwardDiff")
 using ForwardDiff
+
+println(!isnothing(Base.get_extension(TJLF, :TJLFForwardDiffExt)))
 
 @testset "ForwardDiff AD" begin
 

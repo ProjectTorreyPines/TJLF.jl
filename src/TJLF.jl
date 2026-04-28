@@ -10,11 +10,17 @@ using FastGaussQuadrature
 using LinearMaps
 import KrylovKit
 
-# Stubs overridden by TJLFCUDAExt when CUDA is loaded
-_cuda_functional() = false
-_cuda_device_count() = 0
+#  populated by TJLFCUDAExt or TJLFEPCUDAExt.__init__() when CUDA is loaded
+const _CUDA_FUNCTIONAL = Ref{Any}(() -> false)
+const _CUDA_DEVICE_COUNT = Ref{Any}(() -> 0)
+const _CUDA_SOLVE = Ref{Any}(nothing)
+
+# wrappers so call sites stay the same
+_cuda_functional() = _CUDA_FUNCTIONAL[]()
+_cuda_device_count() = _CUDA_DEVICE_COUNT[]()
 function _gpu_solve!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
-    error("CUDA extension not loaded")
+    _CUDA_SOLVE[] === nothing && error("CUDA extension not loaded")
+    return _CUDA_SOLVE[](A, B)
 end
 
 # @show BLAS.get_config()
@@ -30,7 +36,6 @@ include("tjlf_get_uv.jl")
 include("tjlf_eigensolver.jl")
 include("tjlf_FLR_modules.jl")
 include("tjlf_finiteLarmorRadius.jl")
-include("tjlf_ad_extensions.jl")
 include("tjlf_matrix.jl")
 include("tjlf_LINEAR_SOLUTION.jl")
 include("tjlf_max.jl")

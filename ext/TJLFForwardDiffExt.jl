@@ -1,3 +1,9 @@
+module TJLFForwardDiffExt
+
+using TJLF
+using ForwardDiff
+using LinearAlgebra
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AD-compatible eigen dispatch for ForwardDiff.Dual element types.
 #
@@ -13,7 +19,18 @@
 # through the IFT formulas analytically.
 # ─────────────────────────────────────────────────────────────────────────────
 
-import ForwardDiff
+# tjlf_ad_extensions.jl - at the top
+if !hasmethod(LinearAlgebra.eigen, Tuple{LinearAlgebra.Symmetric{<:ForwardDiff.Dual}})
+    function LinearAlgebra.eigen(A::LinearAlgebra.Symmetric{D,M}; kwargs...) where {D <: ForwardDiff.Dual, M}
+        # ... existing implementation
+    end
+end
+
+if !hasmethod(LinearAlgebra.eigen, Tuple{AbstractMatrix{<:Complex{<:ForwardDiff.Dual}}})
+    function LinearAlgebra.eigen(A::AbstractMatrix{Complex{D}}; kwargs...) where {D <: ForwardDiff.Dual}
+        # ... existing implementation
+    end
+end
 
 const _DEGEN_THRESHOLD = 1e-12
 
@@ -182,4 +199,6 @@ function LinearAlgebra.eigen(A::AbstractMatrix{Complex{D}}; kwargs...) where {D 
     end
 
     return (values = λ, vectors = Vd)
+end
+
 end

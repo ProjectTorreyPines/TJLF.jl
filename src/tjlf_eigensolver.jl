@@ -2744,7 +2744,6 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
 
     else
-        println("GPU eigensolver path taken")
         if !use_tm
             amat_copy = copy(amat)
             bmat_copy = copy(bmat)
@@ -2773,23 +2772,21 @@ end
 
 function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64}; use_gpu::Bool=false)
     if use_gpu
-        try
-            println("GPU path taken")
-            A = _gpu_solve!(A, B)
-            println("success")
-            return geev!('N','N', A)[1]
-        catch e
-            @warn "GPU eigensolver failed, falling back to CPU: $(e)"
-            (A, B, _) = gesv!(B, A)
-            return geev!('N','N', A)[1]
-        end
+        # try
+        A = _gpu_solve!(A, B)
+        return geev!('N','N', A)[1]
+        # catch e
+        #     @warn "GPU eigensolver failed, falling back to CPU: $(e)"
+        #     (A, B, _) = gesv!(B, A)
+        #     return geev!('N','N', A)[1]
+        # end
     else
         (A, B, _) = gesv!(B, A)
         return geev!('N','N', A)[1]
     end
 end
 
-function _standard_eigenvalues_via_solve(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}
+function _standard_eigenvalues_via_solve(A::Matrix{K}, B::Matrix{K}; use_gpu::Bool=false) where {K<:Complex}
     alpha = eigen(B \ A).values
     return alpha
 end
