@@ -2744,12 +2744,8 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
 
     else
-        if !use_tm
-            amat_copy = copy(amat)
-            bmat_copy = copy(bmat)
-            alpha = _generalized_eigenvalues(amat_copy, bmat_copy)
-        end
-
+        # use_gpu=true: skip the CPU _generalized_eigenvalues call that the
+        # non-transport-model path would otherwise run (its result is unused).
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
         alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
@@ -2772,14 +2768,9 @@ end
 
 function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64}; use_gpu::Bool=false)
     if use_gpu
-        # try
-        A = _gpu_solve!(A, B)
-        return geev!('N','N', A)[1]
-        # catch e
-        #     @warn "GPU eigensolver failed, falling back to CPU: $(e)"
-        #     (A, B, _) = gesv!(B, A)
-        #     return geev!('N','N', A)[1]
-        # end
+        # _gpu_solve! does getrf(B) + getrs(B,A) + Xgeev!(B⁻¹A) entirely on GPU
+        # and returns Vector{ComplexF64} eigenvalues directly.
+        return _gpu_solve!(A, B)
     else
         (A, B, _) = gesv!(B, A)
         return geev!('N','N', A)[1]

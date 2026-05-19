@@ -18,6 +18,8 @@ const _CUDA_SOLVE = Ref{Any}(nothing)
 # wrappers so call sites stay the same
 _cuda_functional() = _CUDA_FUNCTIONAL[]()
 _cuda_device_count() = _CUDA_DEVICE_COUNT[]()
+# Returns Vector{ComplexF64} of eigenvalues of B⁻¹A, computed entirely on GPU
+# (CUSOLVER getrf/getrs for the solve, then Xgeev for the diagonalisation).
 function _gpu_solve!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
     _CUDA_SOLVE[] === nothing && error("CUDA extension not loaded")
     return _CUDA_SOLVE[](A, B)
