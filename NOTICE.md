@@ -18,7 +18,7 @@ The names "General Atomics", and any associated logos or images, are trademarks 
 
 ## Copyright
 
-Copyright (c) 2024 General Atomics
+Copyright (c) 2026 General Atomics
 
 ## Version
 
