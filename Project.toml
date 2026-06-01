@@ -5,12 +5,14 @@ authors = ["Tom Neiser <neisert@fusion.gat.com>", "Danny Sun <dannysun@alumni.pr
 
 [deps]
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[weakdeps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 
 [extensions]
 TJLFForwardDiffExt = "ForwardDiff"

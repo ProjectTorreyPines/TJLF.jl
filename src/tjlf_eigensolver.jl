@@ -2778,6 +2778,18 @@ function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{Comple
 end
 
 function _standard_eigenvalues_via_solve(A::Matrix{K}, B::Matrix{K}; use_gpu::Bool=false) where {K<:Complex}
-    alpha = eigen(B \ A).values
+    alpha = _herm_eigen(B \ A).values
     return alpha
 end
+
+# ── TJLF-owned eigen entrypoints ─────────────────────────────────────────────
+# These wrap LinearAlgebra.eigen so that AD (ForwardDiff.Dual element types) can
+# be specialized in TJLFForwardDiffExt WITHOUT committing type piracy on
+# LinearAlgebra.eigen. Default implementations just forward to Base/LAPACK; the
+# extension adds Dual-typed methods to these owned functions instead.
+#   _sym_eigen   : real symmetric matrices (modwd!)
+#   _herm_eigen  : complex matrices (modkpar!, B\A standard solve)
+# Both return an object supporting positional destructuring `(values, vectors)`
+# and `.values` / `.vectors` field access (Eigen or NamedTuple).
+_sym_eigen(A::Symmetric) = eigen(A)
+_herm_eigen(A::AbstractMatrix) = eigen(A)
