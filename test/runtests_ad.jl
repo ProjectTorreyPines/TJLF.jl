@@ -1,8 +1,10 @@
 using Test
 using TJLF
-using ForwardDiff
+using ForwardDiff  # provided by test/Project.toml; triggers TJLFForwardDiffExt
 
 @testset "ForwardDiff AD" begin
+
+    @test !isnothing(Base.get_extension(TJLF, :TJLFForwardDiffExt))
 
     # Helper: construct InputTJLF{T} from a Float64 baseline
     function convert_input_tjlf(::Type{T}, base::TJLF.InputTJLF{Float64}) where {T<:Real}

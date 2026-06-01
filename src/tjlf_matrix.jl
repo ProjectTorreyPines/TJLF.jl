@@ -427,7 +427,7 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
     # find the eigenvalues of ave.wdh
     wdh = Symmetric(ave.wdh)
-    wh, ah = eigen(wdh)
+    wh, ah = _sym_eigen(wdh)
     # if abs(wh)<wd_zero, make it +- wd_zero. otherwise keep the wh
     @. wh .= sign(wh) * max(abs(wh), wd_zero_in)
     @inbounds @simd for j in eachindex(wh)
@@ -439,7 +439,7 @@ function modwd!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
 
     ### now for wdg
     wdg = Symmetric(ave.wdg)
-    wg, ag = eigen(wdg)
+    wg, ag = _sym_eigen(wdg)
     # if abs(wg)<wd_zero, make it +- wd_zero. otherwise keep the wg
     @. wg = sign(wg) * max(abs(wg), wd_zero_in)
     @inbounds @simd for j in eachindex(wg)
@@ -470,7 +470,7 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
     # find the eigenvalues and eigenvectors
         if(vpar_model_in!=1)
             a_herm = im.*ave.kpar
-            eig = eigen(a_herm)
+            eig = _herm_eigen(a_herm)
             w = Diagonal(eig.values)
             a = eig.vectors
             b = a * abs.(w) * adjoint(a)
@@ -482,7 +482,7 @@ function modkpar!(inputs::InputTJLF{T},ave::Ave{T}) where T<:Real
         else
             for is = ns0:ns
                 a_herm = im.*ave.kpar_eff[is,:,:]
-                eig = eigen(a_herm)
+                eig = _herm_eigen(a_herm)
                 w = Diagonal(eig.values)
                 a = eig.vectors
                 b = a * abs.(w) * adjoint(a)

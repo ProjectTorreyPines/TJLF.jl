@@ -10,6 +10,21 @@ using FastGaussQuadrature
 using LinearMaps
 import KrylovKit
 
+#  populated by TJLFCUDAExt.__init__() when CUDA is loaded
+const _CUDA_FUNCTIONAL = Ref{Any}(() -> false)
+const _CUDA_DEVICE_COUNT = Ref{Any}(() -> 0)
+const _CUDA_SOLVE = Ref{Any}(nothing)
+
+# wrappers so call sites stay the same
+_cuda_functional() = _CUDA_FUNCTIONAL[]()
+_cuda_device_count() = _CUDA_DEVICE_COUNT[]()
+# Returns Vector{ComplexF64} of eigenvalues of B⁻¹A, computed entirely on GPU
+# (CUSOLVER getrf/getrs for the solve, then Xgeev for the diagonalisation).
+function _gpu_solve!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
+    _CUDA_SOLVE[] === nothing && error("CUDA extension not loaded")
+    return _CUDA_SOLVE[](A, B)
+end
+
 # @show BLAS.get_config()
 BLAS.set_num_threads(1)
 
@@ -23,14 +38,13 @@ include("tjlf_get_uv.jl")
 include("tjlf_eigensolver.jl")
 include("tjlf_FLR_modules.jl")
 include("tjlf_finiteLarmorRadius.jl")
-include("tjlf_ad_extensions.jl")
 include("tjlf_matrix.jl")
 include("tjlf_LINEAR_SOLUTION.jl")
 include("tjlf_max.jl")
 include("tjlf_TRANSPORT_MODEL.jl")
 include("run_tjlf.jl")
 
-export readInput, run, get_wavefunction
+export readInput, run, get_wavefunction, pick_device
 export gauss_hermite, get_sat_params, get_ky_spectrum, get_ky_spectrum_size, tjlf_TM
 export sum_ky_spectrum, xgrid_functions_geo
 

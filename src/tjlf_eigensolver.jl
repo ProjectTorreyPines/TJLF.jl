@@ -22,7 +22,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         nbasis::Int, ky::T,
                         amat::Matrix{K},bmat::Matrix{K},
                         ky_index::Int,
-                        find_eigenvector::Bool) where T<:Real where K<:Complex
+                        find_eigenvector::Bool; use_gpu::Bool=false) where T<:Real where K<:Complex
 
     ft = outputGeo.fts[1]  # electrons
     ft2 = ft^2
@@ -2723,23 +2723,32 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     end
 
     use_tm = ismissing(inputs.USE_TRANSPORT_MODEL) ? true : inputs.USE_TRANSPORT_MODEL
-    if !use_tm
+    if !use_gpu
+        if !use_tm
+            if inputs.IFLUX || find_eigenvector
+                amat_copy = copy(amat)
+                bmat_copy = copy(bmat)
+                alpha = _generalized_eigenvalues(amat_copy, bmat_copy)
+            else
+                alpha = _generalized_eigenvalues(amat, bmat)
+            end
+            return alpha, fill(NaN*im,(1,1))
+        end
+
         if inputs.IFLUX || find_eigenvector
             amat_copy = copy(amat)
             bmat_copy = copy(bmat)
-            alpha = _generalized_eigenvalues(amat_copy, bmat_copy)
+            alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
         else
-            alpha = _generalized_eigenvalues(amat, bmat)
+            alpha = _standard_eigenvalues_via_solve(amat, bmat; use_gpu=use_gpu)
         end
-        return alpha, fill(NaN*im,(1,1))
-    end
 
-    if inputs.IFLUX || find_eigenvector
+    else
+        # use_gpu=true: skip the CPU _generalized_eigenvalues call that the
+        # non-transport-model path would otherwise run (its result is unused).
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
-        alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy)
-    else
-        alpha = _standard_eigenvalues_via_solve(amat, bmat)
+        alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
     end
 
     return alpha, fill(NaN*im,(1,1))
@@ -2757,12 +2766,30 @@ function _generalized_eigenvalues(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}
     return F.values
 end
 
-function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
-    (A, B, _) = gesv!(B, A)
-    return geev!('N','N', A)[1]
+function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64}; use_gpu::Bool=false)
+    if use_gpu
+        # _gpu_solve! does getrf(B) + getrs(B,A) + Xgeev!(B⁻¹A) entirely on GPU
+        # and returns Vector{ComplexF64} eigenvalues directly.
+        return _gpu_solve!(A, B)
+    else
+        (A, B, _) = gesv!(B, A)
+        return geev!('N','N', A)[1]
+    end
 end
 
-function _standard_eigenvalues_via_solve(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}
-    alpha = eigen(B \ A).values
+function _standard_eigenvalues_via_solve(A::Matrix{K}, B::Matrix{K}; use_gpu::Bool=false) where {K<:Complex}
+    alpha = _herm_eigen(B \ A).values
     return alpha
 end
+
+# ── TJLF-owned eigen entrypoints ─────────────────────────────────────────────
+# These wrap LinearAlgebra.eigen so that AD (ForwardDiff.Dual element types) can
+# be specialized in TJLFForwardDiffExt WITHOUT committing type piracy on
+# LinearAlgebra.eigen. Default implementations just forward to Base/LAPACK; the
+# extension adds Dual-typed methods to these owned functions instead.
+#   _sym_eigen   : real symmetric matrices (modwd!)
+#   _herm_eigen  : complex matrices (modkpar!, B\A standard solve)
+# Both return an object supporting positional destructuring `(values, vectors)`
+# and `.values` / `.vectors` field access (Eigen or NamedTuple).
+_sym_eigen(A::Symmetric) = eigen(A)
+_herm_eigen(A::AbstractMatrix) = eigen(A)

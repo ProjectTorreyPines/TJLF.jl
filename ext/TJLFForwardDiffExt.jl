@@ -1,28 +1,34 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# AD-compatible eigen dispatch for ForwardDiff.Dual element types.
-#
-# Julia's LinearAlgebra.eigen internally calls `ishermitian` / checks for
-# Symmetric wrappers and then dispatches to LAPACK, which only supports
-# Float32/64/ComplexF32/ComplexF64.  For Dual-number elements we instead use
-# the implicit function theorem (IFT):
-#
-#   ∂λᵢ/∂p  =  vᵢᴴ  (∂A/∂p)  vᵢ          (non-degenerate eigenvalue)
-#   ∂vᵢ/∂p  =  Σ_{j≠i}  [vⱼᴴ (∂A/∂p) vᵢ / (λᵢ - λⱼ)]  vⱼ
-#
-# The Float64 eigensystem is computed by LAPACK; the Dual perturbation flows
-# through the IFT formulas analytically.
-# ─────────────────────────────────────────────────────────────────────────────
+module TJLFForwardDiffExt
 
-import ForwardDiff
+using TJLF
+using ForwardDiff
+using LinearAlgebra
+import LinearAlgebra.LAPACK.ggev!
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AD-compatible eigen for ForwardDiff.Dual element types.
+#
+# LAPACK only supports Float32/64/ComplexF32/ComplexF64, so for Dual-number
+# elements we compute the Float64 eigensystem with LAPACK and propagate the Dual
+# perturbation analytically via the implicit function theorem (IFT):
+#
+#   ∂λᵢ/∂p  =  lᵢᴴ (∂A/∂p) rᵢ                         (simple eigenvalue)
+#   ∂rᵢ/∂p  =  Σ_{j≠i}  [lⱼᴴ (∂A/∂p) rᵢ / (λᵢ - λⱼ)] rⱼ
+#
+# IMPORTANT (no type piracy): these methods are defined on TJLF-OWNED functions
+# (`TJLF._sym_eigen`, `TJLF._herm_eigen`, `TJLF._generalized_eigenvalues`), NOT
+# on `LinearAlgebra.eigen`. TJLF's eigen call sites route through those owned
+# wrappers, so AD specialization here stays local to TJLF and never overrides
+# `eigen` for other packages.
+# ─────────────────────────────────────────────────────────────────────────────
 
 const _DEGEN_THRESHOLD = 1e-12
 
 # ── Real symmetric matrix with Dual entries ──────────────────────────────────
-# Matches:  modwd!  →  eigen(Symmetric(ave.wdh))  /  eigen(Symmetric(ave.wdg))
-# Return is a NamedTuple that supports both:
-#   wh, ah = eigen(wdh)          (positional iteration)
-#   eig.values / eig.vectors     (field access)
-function LinearAlgebra.eigen(A::LinearAlgebra.Symmetric{D,M}; kwargs...) where {D <: ForwardDiff.Dual, M}
+# Matches:  modwd!  →  _sym_eigen(Symmetric(ave.wdh)) / _sym_eigen(Symmetric(ave.wdg))
+# Returns a NamedTuple supporting both `wh, ah = _sym_eigen(wdh)` (positional)
+# and `eig.values` / `eig.vectors` (field access).
+function TJLF._sym_eigen(A::LinearAlgebra.Symmetric{D,M}) where {D <: ForwardDiff.Dual, M <: AbstractMatrix{D}}
     np  = ForwardDiff.npartials(D)
     Tag = ForwardDiff.tagtype(D)
 
@@ -76,10 +82,10 @@ function LinearAlgebra.eigen(A::LinearAlgebra.Symmetric{D,M}; kwargs...) where {
 end
 
 # ── Complex matrix with Dual entries ─────────────────────────────────────────
-# Matches:  modkpar!  →  eigen(im .* ave.kpar)  /  eigen(im .* ave.kpar_eff[is,:,:])
-#           eigensolver  →  eigen(B \ A)
+# Matches:  modkpar!  →  _herm_eigen(im .* ave.kpar) / _herm_eigen(im .* ave.kpar_eff[is,:,:])
+#           eigensolver  →  _herm_eigen(B \ A)
 # eigenvalues may be complex (e.g. pure-imaginary for anti-Hermitian matrices)
-function LinearAlgebra.eigen(A::AbstractMatrix{Complex{D}}; kwargs...) where {D <: ForwardDiff.Dual}
+function TJLF._herm_eigen(A::AbstractMatrix{Complex{D}}) where {D <: ForwardDiff.Dual}
     np  = ForwardDiff.npartials(D)
     Tag = ForwardDiff.tagtype(D)
 
@@ -182,4 +188,57 @@ function LinearAlgebra.eigen(A::AbstractMatrix{Complex{D}}; kwargs...) where {D 
     end
 
     return (values = λ, vectors = Vd)
+end
+
+# ── Generalized complex eigenproblem A r = λ B r with Dual entries ───────────
+# Matches:  eigensolver  →  _generalized_eigenvalues(amat, bmat)  (non-transport
+# model / EP single-ky path). Returns ONLY the eigenvalues (Vector{Complex{Dual}})
+# to match the owned `_generalized_eigenvalues` contract.
+#
+#   ∂λᵢ/∂p = lᵢᴴ (∂A/∂p − λᵢ ∂B/∂p) rᵢ   with B-biorthogonal normalisation lᵢᴴ B rᵢ = 1
+function TJLF._generalized_eigenvalues(A::Matrix{Complex{D}}, B::Matrix{Complex{D}}) where {D <: ForwardDiff.Dual}
+    np  = ForwardDiff.npartials(D)
+    Tag = ForwardDiff.tagtype(D)
+
+    Af = map(a -> Complex{Float64}(ForwardDiff.value(real(a)), ForwardDiff.value(imag(a))), A)
+    Bf = map(b -> Complex{Float64}(ForwardDiff.value(real(b)), ForwardDiff.value(imag(b))), B)
+
+    # LAPACK ggev! returns left (L) and right (R) eigenvectors; it overwrites its
+    # inputs, so pass copies.
+    (alpha, beta, L, R) = ggev!('V', 'V', copy(Af), copy(Bf))
+    λf = alpha ./ beta    # Vector{ComplexF64}
+    n  = length(λf)
+
+    # B-biorthogonal normalisation: rescale L so that lᵢᴴ B rᵢ = 1
+    BfR = Bf * R
+    for i in 1:n
+        s = dot(L[:, i], BfR[:, i])
+        if abs(s) > 1e-30
+            L[:, i] ./= conj(s)
+        end
+    end
+
+    dλ_re = zeros(n, np)
+    dλ_im = zeros(n, np)
+    for k in 1:np
+        dAk = map(a -> Complex{Float64}(ForwardDiff.partials(real(a), k),
+                                        ForwardDiff.partials(imag(a), k)), A)
+        dBk = map(b -> Complex{Float64}(ForwardDiff.partials(real(b), k),
+                                        ForwardDiff.partials(imag(b), k)), B)
+        # Ck[i,i] = lᵢᴴ (dA − λᵢ dB) rᵢ
+        LH_dAk_R = L' * (dAk * R)
+        LH_dBk_R = L' * (dBk * R)
+        for i in 1:n
+            c = LH_dAk_R[i, i] - λf[i] * LH_dBk_R[i, i]
+            dλ_re[i, k] = real(c)
+            dλ_im[i, k] = imag(c)
+        end
+    end
+
+    return map(1:n) do i
+        Complex(ForwardDiff.Dual{Tag}(real(λf[i]), ntuple(k -> dλ_re[i, k], Val(np))...),
+                ForwardDiff.Dual{Tag}(imag(λf[i]), ntuple(k -> dλ_im[i, k], Val(np))...))
+    end
+end
+
 end
