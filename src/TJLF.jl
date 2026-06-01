@@ -10,7 +10,7 @@ using FastGaussQuadrature
 using LinearMaps
 import KrylovKit
 
-#  populated by TJLFCUDAExt or TJLFEPCUDAExt.__init__() when CUDA is loaded
+#  populated by TJLFCUDAExt.__init__() when CUDA is loaded
 const _CUDA_FUNCTIONAL = Ref{Any}(() -> false)
 const _CUDA_DEVICE_COUNT = Ref{Any}(() -> 0)
 const _CUDA_SOLVE = Ref{Any}(nothing)
