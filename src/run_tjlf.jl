@@ -1,5 +1,5 @@
 function run(inputTJLF::InputTJLF; use_gpu::Bool=false)
-    use_tm = ismissing(inputTJLF.USE_TRANSPORT_MODEL) ? true : inputTJLF.USE_TRANSPORT_MODEL
+    use_tm = inputTJLF.USE_TRANSPORT_MODEL
     if use_tm
         checkInput(inputTJLF)
         outputHermite = gauss_hermite(inputTJLF)

@@ -1124,20 +1124,20 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     ia = nbasis+ib + ia0
 
                     phi_A = N_j*im*w_s*vpar_shear[is]*hp1/vsIS
-                    phi_B = 0.0
+                    phi_B = zero(K)
                     if(vpar_model_in==0)
                         phi_A = phi_A  +N_j*im*w_cd*wdhp1p0*vpar[is]/vsIS
                             + d_1*(nuei_u_u_1+nuei_u_q3_1*5.0/3.0)*hp1*E_i*N_j*vpar[is]/vsIS
                         phi_B = -E_i*N_j*hp1*vpar[is]/vsIS
                     end
-                    sig_A = 0.0
-                    sig_B = 0.0
-                    psi_A = 0.0
-                    psi_B = 0.0
-                    phi_AU = 0.0
-                    phi_BU = 0.0
-                    psi_AN = 0.0
-                    psi_BN = 0.0
+                    sig_A = zero(K)
+                    sig_B = zero(K)
+                    psi_A = zero(K)
+                    psi_B = zero(K)
+                    phi_AU = zero(K)
+                    phi_BU = zero(K)
+                    psi_AN = zero(K)
+                    psi_BN = zero(K)
                     if(use_bper_in)
                         psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hp1b0+1.5*rltsIS*(hr13b0-hp1b0))
                         psi_B = betae_psi*M_i*J_j*hp1b0
@@ -1233,14 +1233,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         phi_A = phi_A +N_j*E_i*kpar_hp1p0*vpar[is]
                     end
                     phi_B = -hp1*E_i*N_j
-                    sig_A = 0.0
-                    sig_B = 0.0
-                    psi_A = 0.0
-                    psi_B = 0.0
-                    phi_AU = 0.0
-                    phi_BU = 0.0
-                    psi_AN = 0.0
-                    psi_BN = 0.0
+                    sig_A = zero(K)
+                    sig_B = zero(K)
+                    psi_A = zero(K)
+                    psi_B = zero(K)
+                    phi_AU = zero(K)
+                    phi_BU = zero(K)
+                    psi_AN = zero(K)
+                    psi_BN = zero(K)
                     if(use_bpar_in)
                         sig_A = -betae_sig*(asJS*tausJS*zsIS/massIS)*(im*w_s*(rlnsIS*h10p1 + rltsIS*1.5*(h10r13-h10p1)))
                         sig_B = betae_sig*h10p1*asJS*tausJS*zsIS*zsIS/(tausIS*massIS)
@@ -1347,14 +1347,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         phi_A = phi_A + N_j*E_i*kpar_hp3p0*vpar[is]
                     end
                     phi_B = -hp3*E_i*N_j
-                    sig_A = 0.0
-                    sig_B = 0.0
-                    psi_A = 0.0
-                    psi_B = 0.0
-                    phi_AU = 0.0
-                    phi_BU = 0.0
-                    psi_AN = 0.0
-                    psi_BN = 0.0
+                    sig_A = zero(K)
+                    sig_B = zero(K)
+                    psi_A = zero(K)
+                    psi_B = zero(K)
+                    phi_AU = zero(K)
+                    phi_BU = zero(K)
+                    psi_AN = zero(K)
+                    psi_BN = zero(K)
                     if(use_bpar_in)
                         sig_A = -betae_sig*(asJS*tausJS*zsIS/massIS) * (im*w_s*(rlnsIS*h10p3 + rltsIS*1.5*(h10r33-h10p3)))
                         sig_B = betae_sig*h10p3*asJS*tausJS*zsIS*zsIS /(tausIS*massIS)
@@ -1455,21 +1455,21 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     ia = 4*nbasis+ib + ia0
 
                     phi_A = N_j*im*w_s*hr11*vpar_shear[is]/vsIS
-                    phi_B = 0.0
+                    phi_B = zero(K)
                     if(vpar_model_in==0)
                         phi_A = (phi_A +N_j*im*w_cd*wdhr11p0*vpar[is]/vsIS
                                 + d_1*(nuei_q1_u_1 + (5/3)*nuei_q1_q3_1+3*nuei_q1_q1_1)
                                 *hr11*E_i*N_j*vpar[is]/vsIS)
                         phi_B = -E_i*N_j*hr11*vpar[is]/vsIS
                     end
-                    sig_A = 0.0
-                    sig_B = 0.0
-                    psi_A = 0.0
-                    psi_B = 0.0
-                    phi_AU = 0.0
-                    phi_BU = 0.0
-                    psi_AN = 0.0
-                    psi_BN = 0.0
+                    sig_A = zero(K)
+                    sig_B = zero(K)
+                    psi_A = zero(K)
+                    psi_B = zero(K)
+                    phi_AU = zero(K)
+                    phi_BU = zero(K)
+                    psi_AN = zero(K)
+                    psi_BN = zero(K)
                     if(use_bper_in)
                         psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hr11b0+1.5*rltsIS*(hw113b0-hr11b0))
                         psi_B =betae_psi*M_i*J_j*hr11b0
@@ -1573,21 +1573,21 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                     ia = 5*nbasis+ib + ia0
 
                     phi_A = N_j*im*w_s*vpar_shear[is]*hr13/vsIS
-                    phi_B = 0.0
+                    phi_B = zero(K)
                     if(vpar_model_in==0)
                         phi_A = (phi_A +N_j*im*w_cd*wdhr13p0*vpar[is]/vsIS
                                 + d_1*(nuei_q3_u_1 + (5.0/3.0)*nuei_q3_q3_1)
                                 *hr13*E_i*N_j*vpar[is]/vsIS)
                         phi_B = -E_i*N_j*hr13*vpar[is]/vsIS
                     end
-                    sig_A = 0.0
-                    sig_B = 0.0
-                    psi_A = 0.0
-                    psi_B = 0.0
-                    phi_AU = 0.0
-                    phi_BU = 0.0
-                    psi_AN = 0.0
-                    psi_BN = 0.0
+                    sig_A = zero(K)
+                    sig_B = zero(K)
+                    psi_A = zero(K)
+                    psi_B = zero(K)
+                    phi_AU = zero(K)
+                    phi_BU = zero(K)
+                    psi_AN = zero(K)
+                    psi_BN = zero(K)
                     if(use_bper_in)
                         psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*hr13b0+1.5*rltsIS*(hw133b0-hr13b0))
                         psi_B = hr13b0*betae_psi*M_i*J_j
@@ -1698,14 +1698,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         end
                         phi_B = -E_i*N_j*gn
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_n_b*phi_B
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bpar_in)
                             sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10n + rltsIS*1.5*(g10p3-g10n))))
@@ -1806,14 +1806,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             phi_A = phi_A  + N_j*im*w_cd*wdgp1p0*vpar[is]/vsIS
                             phi_B = -E_i*N_j*gp1*vpar[is]/vsIS
                         end
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bper_in)
                             psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*gp1b0+1.5*rltsIS*(gr13b0-gp1b0))
                             psi_B =betae_psi*M_i*J_j*gp1b0
@@ -1914,14 +1914,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         end
                         phi_B = -E_i*N_j*gp1
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_p1_b*phi_B
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bpar_in)
                             sig_A =( -betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10p1 + rltsIS*1.5*(g10r13-g10p1))))
@@ -2032,14 +2032,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         end
                         phi_B = -gp3*E_i*N_j
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_p3_b*phi_B
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bpar_in)
                             sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10p3 + rltsIS*1.5*(g10r33-g10p3))))
@@ -2147,14 +2147,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             phi_A = phi_A + N_j*im*w_cd*wdgr11p0*vpar[is]/vsIS
                             phi_B = -E_i*N_j*gr11*vpar[is]/vsIS
                         end
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bper_in)
                             psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*gr11b0+1.5*rltsIS*(gw113b0-gr11b0))
                             psi_B = gr11b0*betae_psi*M_i*J_j
@@ -2256,14 +2256,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                             phi_A = phi_A + N_j*im*w_cd*wdgr13p0*vpar[is]/vsIS
                             phi_B = -E_i*N_j*gr13*vpar[is]/vsIS
                         end
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bper_in)
                             psi_A = -betae_psi*J_j*vsIS*im*w_s*(rlnsIS*gr13b0+1.5*rltsIS*(gw133b0-gr13b0))
                             psi_B = gr13b0*betae_psi*M_i*J_j
@@ -2363,14 +2363,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         phi_A = N_j*im*w_s*(rlnsIS*gn + rltsIS*1.5*(gp3-gn))
                         phi_B = -gn*E_i*N_j
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_n_b*phi_B
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bpar_in)
                             sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10n + rltsIS*1.5*(g10p3-g10n))))
@@ -2467,14 +2467,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         phi_A = N_j*im*w_s*(rlnsIS*gp1 + rltsIS*1.5*(gr13-gp1))
                         phi_B = -gp1*E_i*N_j
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_p1_b*phi_B
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bpar_in)
                             sig_A = (-betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10p1 + rltsIS*1.5*(g10r13-g10p1))))
@@ -2580,14 +2580,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
                         phi_A = N_j*im*w_s*(rlnsIS*gp3+rltsIS*1.5*(gr33-gp3))
                         phi_B = -gp3*E_i*N_j
                         phi_A = phi_A +xnu_phi_b*xnuei*xnu_p3_b*phi_B
-                        sig_A = 0.0
-                        sig_B = 0.0
-                        psi_A = 0.0
-                        psi_B = 0.0
-                        phi_AU = 0.0
-                        phi_BU = 0.0
-                        psi_AN = 0.0
-                        psi_BN = 0.0
+                        sig_A = zero(K)
+                        sig_B = zero(K)
+                        psi_A = zero(K)
+                        psi_B = zero(K)
+                        phi_AU = zero(K)
+                        phi_BU = zero(K)
+                        psi_AN = zero(K)
+                        psi_BN = zero(K)
                         if(use_bpar_in)
                             sig_A =( -betae_sig*(asJS*tausJS*zsIS/massIS)*
                                     (im*w_s*(rlnsIS*g10p3 + rltsIS*1.5*(g10r33-g10p3))))
@@ -2722,7 +2722,7 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         end
     end
 
-    use_tm = ismissing(inputs.USE_TRANSPORT_MODEL) ? true : inputs.USE_TRANSPORT_MODEL
+    use_tm = inputs.USE_TRANSPORT_MODEL
     if !use_gpu
         if !use_tm
             if inputs.IFLUX || find_eigenvector

@@ -203,130 +203,136 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
 end
 
 Base.@kwdef mutable struct InputTJLF{T<:Real}
-    UNITS::Union{String,Missing} = missing
+    # NOTE: fields are concretely typed (no Union{...,Missing}) for type stability.
+    # Every inputs.FIELD read in the hot eigensolver path must infer to a concrete
+    # type; a Union{Missing,...} here poisons inference across all of TJLF and forces
+    # heap-boxing of millions of scalars. Defaults are sentinels (NaN for floats,
+    # 0 for ints, false for bools, empty vectors) that construction always overwrites;
+    # checkInput() still guards "fully populated" via the NaN sentinel for floats.
+    UNITS::String = ""
 
-    USE_BPER::Union{Bool,Missing} = missing
-    USE_BPAR::Union{Bool,Missing} = missing
-    USE_MHD_RULE::Union{Bool,Missing} = missing
-    USE_BISECTION::Union{Bool,Missing} = missing
-    USE_INBOARD_DETRAPPED::Union{Bool,Missing} = missing
-    USE_AVE_ION_GRID::Union{Bool,Missing} = missing
-    NEW_EIKONAL::Union{Bool,Missing} = missing
-    FIND_WIDTH::Union{Bool,Missing} = missing
-    IFLUX::Union{Bool,Missing} = missing
-    ADIABATIC_ELEC::Union{Bool,Missing} = missing
+    USE_BPER::Bool = false
+    USE_BPAR::Bool = false
+    USE_MHD_RULE::Bool = false
+    USE_BISECTION::Bool = false
+    USE_INBOARD_DETRAPPED::Bool = false
+    USE_AVE_ION_GRID::Bool = false
+    NEW_EIKONAL::Bool = false
+    FIND_WIDTH::Bool = false
+    IFLUX::Bool = false
+    ADIABATIC_ELEC::Bool = false
 
-    SAT_RULE::Union{Int,Missing} = missing
-    NS::Union{Int,Missing} = missing
-    NMODES::Union{Int,Missing} = missing
-    NWIDTH::Union{Int,Missing} = missing
-    NBASIS_MAX::Union{Int,Missing} = missing
-    NBASIS_MIN::Union{Int,Missing} = missing
-    NXGRID::Union{Int,Missing} = missing
-    NKY::Union{Int,Missing} = missing
-    KYGRID_MODEL::Union{Int,Missing} = missing
-    XNU_MODEL::Union{Int,Missing} = missing
-    VPAR_MODEL::Union{Int,Missing} = missing
-    IBRANCH::Union{Int,Missing} = missing
+    SAT_RULE::Int = 0
+    NS::Int = 0
+    NMODES::Int = 0
+    NWIDTH::Int = 0
+    NBASIS_MAX::Int = 0
+    NBASIS_MIN::Int = 0
+    NXGRID::Int = 0
+    NKY::Int = 0
+    KYGRID_MODEL::Int = 0
+    XNU_MODEL::Int = 0
+    VPAR_MODEL::Int = 0
+    IBRANCH::Int = 0
 
-    ZS::Union{Vector{T},Missing} = missing
-    MASS::Union{Vector{T},Missing} = missing
-    RLNS::Union{Vector{T},Missing} = missing
-    RLTS::Union{Vector{T},Missing} = missing
-    TAUS::Union{Vector{T},Missing} = missing
-    AS::Union{Vector{T},Missing} = missing
-    VPAR::Union{Vector{T},Missing} = missing
-    VPAR_SHEAR::Union{Vector{T},Missing} = missing
+    ZS::Vector{T} = T[]
+    MASS::Vector{T} = T[]
+    RLNS::Vector{T} = T[]
+    RLTS::Vector{T} = T[]
+    TAUS::Vector{T} = T[]
+    AS::Vector{T} = T[]
+    VPAR::Vector{T} = T[]
+    VPAR_SHEAR::Vector{T} = T[]
 
     # NOT IN TGLF (or missing from InputTGLF structure)
-    WIDTH_SPECTRUM::Union{Vector{T},Missing} = missing    # TJLF-specific
-    KY_SPECTRUM::Union{Vector{T},Missing} = missing       # TJLF-specific  
-    EIGEN_SPECTRUM::Union{Vector{Complex{T}},Missing} = missing  # TJLF-specific
-    FIND_EIGEN::Union{Bool,Missing} = missing             # TGLF parameter but missing from InputTGLF
+    WIDTH_SPECTRUM::Vector{T} = T[]    # TJLF-specific
+    KY_SPECTRUM::Vector{T} = T[]       # TJLF-specific  
+    EIGEN_SPECTRUM::Vector{Complex{T}} = Complex{T}[]  # TJLF-specific
+    FIND_EIGEN::Bool = true             # TGLF parameter but missing from InputTGLF
     # NOT IN TGLF (or missing from InputTGLF structure)
 
-    SIGN_BT::Union{Int,Missing} = missing
-    SIGN_IT::Union{Int,Missing} = missing
-    KY::Union{T,Missing} = missing
+    SIGN_BT::Int = 0
+    SIGN_IT::Int = 0
+    KY::T = T(NaN)
 
-    VEXB_SHEAR::Union{T,Missing} = missing
-    BETAE::Union{T,Missing} = missing
-    XNUE::Union{T,Missing} = missing
-    ZEFF::Union{T,Missing} = missing
-    DEBYE::Union{T,Missing} = missing
+    VEXB_SHEAR::T = T(NaN)
+    BETAE::T = T(NaN)
+    XNUE::T = T(NaN)
+    ZEFF::T = T(NaN)
+    DEBYE::T = T(NaN)
 
-    ALPHA_MACH::Union{T,Missing} = missing
-    ALPHA_E::Union{T,Missing} = missing
-    ALPHA_P::Union{T,Missing} = missing
-    ALPHA_QUENCH::Union{Int,Missing} = missing
-    ALPHA_ZF::Union{T,Missing} = missing
-    XNU_FACTOR::Union{T,Missing} = missing
-    DEBYE_FACTOR::Union{T,Missing} = missing
-    ETG_FACTOR::Union{T,Missing} = missing
-    RLNP_CUTOFF::Union{T,Missing} = missing
+    ALPHA_MACH::T = T(NaN)
+    ALPHA_E::T = T(NaN)
+    ALPHA_P::T = T(NaN)
+    ALPHA_QUENCH::Int = 0
+    ALPHA_ZF::T = T(NaN)
+    XNU_FACTOR::T = T(NaN)
+    DEBYE_FACTOR::T = T(NaN)
+    ETG_FACTOR::T = T(NaN)
+    RLNP_CUTOFF::T = T(NaN)
 
-    WIDTH::Union{T,Missing} = missing
-    WIDTH_MIN::Union{T,Missing} = missing
+    WIDTH::T = T(NaN)
+    WIDTH_MIN::T = T(NaN)
 
-    RMIN_LOC::Union{T,Missing} = missing
-    RMAJ_LOC::Union{T,Missing} = missing
-    ZMAJ_LOC::Union{T,Missing} = missing
-    DRMINDX_LOC::Union{T,Missing} = missing
-    DRMAJDX_LOC::Union{T,Missing} = missing
-    DZMAJDX_LOC::Union{T,Missing} = missing
-    Q_LOC::Union{T,Missing} = missing
-    KAPPA_LOC::Union{T,Missing} = missing
-    S_KAPPA_LOC::Union{T,Missing} = missing
-    DELTA_LOC::Union{T,Missing} = missing
-    S_DELTA_LOC::Union{T,Missing} = missing
-    ZETA_LOC::Union{T,Missing} = missing
-    S_ZETA_LOC::Union{T,Missing} = missing
-    P_PRIME_LOC::Union{T,Missing} = missing
-    Q_PRIME_LOC::Union{T,Missing} = missing
-    BETA_LOC::Union{T,Missing} = missing
-    KX0_LOC::Union{T,Missing} = missing
+    RMIN_LOC::T = T(NaN)
+    RMAJ_LOC::T = T(NaN)
+    ZMAJ_LOC::T = T(NaN)
+    DRMINDX_LOC::T = T(NaN)
+    DRMAJDX_LOC::T = T(NaN)
+    DZMAJDX_LOC::T = T(NaN)
+    Q_LOC::T = T(NaN)
+    KAPPA_LOC::T = T(NaN)
+    S_KAPPA_LOC::T = T(NaN)
+    DELTA_LOC::T = T(NaN)
+    S_DELTA_LOC::T = T(NaN)
+    ZETA_LOC::T = T(NaN)
+    S_ZETA_LOC::T = T(NaN)
+    P_PRIME_LOC::T = T(NaN)
+    Q_PRIME_LOC::T = T(NaN)
+    BETA_LOC::T = T(NaN)
+    KX0_LOC::T = T(NaN)
 
-    DAMP_PSI::Union{T,Missing} = missing
-    DAMP_SIG::Union{T,Missing} = missing
-    WDIA_TRAPPED::Union{T,Missing} = missing
-    PARK::Union{T,Missing} = missing
-    GHAT::Union{T,Missing} = missing
-    GCHAT::Union{T,Missing} = missing
-    WD_ZERO::Union{T,Missing} = missing
-    LINSKER_FACTOR::Union{T,Missing} = missing
-    GRADB_FACTOR::Union{T,Missing} = missing
-    FILTER::Union{T,Missing} = missing
-    THETA_TRAPPED::Union{T,Missing} = missing
-    SMALL::Union{T,Missing} = missing
+    DAMP_PSI::T = T(NaN)
+    DAMP_SIG::T = T(NaN)
+    WDIA_TRAPPED::T = T(NaN)
+    PARK::T = T(NaN)
+    GHAT::T = T(NaN)
+    GCHAT::T = T(NaN)
+    WD_ZERO::T = T(NaN)
+    LINSKER_FACTOR::T = T(NaN)
+    GRADB_FACTOR::T = T(NaN)
+    FILTER::T = T(NaN)
+    THETA_TRAPPED::T = T(NaN)
+    SMALL::T = T(NaN)
 
-    #MXH params
-    SHAPE_COS0::Union{T,Missing} = missing
-    SHAPE_COS1::Union{T,Missing} = missing
-    SHAPE_COS2::Union{T,Missing} = missing
-    SHAPE_COS3::Union{T,Missing} = missing
-    SHAPE_COS4::Union{T,Missing} = missing
-    SHAPE_COS5::Union{T,Missing} = missing
-    SHAPE_COS6::Union{T,Missing} = missing
+    #MXH params (optional; default to 0 so checkInput passes when unset by geometry)
+    SHAPE_COS0::T = zero(T)
+    SHAPE_COS1::T = zero(T)
+    SHAPE_COS2::T = zero(T)
+    SHAPE_COS3::T = zero(T)
+    SHAPE_COS4::T = zero(T)
+    SHAPE_COS5::T = zero(T)
+    SHAPE_COS6::T = zero(T)
 
-    SHAPE_SIN3::Union{T,Missing} = missing
-    SHAPE_SIN4::Union{T,Missing} = missing
-    SHAPE_SIN5::Union{T,Missing} = missing
-    SHAPE_SIN6::Union{T,Missing} = missing
+    SHAPE_SIN3::T = zero(T)
+    SHAPE_SIN4::T = zero(T)
+    SHAPE_SIN5::T = zero(T)
+    SHAPE_SIN6::T = zero(T)
 
-    SHAPE_S_COS0::Union{T,Missing} = missing
-    SHAPE_S_COS1::Union{T,Missing} = missing
-    SHAPE_S_COS2::Union{T,Missing} = missing
-    SHAPE_S_COS3::Union{T,Missing} = missing
-    SHAPE_S_COS4::Union{T,Missing} = missing
-    SHAPE_S_COS5::Union{T,Missing} = missing
-    SHAPE_S_COS6::Union{T,Missing} = missing
+    SHAPE_S_COS0::T = zero(T)
+    SHAPE_S_COS1::T = zero(T)
+    SHAPE_S_COS2::T = zero(T)
+    SHAPE_S_COS3::T = zero(T)
+    SHAPE_S_COS4::T = zero(T)
+    SHAPE_S_COS5::T = zero(T)
+    SHAPE_S_COS6::T = zero(T)
 
-    SHAPE_S_SIN3::Union{T,Missing} = missing
-    SHAPE_S_SIN4::Union{T,Missing} = missing
-    SHAPE_S_SIN5::Union{T,Missing} = missing
-    SHAPE_S_SIN6::Union{T,Missing} = missing
+    SHAPE_S_SIN3::T = zero(T)
+    SHAPE_S_SIN4::T = zero(T)
+    SHAPE_S_SIN5::T = zero(T)
+    SHAPE_S_SIN6::T = zero(T)
 
-    USE_TRANSPORT_MODEL::Union{Bool,Missing} = missing
+    USE_TRANSPORT_MODEL::Bool = true
 end
 
 function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
@@ -438,7 +444,10 @@ function update_input_tjlf!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) 
     input_tjlf.NWIDTH = 21
 
     for fieldname in intersect(fieldnames(typeof(input_tglf)), fieldnames(typeof(input_tjlf)))
-        setfield!(input_tjlf, fieldname, getfield(input_tglf, fieldname))
+        v = getfield(input_tglf, fieldname)
+        # InputTJLF fields are now concrete (no Missing); skip unset source fields so
+        # the concrete sentinel default stands (checkInput still guards true "unset").
+        ismissing(v) || setfield!(input_tjlf, fieldname, v)
     end
 
     for i in 1:input_tglf.NS
