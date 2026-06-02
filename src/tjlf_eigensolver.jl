@@ -11,6 +11,7 @@ const _PROBE_CAP     = Ref{Any}(nothing)        # one captured (amat,bmat) for k
 # in-situ CPU-time accumulators (ns, summed across threads)
 const _PROBE_T_GETMAT   = Threads.Atomic{Int}(0)  # get_matrix (ave* assembly)
 const _PROBE_T_EIGSOLVE = Threads.Atomic{Int}(0)  # tjlf_eigensolver call (amat/bmat fill + eigenvalue solve)
+const _PROBE_T_SOLVE    = Threads.Atomic{Int}(0)  # JUST the eigenvalue solve (_standard_eigenvalues_via_solve)
 const _PROBE_T_EIGVEC   = Threads.Atomic{Int}(0)  # eigenvector solve (whole block)
 const _PROBE_T_BSLASH   = Threads.Atomic{Int}(0)  # just the \ (or KrylovKit) inside the eigenvector block
 # which eigenvector branch was taken
@@ -26,6 +27,7 @@ function reset_probe!()
     _PROBE_CAP[]    = nothing
     _PROBE_T_GETMAT[]   = 0
     _PROBE_T_EIGSOLVE[] = 0
+    _PROBE_T_SOLVE[]    = 0
     _PROBE_T_EIGVEC[]   = 0
     _PROBE_T_BSLASH[]   = 0
     _PROBE_N_INVITER[]  = 0
@@ -40,6 +42,7 @@ probe_stats() = (eigval_solves = _PROBE_EIGVAL[],
                  eigvec_solves = _PROBE_EIGVEC[],
                  t_getmat_s    = _PROBE_T_GETMAT[]   / 1e9,
                  t_eigsolve_s  = _PROBE_T_EIGSOLVE[] / 1e9,
+                 t_solve_s     = _PROBE_T_SOLVE[]    / 1e9,
                  t_eigvec_s    = _PROBE_T_EIGVEC[]   / 1e9,
                  t_bslash_s    = _PROBE_T_BSLASH[]   / 1e9,
                  n_inviter     = _PROBE_N_INVITER[],
@@ -2793,9 +2796,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             if inputs.IFLUX || find_eigenvector
                 amat_copy = copy(amat)
                 bmat_copy = copy(bmat)
+                _ts0 = PROBE[] ? time_ns() : UInt64(0)
                 alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
+                PROBE[] && Threads.atomic_add!(_PROBE_T_SOLVE, Int(time_ns() - _ts0))
             else
+                _ts0 = PROBE[] ? time_ns() : UInt64(0)
                 alpha = _standard_eigenvalues_via_solve(amat, bmat; use_gpu=use_gpu)
+                PROBE[] && Threads.atomic_add!(_PROBE_T_SOLVE, Int(time_ns() - _ts0))
             end
             return alpha, fill(NaN*im,(1,1))
         end
@@ -2803,9 +2810,13 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         if inputs.IFLUX || find_eigenvector
             amat_copy = copy(amat)
             bmat_copy = copy(bmat)
+            _ts0 = PROBE[] ? time_ns() : UInt64(0)
             alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
+            PROBE[] && Threads.atomic_add!(_PROBE_T_SOLVE, Int(time_ns() - _ts0))
         else
+            _ts0 = PROBE[] ? time_ns() : UInt64(0)
             alpha = _standard_eigenvalues_via_solve(amat, bmat; use_gpu=use_gpu)
+            PROBE[] && Threads.atomic_add!(_PROBE_T_SOLVE, Int(time_ns() - _ts0))
         end
 
     else
@@ -2813,7 +2824,9 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
         # non-transport-model path would otherwise run (its result is unused).
         amat_copy = copy(amat)
         bmat_copy = copy(bmat)
+        _ts0 = PROBE[] ? time_ns() : UInt64(0)
         alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
+        PROBE[] && Threads.atomic_add!(_PROBE_T_SOLVE, Int(time_ns() - _ts0))
     end
 
     return alpha, fill(NaN*im,(1,1))
