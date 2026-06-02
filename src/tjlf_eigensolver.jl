@@ -2784,12 +2784,18 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     use_tm = inputs.USE_TRANSPORT_MODEL
     if !use_gpu
         if !use_tm
+            # Eigenvalues via the standard solve B⁻¹A (gesv! + geev!) instead of
+            # the generalized ggev!. For these well-conditioned pencils the two
+            # agree to ~1e-11 relative, but gesv!+geev! is ~4x faster on the small
+            # dense matrices here (e.g. 270×270: 179 ms -> 45 ms). This also makes
+            # the CPU non-transport path match the GPU path, which already solves
+            # this way (see the use_gpu branch below).
             if inputs.IFLUX || find_eigenvector
                 amat_copy = copy(amat)
                 bmat_copy = copy(bmat)
-                alpha = _generalized_eigenvalues(amat_copy, bmat_copy)
+                alpha = _standard_eigenvalues_via_solve(amat_copy, bmat_copy; use_gpu=use_gpu)
             else
-                alpha = _generalized_eigenvalues(amat, bmat)
+                alpha = _standard_eigenvalues_via_solve(amat, bmat; use_gpu=use_gpu)
             end
             return alpha, fill(NaN*im,(1,1))
         end
