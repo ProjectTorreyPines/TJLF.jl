@@ -26,7 +26,31 @@ function _gpu_solve!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
 end
 
 # @show BLAS.get_config()
-BLAS.set_num_threads(1)
+"""
+    with_blas_threads(f, n::Integer)
+
+Run `f()` with the BLAS thread count temporarily set to `n`, restoring the
+previous value afterwards (even on error). No-op if BLAS is already at `n`.
+
+TJLF parallelises over ky with Julia threads, each doing small dense LAPACK
+solves; with multithreaded BLAS the kernels oversubscribe cores (e.g. 8 Julia
+threads × 128 BLAS threads) and per-solve time balloons ~100x. This is applied
+*scoped* around the threaded compute drivers rather than as a global default, so
+loading TJLF does not change BLAS threading for the rest of a host application
+(e.g. FUSE). The `n0 == n` short-circuit makes nested scopes safe: an inner
+driver running inside an already-set region never touches the global BLAS state,
+avoiding concurrent `set_num_threads` calls from worker threads.
+"""
+@inline function with_blas_threads(f, n::Integer)
+    n0 = BLAS.get_num_threads()
+    n0 == n && return f()
+    BLAS.set_num_threads(n)
+    try
+        return f()
+    finally
+        BLAS.set_num_threads(n0)
+    end
+end
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")

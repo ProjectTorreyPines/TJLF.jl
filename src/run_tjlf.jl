@@ -1,4 +1,10 @@
 function run(inputTJLF::InputTJLF; use_gpu::Bool=false)
+    return with_blas_threads(1) do
+        _run_impl(inputTJLF; use_gpu=use_gpu)
+    end
+end
+
+function _run_impl(inputTJLF::InputTJLF; use_gpu::Bool=false)
     use_tm = inputTJLF.USE_TRANSPORT_MODEL
     if use_tm
         checkInput(inputTJLF)
@@ -103,8 +109,11 @@ description:
 function run_tjlf(input_tjlfs::Vector{InputTJLF{T}}; use_gpu::Bool=false) where {T<:Real}
     checkInput(input_tjlfs)
     outputs = Vector{Array{T,3}}(undef, length(input_tjlfs))
-    Threads.@threads for idx in eachindex(input_tjlfs)
-        outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx]; use_gpu=use_gpu)
+    # set BLAS=1 before spawning threads; the per-element run() short-circuits
+    with_blas_threads(1) do
+        Threads.@threads for idx in eachindex(input_tjlfs)
+            outputs[idx] = TJLF.run_tjlf(input_tjlfs[idx]; use_gpu=use_gpu)
+        end
     end
     return outputs
 end

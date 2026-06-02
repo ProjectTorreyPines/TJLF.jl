@@ -1,3 +1,52 @@
+# ── Opt-in perf probe (zero overhead when PROBE[] == false) ──────────────────
+# Counts eigenvalue solves + matrix sizes (and eigenvector solves, incremented in
+# tjlf_LINEAR_SOLUTION.jl) so we can attribute the per-radius cost. Toggle with
+# TJLF.PROBE[] = true; call TJLF.reset_probe!() first. Thread-safe via atomics.
+const PROBE          = Ref(false)
+const _PROBE_EIGVAL  = Threads.Atomic{Int}(0)   # # of tjlf_eigensolver solves
+const _PROBE_SZSUM   = Threads.Atomic{Int}(0)   # Σ matrix dim (iur) over solves
+const _PROBE_SZMAX   = Threads.Atomic{Int}(0)   # max matrix dim seen
+const _PROBE_EIGVEC  = Threads.Atomic{Int}(0)   # # of eigenvector solves
+const _PROBE_CAP     = Ref{Any}(nothing)        # one captured (amat,bmat) for kernel benchmarking
+# in-situ CPU-time accumulators (ns, summed across threads)
+const _PROBE_T_GETMAT   = Threads.Atomic{Int}(0)  # get_matrix (ave* assembly)
+const _PROBE_T_EIGSOLVE = Threads.Atomic{Int}(0)  # tjlf_eigensolver call (amat/bmat fill + eigenvalue solve)
+const _PROBE_T_EIGVEC   = Threads.Atomic{Int}(0)  # eigenvector solve (whole block)
+const _PROBE_T_BSLASH   = Threads.Atomic{Int}(0)  # just the \ (or KrylovKit) inside the eigenvector block
+# which eigenvector branch was taken
+const _PROBE_N_INVITER  = Threads.Atomic{Int}(0)  # SMALL!=0 inverse-iteration (zmat \ rhs)
+const _PROBE_N_KRYLOV   = Threads.Atomic{Int}(0)  # SMALL==0 && (FIND_EIGEN||isnan) KrylovKit path
+const _PROBE_N_REUSE    = Threads.Atomic{Int}(0)  # SMALL==0 reuse v[:,jmax]
+
+function reset_probe!()
+    _PROBE_EIGVAL[] = 0
+    _PROBE_SZSUM[]  = 0
+    _PROBE_SZMAX[]  = 0
+    _PROBE_EIGVEC[] = 0
+    _PROBE_CAP[]    = nothing
+    _PROBE_T_GETMAT[]   = 0
+    _PROBE_T_EIGSOLVE[] = 0
+    _PROBE_T_EIGVEC[]   = 0
+    _PROBE_T_BSLASH[]   = 0
+    _PROBE_N_INVITER[]  = 0
+    _PROBE_N_KRYLOV[]   = 0
+    _PROBE_N_REUSE[]    = 0
+    return nothing
+end
+
+probe_stats() = (eigval_solves = _PROBE_EIGVAL[],
+                 size_sum      = _PROBE_SZSUM[],
+                 size_max      = _PROBE_SZMAX[],
+                 eigvec_solves = _PROBE_EIGVEC[],
+                 t_getmat_s    = _PROBE_T_GETMAT[]   / 1e9,
+                 t_eigsolve_s  = _PROBE_T_EIGSOLVE[] / 1e9,
+                 t_eigvec_s    = _PROBE_T_EIGVEC[]   / 1e9,
+                 t_bslash_s    = _PROBE_T_BSLASH[]   / 1e9,
+                 n_inviter     = _PROBE_N_INVITER[],
+                 n_krylov      = _PROBE_N_KRYLOV[],
+                 n_reuse       = _PROBE_N_REUSE[],
+                 captured      = _PROBE_CAP[])
+
 """
     tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satParams::SaturationParameters{T},ave::Ave{T},aveH::AveH{T},aveWH::AveWH{T},aveKH::AveKH,aveG::AveG{T},aveWG::AveWG{T},aveKG::AveKG,aveGrad::AveGrad{T},aveGradB::AveGradB{T},nbasis::Int, ky::T,amat::Matrix{K},bmat::Matrix{K},ky_index::Int) where T<:Real where K<:Complex
 
@@ -2719,6 +2768,16 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
             end
         else
             @warn "no growth rate initial guess given for ky = $(inputs.KY_SPECTRUM[ky_index]), using gesv!+geev! to find all eigenvalues"
+        end
+    end
+
+    if PROBE[]
+        n = size(amat, 1)
+        Threads.atomic_add!(_PROBE_EIGVAL, 1)
+        Threads.atomic_add!(_PROBE_SZSUM, n)
+        Threads.atomic_max!(_PROBE_SZMAX, n)
+        if _PROBE_CAP[] === nothing
+            _PROBE_CAP[] = (copy(amat), copy(bmat))
         end
     end
 
