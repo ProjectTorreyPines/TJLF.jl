@@ -267,12 +267,20 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     @. zmat = amat - (inputs.SMALL + rr[jmax[imax]] + im * ri[jmax[imax]]) * bmat
 
                     _tb0 = PROBE[] ? time_ns() : UInt64(0)
-                    # in-place inverse iteration: lu!(zmat) factors in place (no
-                    # matrix copy), ldiv! solves in place. zmat is rebuilt fresh
-                    # each iteration above, so destroying it here is safe. This
-                    # avoids the ~2.24 MiB/solve allocation of `zmat \ rhs`, which
-                    # under multithreading triggered heavy GC contention.
-                    ldiv!(lu!(zmat), eigenvector)
+                    if use_gpu && K === ComplexF64 && get(ENV, "TJLF_GPU_EIGVEC", "1") == "1"
+                        # Inverse-iteration LU solve on the GPU (CUSOLVER getrf/getrs),
+                        # mirroring the eigenvalue solve. Moves this O(n^3) factorisation
+                        # off the CPU; overwrites zmat. Set TJLF_GPU_EIGVEC=0 to force the
+                        # CPU path (for A/B timing). Falls back to CPU below otherwise.
+                        eigenvector = TJLF._gpu_lu_solve!(zmat, eigenvector)
+                    else
+                        # in-place inverse iteration: lu!(zmat) factors in place (no
+                        # matrix copy), ldiv! solves in place. zmat is rebuilt fresh
+                        # each iteration above, so destroying it here is safe. This
+                        # avoids the ~2.24 MiB/solve allocation of `zmat \ rhs`, which
+                        # under multithreading triggered heavy GC contention.
+                        ldiv!(lu!(zmat), eigenvector)
+                    end
                     PROBE[] && Threads.atomic_add!(_PROBE_T_BSLASH, Int(time_ns() - _tb0))
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])

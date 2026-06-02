@@ -14,6 +14,7 @@ import KrylovKit
 const _CUDA_FUNCTIONAL = Ref{Any}(() -> false)
 const _CUDA_DEVICE_COUNT = Ref{Any}(() -> 0)
 const _CUDA_SOLVE = Ref{Any}(nothing)
+const _CUDA_LU_SOLVE = Ref{Any}(nothing)
 
 # wrappers so call sites stay the same
 _cuda_functional() = _CUDA_FUNCTIONAL[]()
@@ -23,6 +24,13 @@ _cuda_device_count() = _CUDA_DEVICE_COUNT[]()
 function _gpu_solve!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
     _CUDA_SOLVE[] === nothing && error("CUDA extension not loaded")
     return _CUDA_SOLVE[](A, B)
+end
+
+# Solve Z x = b on the GPU (CUSOLVER getrf/getrs) and return x::Vector{ComplexF64}.
+# Used for the eigenvector inverse-iteration step (Z = amat - σ·bmat); Z is overwritten.
+function _gpu_lu_solve!(Z::Matrix{ComplexF64}, b::Vector{ComplexF64})
+    _CUDA_LU_SOLVE[] === nothing && error("CUDA extension not loaded")
+    return _CUDA_LU_SOLVE[](Z, b)
 end
 
 # @show BLAS.get_config()

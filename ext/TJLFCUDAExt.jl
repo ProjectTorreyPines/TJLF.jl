@@ -59,6 +59,24 @@ function __init__()
             return Array(W)
         end
     end
+
+    # Eigenvector inverse-iteration step on GPU: solve Z x = b (LU via getrf/getrs).
+    # Mirrors _CUDA_SOLVE's device selection + per-device locking so it composes with the
+    # eigenvalue solve (same device, serialized intra-process, overlapped across MPS clients).
+    TJLF._CUDA_LU_SOLVE[] = (Z::Matrix{ComplexF64}, b::Vector{ComplexF64}) -> begin
+        devs = _devices()
+        n = length(devs)
+        dev = devs[mod1(Threads.atomic_add!(_GPU_RR, 1) + 1, n)]
+        CUDA.device!(dev)
+        lock(_device_lock(CUDA.deviceid(dev))) do
+            Z_gpu = CUDA.CuArray(Z)
+            b_gpu = CUDA.CuArray(reshape(b, :, 1))
+            ipiv  = CUDA.CuArray{Int32}(undef, size(Z_gpu, 1))
+            Z_factored, ipiv, _ = CUDA.CUSOLVER.getrf!(Z_gpu, ipiv)
+            x_gpu = CUDA.CUSOLVER.getrs!('N', Z_factored, ipiv, b_gpu)
+            return vec(Array(x_gpu))
+        end
+    end
 end
 
 end
