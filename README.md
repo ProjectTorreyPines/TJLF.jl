@@ -98,15 +98,37 @@ To run top right, set the InputTJLF SMALL parameter = 0.0, set FIND_EIGEN = True
 See `TJLF/test/test_multithreads` for testing.
 
 ## Critical Threading Setup
-**IMPORTANT**: For proper multithreading performance, you MUST set:
-```bash
-export OMP_NUM_THREADS=1  # In shell environment
+TJLF parallelizes over `ky` with Julia threads, each doing small dense LAPACK
+solves. If BLAS is also multithreaded, those kernels oversubscribe cores (e.g.
+8 Julia threads × 128 BLAS threads) and per-solve time can balloon ~100x.
+
+**TJLF handles this automatically, scoped to its own compute drivers.** It wraps
+the threaded entry points (`run`, `run_tjlf`, and the transport-model loop) with
+`with_blas_threads(1)`, which sets the BLAS thread count to 1 for the duration of
+the call and restores the previous value afterward. This avoids degrading BLAS
+threading for the rest of a host application (e.g. FUSE), so **no manual setup is
+required** for TJLF's own performance.
+
+```julia
+# the scoped helper TJLF uses internally; also exposed for callers that thread
+# over their own TJLF calls (set BLAS=1 once *outside* the threaded region):
+TJLF.with_blas_threads(1) do
+    Threads.@threads for i in eachindex(cases)
+        TJLF.run(cases[i])   # nested scopes short-circuit, no BLAS races
+    end
+end
 ```
 
-- Prevents BLAS from competing with Julia's threading
-- Essential for performance scaling on Linux systems
-- Without this setting, multithreaded performance will degrade significantly
-- TJLF automatically sets `BLAS.set_num_threads(1)` during module initialization
+Notes:
+- A previous version called `BLAS.set_num_threads(1)` at module top level. That
+  has **no effect at runtime** — top-level statements run only during
+  precompilation, and the BLAS thread count is runtime state that is not
+  serialized into the precompile cache. The scoped `with_blas_threads` approach
+  replaces it and works on every load.
+- Setting `export OMP_NUM_THREADS=1` in the shell is still a reasonable
+  belt-and-suspenders (it makes BLAS start single-threaded for *any* BLAS use,
+  including code outside TJLF's scoped drivers), but is no longer required for
+  TJLF's own multithreaded scaling.
 
 ## Threading Architecture
 - Automatic parallelization over multiple `InputTJLF` instances

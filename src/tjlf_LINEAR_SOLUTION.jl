@@ -259,10 +259,22 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     # alpha and beta from eigensolver.jl
                     @. zmat = amat - (inputs.SMALL + rr[jmax[imax]] + im * ri[jmax[imax]]) * bmat
 
-                    eigenvector .= zmat \ eigenvector
+                    if use_gpu && K === ComplexF64
+                        # Inverse-iteration LU solve on the GPU (CUSOLVER getrf/getrs),
+                        # mirroring the eigenvalue solve. Moves this O(n^3) factorisation
+                        # off the CPU; overwrites zmat.
+                        eigenvector = TJLF._gpu_lu_solve!(zmat, eigenvector)
+                    else
+                        # in-place inverse iteration: lu!(zmat) factors in place (no
+                        # matrix copy), ldiv! solves in place. zmat is rebuilt fresh
+                        # each iteration above, so destroying it here is safe. This
+                        # avoids the ~2.24 MiB/solve allocation of `zmat \ rhs`, which
+                        # under multithreading triggered heavy GC contention.
+                        ldiv!(lu!(zmat), eigenvector)
+                    end
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])
-                        nev1 = size(amat)[1]                           
+                        nev1 = size(amat)[1]
                         L = construct_linear_map(sparse(amat), sparse(bmat), eigenvalues[jmax[imax]])
                         _, vec, _ = KrylovKit.eigsolve(L, nev1, 1, :LM)
                         eigenvector = vec[1]

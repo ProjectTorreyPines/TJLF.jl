@@ -14,6 +14,7 @@ import KrylovKit
 const _CUDA_FUNCTIONAL = Ref{Any}(() -> false)
 const _CUDA_DEVICE_COUNT = Ref{Any}(() -> 0)
 const _CUDA_SOLVE = Ref{Any}(nothing)
+const _CUDA_LU_SOLVE = Ref{Any}(nothing)
 
 # wrappers so call sites stay the same
 _cuda_functional() = _CUDA_FUNCTIONAL[]()
@@ -25,8 +26,39 @@ function _gpu_solve!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
     return _CUDA_SOLVE[](A, B)
 end
 
+# Solve Z x = b on the GPU (CUSOLVER getrf/getrs) and return x::Vector{ComplexF64}.
+# Used for the eigenvector inverse-iteration step (Z = amat - σ·bmat); Z is overwritten.
+function _gpu_lu_solve!(Z::Matrix{ComplexF64}, b::Vector{ComplexF64})
+    _CUDA_LU_SOLVE[] === nothing && error("CUDA extension not loaded")
+    return _CUDA_LU_SOLVE[](Z, b)
+end
+
 # @show BLAS.get_config()
-BLAS.set_num_threads(1)
+"""
+    with_blas_threads(f, n::Integer)
+
+Run `f()` with the BLAS thread count temporarily set to `n`, restoring the
+previous value afterwards (even on error). No-op if BLAS is already at `n`.
+
+TJLF parallelises over ky with Julia threads, each doing small dense LAPACK
+solves; with multithreaded BLAS the kernels oversubscribe cores (e.g. 8 Julia
+threads × 128 BLAS threads) and per-solve time balloons ~100x. This is applied
+*scoped* around the threaded compute drivers rather than as a global default, so
+loading TJLF does not change BLAS threading for the rest of a host application
+(e.g. FUSE). The `n0 == n` short-circuit makes nested scopes safe: an inner
+driver running inside an already-set region never touches the global BLAS state,
+avoiding concurrent `set_num_threads` calls from worker threads.
+"""
+@inline function with_blas_threads(f, n::Integer)
+    n0 = BLAS.get_num_threads()
+    n0 == n && return f()
+    BLAS.set_num_threads(n)
+    try
+        return f()
+    finally
+        BLAS.set_num_threads(n0)
+    end
+end
 
 include("tjlf_modules.jl")
 include("tjlf_read_input.jl")

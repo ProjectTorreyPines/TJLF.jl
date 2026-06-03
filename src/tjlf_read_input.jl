@@ -154,19 +154,16 @@ function readInput(filename::String)::InputTJLF
     end
 
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
-    if ismissing(inputTJLF.KY_SPECTRUM)
-        inputTJLF.KY_SPECTRUM .= NaN 
+    # KY_SPECTRUM/EIGEN_SPECTRUM are NaN-filled by the (ns,nky) constructor; if a caller
+    # constructed via @kwdef defaults they are empty, in which case nothing to fill.
+    if isempty(inputTJLF.KY_SPECTRUM)
+        inputTJLF.KY_SPECTRUM = fill(NaN, length(inputTJLF.WIDTH_SPECTRUM))
     end
-    if ismissing(inputTJLF.EIGEN_SPECTRUM)
-        inputTJLF.EIGEN_SPECTRUM .= NaN 
+    if isempty(inputTJLF.EIGEN_SPECTRUM)
+        inputTJLF.EIGEN_SPECTRUM = fill(ComplexF64(NaN), length(inputTJLF.WIDTH_SPECTRUM))
     end
-    
 
-    # double check struct is properly populated
-
-    if ismissing(inputTJLF.FIND_EIGEN)
-        inputTJLF.FIND_EIGEN = true
-    end
+    # double check struct is properly populated (FIND_EIGEN is a concrete Bool, default true)
 
     #Maybe checkInput could be altered for inputting default values, or the struct in modules could be
     #Redefined as having 
