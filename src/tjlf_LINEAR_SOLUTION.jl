@@ -98,20 +98,16 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
 
     new_matrix = true ######################## hardcode for now ########################
     if (new_matrix)
-        _tg0 = PROBE[] ? time_ns() : UInt64(0)
         ave, aveH, aveWH, aveKH,
         aveG, aveWG, aveKG,
         aveGrad, aveGradB = get_matrix(inputs, outputGeo, outputHermite, ky, nbasis, ky_index; aves)
-        PROBE[] && Threads.atomic_add!(_PROBE_T_GETMAT, Int(time_ns() - _tg0))
     end
 
     K = Complex{T}
     amat = Matrix{K}(undef, iur, iur)
     bmat = Matrix{K}(undef, iur, iur)
     #  solver for linear eigenmodes of tglf equations
-    _te0 = PROBE[] ? time_ns() : UInt64(0)
     eigenvalues, v = tjlf_eigensolver(inputs,outputGeo,satParams,ave,aveH,aveWH,aveKH,aveG,aveWG,aveKG,aveGrad,aveGradB, nbasis,ky, amat,bmat,ky_index,find_eigenvector; use_gpu=use_gpu)
-    PROBE[] && Threads.atomic_add!(_PROBE_T_EIGSOLVE, Int(time_ns() - _te0))
 
     rr = real.(eigenvalues)
     ri = imag.(eigenvalues)
@@ -257,21 +253,16 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
         end
         for imax = 1:nmodes_out
             if (jmax[imax] > 0)
-                PROBE[] && Threads.atomic_add!(_PROBE_EIGVEC, 1)
-                _tv0 = PROBE[] ? time_ns() : UInt64(0)
                 if inputs.SMALL != 0.0
-                    PROBE[] && Threads.atomic_add!(_PROBE_N_INVITER, 1)
                     # calculate eigenvector
                     eigenvector .= inputs.SMALL
                     # alpha and beta from eigensolver.jl
                     @. zmat = amat - (inputs.SMALL + rr[jmax[imax]] + im * ri[jmax[imax]]) * bmat
 
-                    _tb0 = PROBE[] ? time_ns() : UInt64(0)
-                    if use_gpu && K === ComplexF64 && get(ENV, "TJLF_GPU_EIGVEC", "1") == "1"
+                    if use_gpu && K === ComplexF64
                         # Inverse-iteration LU solve on the GPU (CUSOLVER getrf/getrs),
                         # mirroring the eigenvalue solve. Moves this O(n^3) factorisation
-                        # off the CPU; overwrites zmat. Set TJLF_GPU_EIGVEC=0 to force the
-                        # CPU path (for A/B timing). Falls back to CPU below otherwise.
+                        # off the CPU; overwrites zmat.
                         eigenvector = TJLF._gpu_lu_solve!(zmat, eigenvector)
                     else
                         # in-place inverse iteration: lu!(zmat) factors in place (no
@@ -281,22 +272,16 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                         # under multithreading triggered heavy GC contention.
                         ldiv!(lu!(zmat), eigenvector)
                     end
-                    PROBE[] && Threads.atomic_add!(_PROBE_T_BSLASH, Int(time_ns() - _tb0))
                 else
                     if inputs.FIND_EIGEN || isnan(v[1,1])
-                        PROBE[] && Threads.atomic_add!(_PROBE_N_KRYLOV, 1)
-                        nev1 = size(amat)[1]                           
-                        _tb0 = PROBE[] ? time_ns() : UInt64(0)
+                        nev1 = size(amat)[1]
                         L = construct_linear_map(sparse(amat), sparse(bmat), eigenvalues[jmax[imax]])
                         _, vec, _ = KrylovKit.eigsolve(L, nev1, 1, :LM)
                         eigenvector = vec[1]
-                        PROBE[] && Threads.atomic_add!(_PROBE_T_BSLASH, Int(time_ns() - _tb0))
                     else
-                        PROBE[] && Threads.atomic_add!(_PROBE_N_REUSE, 1)
                         eigenvector = v[:, jmax[imax]]
                     end
                 end
-                PROBE[] && Threads.atomic_add!(_PROBE_T_EIGVEC, Int(time_ns() - _tv0))
 
                 Ns_Ts_phase,
                 Ne_Te_phase,
