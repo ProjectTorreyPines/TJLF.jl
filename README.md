@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/github/ProjectTorreyPines/TJLF.jl/graph/badge.svg?token=1NY1YYLBWH)](https://codecov.io/github/ProjectTorreyPines/TJLF.jl)
+
 # TJLF
 Tglf in Julia Learned from Fortran (TJLF)
 
