@@ -266,6 +266,22 @@ function TJLF._standard_eigenvalues_via_solve(A::Matrix{Complex{D}}, B::Matrix{C
     Af = map(cval, A)
     Bf = map(cval, B)
 
+    # GPU path: do the whole Dual eigensolve+IFT on the device (CUSOLVER), mirroring the
+    # CPU kernel below. Only taken when CUDA is loaded+functional; falls back otherwise.
+    if use_gpu && TJLF._cuda_functional()
+        dA = Vector{Matrix{Complex{Float64}}}(undef, np)
+        dB = Vector{Matrix{Complex{Float64}}}(undef, np)
+        for k in 1:np
+            dA[k] = map(x -> cpar(x, k), A)
+            dB[k] = map(x -> cpar(x, k), B)
+        end
+        W, dλ_re, dλ_im = TJLF._gpu_solve_eig_grad!(Af, Bf, dA, dB)
+        return map(1:n) do i
+            Complex(ForwardDiff.Dual{Tag}(real(W[i]), ntuple(k -> dλ_re[i, k], Val(np))...),
+                    ForwardDiff.Dual{Tag}(imag(W[i]), ntuple(k -> dλ_im[i, k], Val(np))...))
+        end
+    end
+
     # M = B⁻¹A and ∂M = B⁻¹(∂A − ∂B·M), all sharing one LAPACK LU of Bf.
     luB = lu(Bf)
     Mf  = luB \ Af

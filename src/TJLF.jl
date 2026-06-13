@@ -15,6 +15,7 @@ const _CUDA_FUNCTIONAL = Ref{Any}(() -> false)
 const _CUDA_DEVICE_COUNT = Ref{Any}(() -> 0)
 const _CUDA_SOLVE = Ref{Any}(nothing)
 const _CUDA_LU_SOLVE = Ref{Any}(nothing)
+const _CUDA_SOLVE_EIG_GRAD = Ref{Any}(nothing)
 
 # wrappers so call sites stay the same
 _cuda_functional() = _CUDA_FUNCTIONAL[]()
@@ -31,6 +32,20 @@ end
 function _gpu_lu_solve!(Z::Matrix{ComplexF64}, b::Vector{ComplexF64})
     _CUDA_LU_SOLVE[] === nothing && error("CUDA extension not loaded")
     return _CUDA_LU_SOLVE[](Z, b)
+end
+
+# GPU eigenvalues + implicit-function-theorem derivatives for the standard problem
+# M = B⁻¹A (ForwardDiff.Dual support). Given the value matrices `A,B` and the per-partial
+# matrices `dA[k]=∂A/∂xₖ`, `dB[k]=∂B/∂xₖ` (all host ComplexF64), this mirrors the CPU Dual
+# kernel entirely on the GPU (CUSOLVER getrf/getrs for M and ∂M, Xgeev('N','V') for the
+# eigenpairs, then ∂λᵢ = (R⁻¹ ∂M R)[i,i]). Returns
+# `(W::Vector{ComplexF64}, dλ_re::Matrix{Float64}(n,np), dλ_im::Matrix{Float64}(n,np))`.
+# The IFT diagonal R⁻¹∂M R is invariant to eigenvector column scaling, so CUSOLVER-vs-LAPACK
+# normalization differences are harmless.
+function _gpu_solve_eig_grad!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64},
+                              dA::Vector{Matrix{ComplexF64}}, dB::Vector{Matrix{ComplexF64}})
+    _CUDA_SOLVE_EIG_GRAD[] === nothing && error("CUDA extension not loaded")
+    return _CUDA_SOLVE_EIG_GRAD[](A, B, dA, dB)
 end
 
 # @show BLAS.get_config()
