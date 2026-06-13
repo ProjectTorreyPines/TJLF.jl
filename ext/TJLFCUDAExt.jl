@@ -77,6 +77,55 @@ function __init__()
             return vec(Array(x_gpu))
         end
     end
+
+    # Complex{Dual} eigensolve: eigenvalues of M=B⁻¹A plus IFT derivatives ∂λᵢ for each
+    # partial. Mirrors the CPU Dual kernel (TJLFForwardDiffExt) but keeps every O(n³) step
+    # on the GPU: getrf/getrs for M and ∂M (one LU of B reused), Xgeev('N','V') for the
+    # eigenpairs, then ∂λᵢ=(R⁻¹∂M R)[i,i]. Round-robin device + per-device lock match
+    # _CUDA_SOLVE so team workers overlap across GPUs via MPS while staying serialized
+    # within a CUDA context (Xgeev is not concurrency-safe intra-context).
+    TJLF._CUDA_SOLVE_EIG_GRAD[] = (A::Matrix{ComplexF64}, B::Matrix{ComplexF64},
+                                   dA::Vector{Matrix{ComplexF64}}, dB::Vector{Matrix{ComplexF64}}) -> begin
+        devs = _devices()
+        ndev = length(devs)
+        dev = devs[mod1(Threads.atomic_add!(_GPU_RR, 1) + 1, ndev)]
+        CUDA.device!(dev)
+        lock(_device_lock(CUDA.deviceid(dev))) do
+            np = length(dA)
+            m  = size(A, 1)
+            A_gpu = CUDA.CuArray(A)
+            B_gpu = CUDA.CuArray(B)
+            ipivB = CUDA.CuArray{Int32}(undef, m)
+            B_fact, ipivB, _ = CUDA.CUSOLVER.getrf!(B_gpu, ipivB)
+            # Mf = B⁻¹A (getrs! overwrites A_gpu and returns it).
+            Mf = CUDA.CUSOLVER.getrs!('N', B_fact, ipivB, A_gpu)
+            # ∂M[k] = B⁻¹(∂A[k] − ∂B[k]·Mf), reusing the LU of B. Done BEFORE Xgeev overwrites Mf.
+            dMs = Vector{CUDA.CuMatrix{ComplexF64}}(undef, np)
+            for k in 1:np
+                dAk = CUDA.CuArray(dA[k])
+                dBk = CUDA.CuArray(dB[k])
+                rhs = dAk - dBk * Mf
+                dMs[k] = CUDA.CUSOLVER.getrs!('N', B_fact, ipivB, rhs)
+            end
+            # Eigenpairs of Mf: eigenvalues W + right vectors VR (Xgeev! overwrites Mf).
+            W, _, VR = CUDA.CUSOLVER.Xgeev!('N', 'V', Mf)
+            # Factor a COPY of VR (getrf! is in-place); keep VR itself for the ∂M·R product.
+            VRf = copy(VR)
+            ipivR = CUDA.CuArray{Int32}(undef, m)
+            VRf, ipivR, _ = CUDA.CUSOLVER.getrf!(VRf, ipivR)
+            dλ_re = zeros(Float64, m, np)
+            dλ_im = zeros(Float64, m, np)
+            for k in 1:np
+                C  = CUDA.CUSOLVER.getrs!('N', VRf, ipivR, dMs[k] * VR)  # = R⁻¹ ∂M R
+                Ch = Array(C)
+                @inbounds for i in 1:m
+                    dλ_re[i, k] = real(Ch[i, i])
+                    dλ_im[i, k] = imag(Ch[i, i])
+                end
+            end
+            return (Array(W), dλ_re, dλ_im)
+        end
+    end
 end
 
 end
