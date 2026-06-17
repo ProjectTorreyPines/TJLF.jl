@@ -4,6 +4,7 @@ using TJLF
 using ForwardDiff
 using LinearAlgebra
 import LinearAlgebra.LAPACK.ggev!
+import PrecompileTools
 
 # ─────────────────────────────────────────────────────────────────────────────
 # AD-compatible eigen for ForwardDiff.Dual element types.
@@ -311,6 +312,38 @@ function TJLF._standard_eigenvalues_via_solve(A::Matrix{Complex{D}}, B::Matrix{C
     return map(1:n) do i
         Complex(ForwardDiff.Dual{Tag}(real(λf[i]), ntuple(k -> dλ_re[i, k], Val(np))...),
                 ForwardDiff.Dual{Tag}(imag(λf[i]), ntuple(k -> dλ_im[i, k], Val(np))...))
+    end
+end
+
+# Bake the ForwardDiff/Dual `run_tjlf` path (AD through the entire spectral solve) so AD
+# consumers — e.g. flux-matching with TJLF and `use_ad=true` — don't re-JIT it on first use.
+# This is by far the largest compile in that workflow. Mirrors the AD regression test: perturb
+# a gradient with a Dual and differentiate Qe through `run_tjlf`. PrecompileTools catches any
+# workload error, so it cannot break (extension) precompilation.
+function _convert_input_tjlf(::Type{T}, base::TJLF.InputTJLF{Float64}) where {T<:Real}
+    inp = TJLF.InputTJLF{T}(base.NS, length(base.KY_SPECTRUM))
+    for fn in fieldnames(TJLF.InputTJLF)
+        v = getfield(base, fn)
+        ismissing(v) && continue
+        if v isa Float64
+            setfield!(inp, fn, T(v))
+        elseif v isa Vector{Float64}
+            setfield!(inp, fn, T.(v))
+        elseif v isa Vector{ComplexF64}
+            setfield!(inp, fn, Complex{T}.(v))
+        else
+            setfield!(inp, fn, v)
+        end
+    end
+    return inp
+end
+
+PrecompileTools.@compile_workload begin
+    base = TJLF.readInput(joinpath(pkgdir(TJLF), "precompile", "sample_input.tglf"))
+    ForwardDiff.derivative(base.RLTS[2]) do x
+        inp = _convert_input_tjlf(typeof(x), base)
+        inp.RLTS[2] = x
+        TJLF.Qe(TJLF.run_tjlf(inp))
     end
 end
 

@@ -9,6 +9,7 @@ using StaticArrays
 using FastGaussQuadrature
 using LinearMaps
 import KrylovKit
+import PrecompileTools
 
 #  populated by TJLFCUDAExt.__init__() when CUDA is loaded
 const _CUDA_FUNCTIONAL = Ref{Any}(() -> false)
@@ -97,5 +98,18 @@ export sum_ky_spectrum, xgrid_functions_geo
 
 const document = Dict()
 document[Symbol(@__MODULE__)] = [name for name in Base.names(@__MODULE__; all=false, imported=false) if name != Symbol(@__MODULE__)]
+
+# The quasi-linear spectral solve (`run_tjlf`) is by far the largest first-use JIT cost for
+# downstream consumers (in the FUS3 stellarator suite it dominates a ~125 s test item, ~80% of
+# which is compilation). Exercising the full read→solve path here, during precompilation, bakes
+# those specializations into `TJLF.ji` so every consumer — and every parallel test worker —
+# pays the compile once (cached) instead of on first call. We run both the scalar and the
+# `Vector` entry points (the latter is what integrated drivers call). PrecompileTools catches
+# any workload error, so this can never break precompilation.
+PrecompileTools.@compile_workload begin
+    input = readInput(joinpath(@__DIR__, "..", "precompile", "sample_input.tglf"))
+    run_tjlf(input)
+    run_tjlf([input])
+end
 
 end
