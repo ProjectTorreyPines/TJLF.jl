@@ -426,6 +426,30 @@ end
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 
+"""
+    get_wavefunction(inputs::InputTJLF, satParams::SaturationParameters, field_weight_out::Array{ComplexF64,3})
+
+Reconstruct the linear mode structure (wavefunction) along the extended
+ballooning angle from the Hermite-basis field weights produced by [`run`](@ref)
+(its `field_weight_out`).
+
+parameters:
+    inputs::InputTJLF                       - the input used for the run
+    satParams::SaturationParameters         - saturation/geometry params (`get_sat_params`)
+    field_weight_out::Array{ComplexF64,3}   - mode field weights [field, basis, mode] from `run`
+
+outputs:
+    plot_field_out   - fields on the angle grid   [mode, field, point]
+    plot_angle_out   - ballooning angle θ per grid point
+    max_plot         - number of angle-grid points
+    nmodes_out       - number of modes returned
+
+description:
+    Sums the basis-`j` Hermite functions weighted by `field_weight_out` onto a
+    fixed extended-angle grid, for each mode and each active field
+    (electrostatic, plus `USE_BPER`/`USE_BPAR` magnetic components). Useful for
+    inspecting mode localization and parity.
+"""
 function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, field_weight_out::Array{ComplexF64, 3}) where T<:Real 
     ms = 128
     npi = 9

@@ -1,3 +1,32 @@
+"""
+    run(input::Union{InputTJLF,InputTGLF}; use_gpu::Bool=false)
+
+Run the full TGLF quasi-linear transport model and return everything it computes
+as a `NamedTuple` (unlike [`run_tjlf`](@ref), which returns only the summed
+fluxes). An `InputTGLF` is converted to an `InputTJLF{Float64}` first.
+
+parameters:
+    input::InputTJLF | InputTGLF            - the local-equilibrium input
+    use_gpu::Bool                           - offload the dense eigensolves to CUDA (default false)
+
+outputs (NamedTuple):
+    QL_weights       - quasi-linear weights      [field, species, mode, ky, type]
+    eigenvalue       - growth rate & frequency   [mode, ky, type]
+    QL_flux_out      - summed fluxes             [field, species, type]   (== `run_tjlf` output)
+    flux_spectrum    - flux per ky               [field, species, mode, ky, type]
+    field_weight_out - mode (eigen) structure    [field, basis, mode, ky]
+
+description:
+    Wraps the solve in `with_blas_threads(1)` so the threaded `ky` loop does not
+    oversubscribe BLAS. With `USE_TRANSPORT_MODEL=true` (the usual path) it runs
+    the full saturation-rule spectrum sum; otherwise it returns a single-`ky`
+    linear solution with empty `QL_flux_out`/`flux_spectrum`. As with `run_tjlf`,
+    the width and eigenvalue spectra found during the run are saved back into the
+    input struct for reuse via the `FIND_WIDTH`/`FIND_EIGEN` flags.
+
+!!! note
+    `run` is exported but shadows `Base.run`, so call it as `TJLF.run`.
+"""
 function run(inputTJLF::InputTJLF; use_gpu::Bool=false)
     return with_blas_threads(1) do
         _run_impl(inputTJLF; use_gpu=use_gpu)
