@@ -14,6 +14,9 @@ through a golden-output regression suite — and adds two things the Fortran doe
 not have: an optional **GPU eigensolver** and **full automatic differentiation**,
 so you can take exact gradients of the predicted fluxes with respect to any input.
 
+For the full API reference, see the
+[online documentation](https://projecttorreypines.github.io/TJLF.jl/dev).
+
 ## Capabilities
 
 1. **Quasi-linear turbulent fluxes** for electrons and an arbitrary number of ion
@@ -282,11 +285,6 @@ suites cover saturation rules (`runtests_sat.jl`), electromagnetic runs
 (`runtests_EM.jl`), the transport model (`runtests_tm.jl`), the eigensolver
 (`runtests_eigen.jl`), the ky grid (`runtests_kygrid.jl`), and autodiff
 (`runtests_ad.jl`).
-
-## Online documentation
-
-For the full API reference, see the
-[online documentation](https://projecttorreypines.github.io/TJLF.jl/dev).
 
 ## Citation
 
