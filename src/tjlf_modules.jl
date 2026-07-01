@@ -202,6 +202,36 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     SHAPE_S_SIN6::Union{T,Missing} = missing
 end
 
+"""
+    InputTJLF{T<:Real}
+
+The complete set of inputs for a TJLF run — the Julia counterpart of a TGLF
+`input.tglf` file. Fields largely mirror the TGLF input variables (physics
+switches like `USE_BPER`/`USE_BPAR`/`USE_MHD_RULE`, the saturation rule
+`SAT_RULE`, species arrays `ZS`/`MASS`/`AS`/`TAUS`/`RLNS`/`RLTS`/`VPAR`, Miller
+geometry, and the `ky` grid controls). Build one with `readInput("input.tglf")`,
+convert from a `TurbulentTransport.InputTGLF`, or construct directly via
+`InputTJLF{T}(ns, nky)` and populate the fields.
+
+Fields are **concretely typed** (no `Union{Missing,...}`) for type stability in
+the hot eigensolver path; defaults are sentinels (`NaN` for floats, `0` for
+ints, `false` for bools, empty vectors) that construction is expected to
+overwrite. `checkInput` verifies a struct is fully populated (it errors on a
+leftover `NaN` sentinel), so there are deliberately no meaningful physics
+defaults.
+
+A few fields are TJLF-specific (repurposed or added relative to TGLF):
+- `FIND_WIDTH::Bool` — solve for the Gaussian mode width (`true`) or reuse an
+  externally supplied `WIDTH_SPECTRUM` (`false`).
+- `WIDTH_SPECTRUM::Vector` — per-`ky` widths; filled when `FIND_WIDTH=true`,
+  consumed when `false`.
+- `FIND_EIGEN::Bool` — select the eigenvalue solver (robust LAPACK when `true`).
+- `EIGEN_SPECTRUM::Vector` — initial eigenvalue guess used when `FIND_EIGEN=false`.
+- `SMALL::Float` — small value used to rewrite the eigenproblem as a linear
+  system (default `1e-13`).
+
+See also [`readInput`](@ref), [`run`](@ref), and `run_tjlf`.
+"""
 Base.@kwdef mutable struct InputTJLF{T<:Real}
     # NOTE: fields are concretely typed (no Union{...,Missing}) for type stability.
     # Every inputs.FIELD read in the hot eigensolver path must infer to a concrete
