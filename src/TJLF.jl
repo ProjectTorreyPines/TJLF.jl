@@ -10,6 +10,8 @@ using FastGaussQuadrature
 using LinearMaps
 import KrylovKit
 import PrecompileTools
+import Serialization
+import Random
 
 #  populated by TJLFCUDAExt.__init__() when CUDA is loaded
 const _CUDA_FUNCTIONAL = Ref{Any}(() -> false)
@@ -17,6 +19,10 @@ const _CUDA_DEVICE_COUNT = Ref{Any}(() -> 0)
 const _CUDA_SOLVE = Ref{Any}(nothing)
 const _CUDA_LU_SOLVE = Ref{Any}(nothing)
 const _CUDA_SOLVE_EIG_GRAD = Ref{Any}(nothing)
+const _CUDA_SI_BATCH = Ref{Any}(nothing)
+const _CUDA_CONTOUR_MOMENTS = Ref{Any}(nothing)
+const _CUDA_CSI_OPEN = Ref{Any}(nothing)
+const _CUDA_CSI_MAXP = Ref{Any}(nothing)
 
 # wrappers so call sites stay the same
 _cuda_functional() = _CUDA_FUNCTIONAL[]()
@@ -48,6 +54,8 @@ function _gpu_solve_eig_grad!(A::Matrix{ComplexF64}, B::Matrix{ComplexF64},
     _CUDA_SOLVE_EIG_GRAD[] === nothing && error("CUDA extension not loaded")
     return _CUDA_SOLVE_EIG_GRAD[](A, B, dA, dB)
 end
+
+include("tjlf_batched_si.jl")
 
 # @show BLAS.get_config()
 """

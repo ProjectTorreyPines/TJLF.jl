@@ -15,5 +15,7 @@ include("runtests_kygrid.jl")
 
 include("runtests_eigen.jl")
 
+include("runtests_batched_si.jl")
+
 println("\n*** Starting ForwardDiff AD tests (this may take ~20 min due to Dual-number compilation) ***\n")
 include("runtests_ad.jl")

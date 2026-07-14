@@ -2772,7 +2772,41 @@ function _generalized_eigenvalues(A::Matrix{K}, B::Matrix{K}) where {K<:Complex}
     return F.values
 end
 
+# Debug/benchmark hook: when TJLF_DUMP_PENCILS=<dir> is set, save up to
+# TJLF_DUMP_PENCILS_MAX (default 64) raw (A,B) pencils that reach the dense eigensolve, as
+# Serialization blobs pencil_<k>.jls containing (A=Matrix{ComplexF64}, B=Matrix{ComplexF64}).
+# Used by TJLFEP/build/ad/benchmark_krylov_eigs.jl to test alternative eigensolvers on REAL
+# TJLF matrices instead of random ones. Off (zero overhead beyond one ENV lookup) by default.
+const _PENCIL_DUMP_COUNT = Threads.Atomic{Int}(0)
+function _maybe_dump_pencil(A::Matrix{ComplexF64}, B::Matrix{ComplexF64})
+    dir = get(ENV, "TJLF_DUMP_PENCILS", "")
+    isempty(dir) && return
+    # TJLF_DUMP_PENCILS_MINSIZE filters to full-nbasis pencils: a grid scan also solves many
+    # cheap coarse-nbasis width-search passes (small n), which we usually don't want to profile.
+    minsize = parse(Int, get(ENV, "TJLF_DUMP_PENCILS_MINSIZE", "0"))
+    size(A, 1) < minsize && return
+    maxn = parse(Int, get(ENV, "TJLF_DUMP_PENCILS_MAX", "64"))
+    k = Threads.atomic_add!(_PENCIL_DUMP_COUNT, 1) + 1
+    k > maxn && return
+    mkpath(dir)
+    path = joinpath(dir, "pencil_$(lpad(k, 4, '0')).jls")
+    Serialization.serialize(path, (A = copy(A), B = copy(B)))
+    return
+end
+
+# Opt-in eigensolve hook: when set (Ref holds a callable), _standard_eigenvalues_via_solve routes
+# the (A,B) pencil to it instead of the dense per-pencil solve, returning Vector{ComplexF64}
+# eigenvalues. This is the seam TJLFEP's batched shift-invert driver uses to collect pencils
+# across grid combos and solve them in one batched GPU sweep (see TJLFEP kwscale inner=:batched_si).
+# Only valid for the eigenvalue-only path (IFLUX=false, no eigenvectors); nothing by default so the
+# standard behavior is bit-for-bit unchanged.
+const _EIGSOLVE_HOOK = Ref{Any}(nothing)
+
 function _standard_eigenvalues_via_solve(A::Matrix{ComplexF64}, B::Matrix{ComplexF64}; use_gpu::Bool=false)
+    _maybe_dump_pencil(A, B)
+    let h = _EIGSOLVE_HOOK[]
+        h === nothing || return h(A, B)::Vector{ComplexF64}
+    end
     if use_gpu
         # _gpu_solve! does getrf(B) + getrs(B,A) + Xgeev!(B⁻¹A) entirely on GPU
         # and returns Vector{ComplexF64} eigenvalues directly.
