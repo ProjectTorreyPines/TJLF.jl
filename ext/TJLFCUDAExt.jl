@@ -378,21 +378,37 @@ end
 
 function _si_batch(As, Bs, cfg)
     P = length(As); n = size(As[1], 1); M = cfg.M; Q = cfg.Q
-    A3h = Array{ComplexF64}(undef, n, n, P); B3h = similar(A3h)
-    @inbounds for p in 1:P
-        A3h[:, :, p] .= As[p]; B3h[:, :, p] .= Bs[p]
-    end
+    out = Vector{Vector{ComplexF64}}(undef, P)
     _with_device_slot() do
-        A3 = CUDA.CuArray(A3h); B3 = CUDA.CuArray(B3h)
-        bufs = (CUDA.zeros(ComplexF64, n, M, P), CUDA.zeros(ComplexF64, n, M, P),
-                CUDA.zeros(ComplexF64, n, M, P), CUDA.zeros(ComplexF64, n, M, P),
-                CUDA.zeros(ComplexF64, M, M, P), CUDA.zeros(ComplexF64, M, M, P))
+        # Memory-aware sharding over the pencil batch. Peak device footprint per pencil is
+        # A3 + B3 + the per-shift LU buffer G (3 n²) plus the subspace/Gram buffers (X,Y,permbuf,tmp
+        # = 4 nM; gram,rinv = 2 M²), all complex. A full ~256-pencil round at large n (UCP n=2400 →
+        # ~0.28 GB/pencil) far exceeds a 40 GB A100, so cap the shard to ~60% of free memory and free
+        # the device buffers between shards. At small n (DIII-D n≤1440) this is a single shard, so the
+        # bit-for-bit behavior there is unchanged.
+        bytes_per_p = (3 * n^2 + 4 * n * M + 2 * M^2) * sizeof(ComplexF64)
+        Ps_max = clamp(floor(Int, 0.6 * CUDA.available_memory() / bytes_per_p), 1, P)
         X0h = Matrix(qr(randn(ComplexF64, n, M)).Q)
-        cands = [ComplexF64[] for _ in 1:P]
-        for σ in cfg.shifts
-            _si_shift!(cands, A3, B3, σ, X0h, bufs, M, Q, cfg.mu_tol)
+        for lo in 1:Ps_max:P
+            rng = lo:min(lo + Ps_max - 1, P); Ps = length(rng)
+            A3h = Array{ComplexF64}(undef, n, n, Ps); B3h = similar(A3h)
+            @inbounds for (q, p) in enumerate(rng)
+                A3h[:, :, q] .= As[p]; B3h[:, :, q] .= Bs[p]
+            end
+            A3 = CUDA.CuArray(A3h); B3 = CUDA.CuArray(B3h)
+            bufs = (CUDA.zeros(ComplexF64, n, M, Ps), CUDA.zeros(ComplexF64, n, M, Ps),
+                    CUDA.zeros(ComplexF64, n, M, Ps), CUDA.zeros(ComplexF64, n, M, Ps),
+                    CUDA.zeros(ComplexF64, M, M, Ps), CUDA.zeros(ComplexF64, M, M, Ps))
+            cands = [ComplexF64[] for _ in 1:Ps]
+            for σ in cfg.shifts
+                _si_shift!(cands, A3, B3, σ, X0h, bufs, M, Q, cfg.mu_tol)
+            end
+            for (q, p) in enumerate(rng)
+                out[p] = TJLF._dedup_ritz(cands[q], cfg.dedup_tol)
+            end
+            CUDA.unsafe_free!(A3); CUDA.unsafe_free!(B3); foreach(CUDA.unsafe_free!, bufs)
         end
-        return [TJLF._dedup_ritz(cands[p], cfg.dedup_tol) for p in 1:P]
+        return out
     end
 end
 
