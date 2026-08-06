@@ -808,8 +808,13 @@ function flux_integrals(inputs::InputTJLF, QL::Array{T,5}, QL_flux_out::Array{T,
                              .+ dky1 .* sum(QL[:,:,:,i,5],dims=3))
 
     if ky * inputs.TAUS[1] * inputs.MASS[2] <= 1
-        # sum of first and second field of energy flux
-        q_low_out .= QL_flux_out[1,:,2] .+ QL_flux_out[2,:,2]
+        # sum of first and second field (phi, apar) of energy flux; an
+        # electrostatic-only QL tensor (nf = 1) has no apar contribution
+        if size(QL_flux_out, 1) >= 2
+            q_low_out .= QL_flux_out[1,:,2] .+ QL_flux_out[2,:,2]
+        else
+            q_low_out .= QL_flux_out[1,:,2]
+        end
     end
 
     return QL_flux_out, q_low_out
@@ -844,8 +849,12 @@ function sum_ky_spectrum(
 )where T <: Real
 
     sat_rule_in = inputs.SAT_RULE
-    nf = 3 # get the number of fields
-    ns = inputs.NS # get the number of species
+    # Size the output by the QL tensor itself, not by fixed constants:
+    # QLNN bundles trained with drop_bpar hand in nf < 3, and QLNN packs the
+    # canonical (e, D, C) species set which may differ from inputs.NS.
+    # Native TJLF callers always build (3, NS, ...) so this is a no-op for them.
+    nf = size(QL_weights, 1) # get the number of fields
+    ns = size(QL_weights, 2) # get the number of species
     nm = inputs.NMODES # get the number of modes
     ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
