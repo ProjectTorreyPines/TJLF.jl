@@ -8,8 +8,10 @@ directory = joinpath(@__DIR__, "test_eigen")
   TJLF.run_tjlf(inputTJLF)
   fluxesJulia = sum(TJLF.run_tjlf(inputTJLF); dims=1)[1, :, :]
 
-  # took these results from previous implementation with Arpark:eigs
-  Fluxes_results=[-39.560547433921755, -34.280893518792716, -0.7300925138635125, 240.91550661719268, 180.22103212060173, 5.44996230222146, 0.010288609198657303, 5.661387914783233, 0.7838629459587043]
+  # TJLF self-consistency baseline (originally from the Arpack:eigs implementation);
+  # regenerated after the SAT3 kT now uses the USE_AVE_ION_GRID charge-weighted rho_ion
+  # to match the Fortran module-level definition (this deck is SAT_RULE=3, NS=3, ave-ion grid)
+  Fluxes_results=[-38.50565281057576, -33.32764980282209, -0.7160357527709992, 236.9454196026313, 178.66229235085234, 5.360568221008874, 0.010139191833800899, 5.555240092823567, 0.7697844615545134]
 
   for i in 1:3*inputTJLF.NS
     @test isapprox(sum(fluxesJulia[i]), sum(Fluxes_results[i]), rtol=5e-3)  

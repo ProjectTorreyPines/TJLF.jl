@@ -1,4 +1,29 @@
 """
+    get_rho_ion(inputs::InputTJLF{T}) where T<:Real
+
+description:
+    single definition of the ion gyroradius used by the saturation rules,
+    mirroring the module-level rho_ion of the Fortran (tglf_startup.f90):
+    charge-weighted average over ions when USE_AVE_ION_GRID is set,
+    otherwise the plain species-2 value
+"""
+function get_rho_ion(inputs::InputTJLF{T}) where T<:Real
+    if !inputs.USE_AVE_ION_GRID
+        return √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
+    end
+    rho_ion = 0.0
+    charge = 0.0
+    for is in 2:inputs.NS
+        if inputs.ZS[is]*inputs.AS[is]/abs(inputs.ZS[1]*inputs.AS[1]) > 0.1
+            charge += inputs.ZS[is]*inputs.AS[is]
+            rho_ion += inputs.AS[is]*√(inputs.TAUS[is]*inputs.MASS[is])
+        end
+    end
+    if charge!=0.0 rho_ion = rho_ion/charge end
+    return rho_ion
+end
+
+"""
     get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, most_unstable_gamma::AbstractArray{T}) where T<:Real
 
 parameters:
@@ -21,18 +46,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
     ky_spect = inputs.KY_SPECTRUM
     alpha_zf = inputs.ALPHA_ZF
 
-    rho_ion = 0.0
-    charge = 0.0
-    for is in 2:inputs.NS
-        if !inputs.USE_AVE_ION_GRID
-            rho_ion = √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
-            break
-        elseif inputs.ZS[is]*inputs.AS[is]/abs(inputs.ZS[1]*inputs.AS[1]) > 0.1
-            charge += inputs.ZS[is]*inputs.AS[is]
-            rho_ion += inputs.AS[is]*√(inputs.TAUS[is]*inputs.MASS[is])
-        end
-    end
-    if charge!=0.0 rho_ion = rho_ion/charge end
+    rho_ion = get_rho_ion(inputs)
 
     # find the local maximum of most_unstable_gamma/ky_spect with the largest most_unstable_gamma/ky_spect^2
     kycut = 0.8/rho_ion
@@ -111,8 +125,8 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
         b = (f1 - f0*(1-x1*x1)-f2*x1*x1)/(x1-x1*x1)
         c = f2 - f0 - b
 
-        # if f0>f1 then f1 is not a local maximum
-        if(f0 > f1)
+        # if f0>=f1 then f1 is not a local maximum (Fortran tie-break: .ge.)
+        if(f0 >= f1)
             kymax1 = ky_spect[jmax1-1]
             gammamax1 = f0*kymax1
 
@@ -273,12 +287,10 @@ function intensity_sat(
     alpha_zf = inputs.ALPHA_ZF
     alpha_quench = inputs.ALPHA_QUENCH
 
-    zs_2 = inputs.ZS[2]
-    taus_2 = inputs.TAUS[2]
     mass_2 = inputs.MASS[2]
     taus_1 = inputs.TAUS[1]
     nmodes = inputs.NMODES
-    rho_ion = √(taus_2*mass_2)/ abs(zs_2)
+    rho_ion = get_rho_ion(inputs)
     small = 10^-10
     ky_spect = inputs.KY_SPECTRUM
     nky = length(ky_spect)
@@ -361,14 +373,14 @@ function intensity_sat(
     sqcky=√(cky)
     cnorm = 14.29
     etg_streamer=1.05
-    kyetg = etg_streamer * abs(zs_2) / √(taus_2 * mass_2)
-
-    measure = √(taus_1 * mass_2)
     # if(USE_SUB1)
     #     cnorm=12.12
     #     expsub=1
     # end
     if(alpha_quench != 0.0) etg_streamer=2.1 end
+    kyetg = etg_streamer / rho_ion   # fixed to ion gyroradius (Fortran: etg_streamer/rho_ion)
+
+    measure = √(taus_1 * mass_2)
     # if(igeo == 0)then # s-alpha
     #     cnorm=14.63
     #     cz1=0.90*czf
@@ -593,7 +605,9 @@ function intensity_sat(
 
     # generate SAT2 potential for SAT3 to connect to for electron scale
 
-    YTs = Vector{T}(undef, nmodes)
+    # zero-initialized like the Fortran: when the connecting-quadratic denominator
+    # vanishes YTs stays 0.0 and the 1e-5 floor below takes over
+    YTs = zeros(T, nmodes)
     if(sat_rule_in==3)
         if(ky_spect[nky] >= kT)
             dummy_interp = zeros(T, size(ky_spect)...)

@@ -19,18 +19,7 @@ function get_ky_spectrum(inputs::InputTJLF{T}, grad_r0::T)::Vector{T} where T<:R
     spectrum_type = inputs.KYGRID_MODEL
     rho_e = √(inputs.TAUS[1]*inputs.MASS[1])/ abs(inputs.ZS[1]) #((Ts/Te)*m)^0.5/|1| -> abs(charge #) as denom. TAUS[1] is electrons, aka 1.
 
-    rho_ion = 0.0
-    charge = 0.0
-    for is in 2:inputs.NS #NS stands for Number of Species, so this just runs once for most considerations
-        if !inputs.USE_AVE_ION_GRID
-            rho_ion = √(inputs.TAUS[2]*inputs.MASS[2]) / abs(inputs.ZS[2])
-            break
-        elseif inputs.ZS[is]*inputs.AS[is]/abs(inputs.ZS[1]*inputs.AS[1]) > 0.1
-            charge += inputs.ZS[is]*inputs.AS[is]
-            rho_ion += inputs.AS[is]*√(inputs.TAUS[is]*inputs.MASS[is])
-        end
-    end
-    if charge!=0.0 rho_ion = rho_ion/charge end
+    rho_ion = get_rho_ion(inputs)
 
     ### value from modules.f90
     ky_min = 0.05

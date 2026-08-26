@@ -335,7 +335,7 @@ function tjlf_LS(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, outpu
                     phi2_bar = 0.0
                 else
                     kyi = ky
-                    v_bar_out[imax] = get_intensity(inputs, ave, outputGeo.kx0_e, R_unit, kyi, gamma_out[imax]) ############### can use some cleaning
+                    v_bar_out[imax] = get_intensity(inputs, ave, satParams, outputGeo.kx0_e, R_unit, kyi, gamma_out[imax]) ############### can use some cleaning
                     phi2_bar = v_bar_out[imax] / v_QL_out[imax]
                 end
 
@@ -517,12 +517,12 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
 end
 
 """
-    get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, kp::T, gp::T) where T<:Real
+    get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, satParams::SaturationParameters{T}, kx0_e::T, R_unit::T, kp::T, gp::T) where T<:Real
 
 description:
     helper function to get intensity coefficent given the saturation rule
 """
-function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, kp::T, gp::T) where {T<:Real}
+function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, satParams::SaturationParameters{T}, kx0_e::T, R_unit::T, kp::T, gp::T) where {T<:Real}
 
     nmodes_in = inputs.NMODES
     sat_rule_in = inputs.SAT_RULE
@@ -565,7 +565,7 @@ function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, k
             end
         end
 
-        wd0 = ks * √(inputs.TAUS[1] * inputs.MASS[2]) / R_unit  #renomalized for scale invariance
+        wd0 = ks * √(inputs.TAUS[1] / inputs.MASS[2]) / R_unit  #renomalized for scale invariance
         gnet = gp / wd0
         intensity = cnorm * (wd0^2) * (gnet^exponent1 + c1 * gnet) / (kp^4)
 
@@ -574,8 +574,8 @@ function get_intensity(inputs::InputTJLF{T}, ave::Ave{T}, kx0_e::T, R_unit::T, k
             intensity = intensity / (1.0 + (1.15 * kx0_e)^4)^2
         end
 
-        SAT_geo0_out = 1.0 ############# BRUH #################
-        intensity = intensity * SAT_geo0_out * measure
+        # geometry factor from get_sat_params: 1.0 for GYRO units, 0.946/qrat_geo(0) otherwise
+        intensity = intensity * satParams.SAT_geo0 * measure
     elseif (sat_rule_in >= 1)
         intensity = 1.0
     end
