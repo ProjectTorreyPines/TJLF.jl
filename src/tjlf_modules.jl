@@ -1,142 +1,149 @@
 abstract type AbstractAve{T<:Number} end
 
 Base.@kwdef mutable struct InputTGLF{T<:Real}
-    SIGN_BT::Union{Int,Missing} = missing
-    SIGN_IT::Union{Int,Missing} = missing
-    NS::Union{Int,Missing} = missing
-    ZMAJ_LOC::Union{T,Missing} = missing
-    DRMINDX_LOC::Union{T,Missing} = missing
-    DZMAJDX_LOC::Union{T,Missing} = missing
-    S_DELTA_LOC::Union{T,Missing} = missing
-    ZETA_LOC::Union{T,Missing} = missing
-    S_ZETA_LOC::Union{T,Missing} = missing
+    # NOTE: fields are concretely typed (no Union{...,Missing}) for type stability —
+    # the same recipe as InputTJLF below. FUSE constructs InputTGLF{Dual} and reads it
+    # field-by-field in the AD path; a Union{Missing,...} here poisons inference and
+    # boxes every access. Defaults are sentinels (T(NaN) for floats, 0 for ints, false
+    # for bools, "" for strings) that construction is expected to overwrite. "Unset" is
+    # detected with `is_unset` (NaN / empty string); it is NOT detectable for ints and
+    # bools, whose sentinels are valid values.
+    SIGN_BT::Int = 0
+    SIGN_IT::Int = 0
+    NS::Int = 0
+    ZMAJ_LOC::T = T(NaN)
+    DRMINDX_LOC::T = T(NaN)
+    DZMAJDX_LOC::T = T(NaN)
+    S_DELTA_LOC::T = T(NaN)
+    ZETA_LOC::T = T(NaN)
+    S_ZETA_LOC::T = T(NaN)
 
-    MASS_1::Union{T,Missing} = missing
-    ZS_1::Union{T,Missing} = missing
-    AS_1::Union{T,Missing} = missing
-    TAUS_1::Union{T,Missing} = missing
+    MASS_1::T = T(NaN)
+    ZS_1::T = T(NaN)
+    AS_1::T = T(NaN)
+    TAUS_1::T = T(NaN)
 
-    MASS_2::Union{T,Missing} = missing
-    ZS_2::Union{T,Missing} = missing
-    VPAR_2::Union{T,Missing} = missing
-    VPAR_SHEAR_2::Union{T,Missing} = missing
+    MASS_2::T = T(NaN)
+    ZS_2::T = T(NaN)
+    VPAR_2::T = T(NaN)
+    VPAR_SHEAR_2::T = T(NaN)
 
-    MASS_3::Union{T,Missing} = missing
-    ZS_3::Union{T,Missing} = missing
-    RLTS_3::Union{T,Missing} = missing
-    TAUS_3::Union{T,Missing} = missing
-    VPAR_3::Union{T,Missing} = missing
-    VPAR_SHEAR_3::Union{T,Missing} = missing
+    MASS_3::T = T(NaN)
+    ZS_3::T = T(NaN)
+    RLTS_3::T = T(NaN)
+    TAUS_3::T = T(NaN)
+    VPAR_3::T = T(NaN)
+    VPAR_SHEAR_3::T = T(NaN)
 
     # TGLF-NN uses 3 species
     # This is why parameters for species 1:3 are sorted differently than 4:10
-    MASS_4::Union{T,Missing} = missing
-    AS_4::Union{T,Missing} = missing
-    ZS_4::Union{T,Missing} = missing
-    RLNS_4::Union{T,Missing} = missing
-    RLTS_4::Union{T,Missing} = missing
-    TAUS_4::Union{T,Missing} = missing
-    VPAR_4::Union{T,Missing} = missing
-    VPAR_SHEAR_4::Union{T,Missing} = missing
+    MASS_4::T = T(NaN)
+    AS_4::T = T(NaN)
+    ZS_4::T = T(NaN)
+    RLNS_4::T = T(NaN)
+    RLTS_4::T = T(NaN)
+    TAUS_4::T = T(NaN)
+    VPAR_4::T = T(NaN)
+    VPAR_SHEAR_4::T = T(NaN)
 
-    MASS_5::Union{T,Missing} = missing
-    AS_5::Union{T,Missing} = missing
-    ZS_5::Union{T,Missing} = missing
-    RLNS_5::Union{T,Missing} = missing
-    RLTS_5::Union{T,Missing} = missing
-    TAUS_5::Union{T,Missing} = missing
-    VPAR_5::Union{T,Missing} = missing
-    VPAR_SHEAR_5::Union{T,Missing} = missing
+    MASS_5::T = T(NaN)
+    AS_5::T = T(NaN)
+    ZS_5::T = T(NaN)
+    RLNS_5::T = T(NaN)
+    RLTS_5::T = T(NaN)
+    TAUS_5::T = T(NaN)
+    VPAR_5::T = T(NaN)
+    VPAR_SHEAR_5::T = T(NaN)
 
-    MASS_6::Union{T,Missing} = missing
-    AS_6::Union{T,Missing} = missing
-    ZS_6::Union{T,Missing} = missing
-    RLNS_6::Union{T,Missing} = missing
-    RLTS_6::Union{T,Missing} = missing
-    TAUS_6::Union{T,Missing} = missing
-    VPAR_6::Union{T,Missing} = missing
-    VPAR_SHEAR_6::Union{T,Missing} = missing
+    MASS_6::T = T(NaN)
+    AS_6::T = T(NaN)
+    ZS_6::T = T(NaN)
+    RLNS_6::T = T(NaN)
+    RLTS_6::T = T(NaN)
+    TAUS_6::T = T(NaN)
+    VPAR_6::T = T(NaN)
+    VPAR_SHEAR_6::T = T(NaN)
 
-    MASS_7::Union{T,Missing} = missing
-    AS_7::Union{T,Missing} = missing
-    ZS_7::Union{T,Missing} = missing
-    RLNS_7::Union{T,Missing} = missing
-    RLTS_7::Union{T,Missing} = missing
-    TAUS_7::Union{T,Missing} = missing
-    VPAR_7::Union{T,Missing} = missing
-    VPAR_SHEAR_7::Union{T,Missing} = missing
+    MASS_7::T = T(NaN)
+    AS_7::T = T(NaN)
+    ZS_7::T = T(NaN)
+    RLNS_7::T = T(NaN)
+    RLTS_7::T = T(NaN)
+    TAUS_7::T = T(NaN)
+    VPAR_7::T = T(NaN)
+    VPAR_SHEAR_7::T = T(NaN)
 
-    MASS_8::Union{T,Missing} = missing
-    AS_8::Union{T,Missing} = missing
-    ZS_8::Union{T,Missing} = missing
-    RLNS_8::Union{T,Missing} = missing
-    RLTS_8::Union{T,Missing} = missing
-    TAUS_8::Union{T,Missing} = missing
-    VPAR_8::Union{T,Missing} = missing
-    VPAR_SHEAR_8::Union{T,Missing} = missing
+    MASS_8::T = T(NaN)
+    AS_8::T = T(NaN)
+    ZS_8::T = T(NaN)
+    RLNS_8::T = T(NaN)
+    RLTS_8::T = T(NaN)
+    TAUS_8::T = T(NaN)
+    VPAR_8::T = T(NaN)
+    VPAR_SHEAR_8::T = T(NaN)
 
-    MASS_9::Union{T,Missing} = missing
-    AS_9::Union{T,Missing} = missing
-    ZS_9::Union{T,Missing} = missing
-    RLNS_9::Union{T,Missing} = missing
-    RLTS_9::Union{T,Missing} = missing
-    TAUS_9::Union{T,Missing} = missing
-    VPAR_9::Union{T,Missing} = missing
-    VPAR_SHEAR_9::Union{T,Missing} = missing
+    MASS_9::T = T(NaN)
+    AS_9::T = T(NaN)
+    ZS_9::T = T(NaN)
+    RLNS_9::T = T(NaN)
+    RLTS_9::T = T(NaN)
+    TAUS_9::T = T(NaN)
+    VPAR_9::T = T(NaN)
+    VPAR_SHEAR_9::T = T(NaN)
 
-    MASS_10::Union{T,Missing} = missing
-    AS_10::Union{T,Missing} = missing
-    ZS_10::Union{T,Missing} = missing
-    RLNS_10::Union{T,Missing} = missing
-    RLTS_10::Union{T,Missing} = missing
-    TAUS_10::Union{T,Missing} = missing
-    VPAR_10::Union{T,Missing} = missing
-    VPAR_SHEAR_10::Union{T,Missing} = missing
+    MASS_10::T = T(NaN)
+    AS_10::T = T(NaN)
+    ZS_10::T = T(NaN)
+    RLNS_10::T = T(NaN)
+    RLTS_10::T = T(NaN)
+    TAUS_10::T = T(NaN)
+    VPAR_10::T = T(NaN)
+    VPAR_SHEAR_10::T = T(NaN)
 
-    AS_2::Union{T,Missing} = missing
-    AS_3::Union{T,Missing} = missing
-    BETAE::Union{T,Missing} = missing
-    DEBYE::Union{T,Missing} = missing
-    DELTA_LOC::Union{T,Missing} = missing
-    DRMAJDX_LOC::Union{T,Missing} = missing
-    KAPPA_LOC::Union{T,Missing} = missing
-    P_PRIME_LOC::Union{T,Missing} = missing
-    Q_LOC::Union{T,Missing} = missing
-    Q_PRIME_LOC::Union{T,Missing} = missing
-    RLNS_1::Union{T,Missing} = missing
-    RLNS_2::Union{T,Missing} = missing
-    RLNS_3::Union{T,Missing} = missing
-    RLTS_1::Union{T,Missing} = missing
-    RLTS_2::Union{T,Missing} = missing
-    RMAJ_LOC::Union{T,Missing} = missing
-    RMIN_LOC::Union{T,Missing} = missing
-    S_KAPPA_LOC::Union{T,Missing} = missing
-    TAUS_2::Union{T,Missing} = missing
-    VEXB_SHEAR::Union{T,Missing} = missing
-    VPAR_1::Union{T,Missing} = missing
-    VPAR_SHEAR_1::Union{T,Missing} = missing
-    XNUE::Union{T,Missing} = missing
-    ZEFF::Union{T,Missing} = missing
+    AS_2::T = T(NaN)
+    AS_3::T = T(NaN)
+    BETAE::T = T(NaN)
+    DEBYE::T = T(NaN)
+    DELTA_LOC::T = T(NaN)
+    DRMAJDX_LOC::T = T(NaN)
+    KAPPA_LOC::T = T(NaN)
+    P_PRIME_LOC::T = T(NaN)
+    Q_LOC::T = T(NaN)
+    Q_PRIME_LOC::T = T(NaN)
+    RLNS_1::T = T(NaN)
+    RLNS_2::T = T(NaN)
+    RLNS_3::T = T(NaN)
+    RLTS_1::T = T(NaN)
+    RLTS_2::T = T(NaN)
+    RMAJ_LOC::T = T(NaN)
+    RMIN_LOC::T = T(NaN)
+    S_KAPPA_LOC::T = T(NaN)
+    TAUS_2::T = T(NaN)
+    VEXB_SHEAR::T = T(NaN)
+    VPAR_1::T = T(NaN)
+    VPAR_SHEAR_1::T = T(NaN)
+    XNUE::T = T(NaN)
+    ZEFF::T = T(NaN)
 
     # switches
-    UNITS::Union{String,Missing} = missing
-    ALPHA_ZF::Union{T,Missing} = missing
-    USE_MHD_RULE::Union{Bool,Missing} = missing
-    NKY::Union{Int,Missing} = missing
-    SAT_RULE::Union{Int,Missing} = missing
-    KYGRID_MODEL::Union{Int,Missing} = missing
-    NMODES::Union{Int,Missing} = missing
-    NBASIS_MIN::Union{Int,Missing} = missing
-    NBASIS_MAX::Union{Int,Missing} = missing
-    XNU_MODEL::Union{Int,Missing} = missing
-    USE_AVE_ION_GRID::Union{Bool,Missing} = missing
-    ALPHA_QUENCH::Union{Int,Missing} = missing
-    ALPHA_MACH::Union{T,Missing} = missing
-    WDIA_TRAPPED::Union{T,Missing} = missing
-    USE_BPAR::Union{Bool,Missing} = missing
-    USE_BPER::Union{Bool,Missing} = missing
+    UNITS::String = ""
+    ALPHA_ZF::T = T(NaN)
+    USE_MHD_RULE::Bool = false
+    NKY::Int = 0
+    SAT_RULE::Int = 0
+    KYGRID_MODEL::Int = 0
+    NMODES::Int = 0
+    NBASIS_MIN::Int = 0
+    NBASIS_MAX::Int = 0
+    XNU_MODEL::Int = 0
+    USE_AVE_ION_GRID::Bool = false
+    ALPHA_QUENCH::Int = 0
+    ALPHA_MACH::T = T(NaN)
+    WDIA_TRAPPED::T = T(NaN)
+    USE_BPAR::Bool = false
+    USE_BPER::Bool = false
 
-    _Qgb::Union{T,Missing} = missing
+    _Qgb::T = T(NaN)
 
     # missing
     USE_BISECTION::Bool = true
@@ -174,33 +181,49 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     DAMP_PSI::T = 0.0
     DAMP_SIG::T = 0.0
 
-    #MXH params
-    SHAPE_COS0::Union{T,Missing} = missing
-    SHAPE_COS1::Union{T,Missing} = missing
-    SHAPE_COS2::Union{T,Missing} = missing
-    SHAPE_COS3::Union{T,Missing} = missing
-    SHAPE_COS4::Union{T,Missing} = missing
-    SHAPE_COS5::Union{T,Missing} = missing
-    SHAPE_COS6::Union{T,Missing} = missing
+    # MXH params. NaN sentinel (not zero) so "unset by geometry" stays detectable:
+    # conversions (update_input_tjlf!, tglf_to_cgyro) skip unset fields and let the
+    # target's own 0.0 defaults stand.
+    SHAPE_COS0::T = T(NaN)
+    SHAPE_COS1::T = T(NaN)
+    SHAPE_COS2::T = T(NaN)
+    SHAPE_COS3::T = T(NaN)
+    SHAPE_COS4::T = T(NaN)
+    SHAPE_COS5::T = T(NaN)
+    SHAPE_COS6::T = T(NaN)
 
-    SHAPE_SIN3::Union{T,Missing} = missing
-    SHAPE_SIN4::Union{T,Missing} = missing
-    SHAPE_SIN5::Union{T,Missing} = missing
-    SHAPE_SIN6::Union{T,Missing} = missing
+    SHAPE_SIN3::T = T(NaN)
+    SHAPE_SIN4::T = T(NaN)
+    SHAPE_SIN5::T = T(NaN)
+    SHAPE_SIN6::T = T(NaN)
 
-    SHAPE_S_COS0::Union{T,Missing} = missing
-    SHAPE_S_COS1::Union{T,Missing} = missing
-    SHAPE_S_COS2::Union{T,Missing} = missing
-    SHAPE_S_COS3::Union{T,Missing} = missing
-    SHAPE_S_COS4::Union{T,Missing} = missing
-    SHAPE_S_COS5::Union{T,Missing} = missing
-    SHAPE_S_COS6::Union{T,Missing} = missing
+    SHAPE_S_COS0::T = T(NaN)
+    SHAPE_S_COS1::T = T(NaN)
+    SHAPE_S_COS2::T = T(NaN)
+    SHAPE_S_COS3::T = T(NaN)
+    SHAPE_S_COS4::T = T(NaN)
+    SHAPE_S_COS5::T = T(NaN)
+    SHAPE_S_COS6::T = T(NaN)
 
-    SHAPE_S_SIN3::Union{T,Missing} = missing
-    SHAPE_S_SIN4::Union{T,Missing} = missing
-    SHAPE_S_SIN5::Union{T,Missing} = missing
-    SHAPE_S_SIN6::Union{T,Missing} = missing
+    SHAPE_S_SIN3::T = T(NaN)
+    SHAPE_S_SIN4::T = T(NaN)
+    SHAPE_S_SIN5::T = T(NaN)
+    SHAPE_S_SIN6::T = T(NaN)
 end
+
+"""
+    is_unset(v) -> Bool
+
+`true` when a sentinel-typed input field holds its "never populated" sentinel:
+`missing` (legacy), a NaN float (including `ForwardDiff.Dual`), or an empty
+string. Ints and bools have no detectable unset state (their sentinels `0` and
+`false` are valid values). This is the replacement for `ismissing` checks on
+`InputTGLF`/`InputTJLF` fields now that both structs are concretely typed.
+"""
+is_unset(::Missing) = true
+is_unset(v::Real) = v isa Integer ? false : isnan(v)
+is_unset(v::AbstractString) = isempty(v)
+is_unset(::Any) = false
 
 """
     InputTJLF{T<:Real}
@@ -470,26 +493,50 @@ end
 
 Modifies an InputTJLF from a InputTGLF
 """
+# Copy every field shared by InputTGLF and InputTJLF, skipping unset (NaN/empty)
+# source fields so the target's concrete sentinel/default stands. Unrolled at compile
+# time to typed getfield/setfield! — a runtime-Symbol loop here infers every access as
+# `Any` and boxes each scalar, which is fatal on the Dual path.
+@generated function _copy_shared_fields!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) where {T<:Real}
+    shared = intersect(fieldnames(InputTGLF), fieldnames(InputTJLF))
+    assigns = map(collect(shared)) do f
+        qf = QuoteNode(f)
+        :(let v = getfield(input_tglf, $qf)
+              is_unset(v) || setfield!(input_tjlf, $qf, v)
+          end)
+    end
+    quote
+        $(assigns...)
+        return input_tjlf
+    end
+end
+
+# Copy the per-species scalars (ZS_i, AS_i, ...) into the InputTJLF vectors, unrolled
+# so the field symbols are compile-time constants (the old `Symbol("ZS_", i)` form
+# allocated a Symbol per species per field and inferred to `Any`).
+@generated function _copy_species_fields!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) where {T<:Real}
+    stmts = Expr[]
+    for i in 1:10
+        block = map((:ZS, :AS, :MASS, :RLNS, :RLTS, :TAUS, :VPAR, :VPAR_SHEAR)) do name
+            :(getfield(input_tjlf, $(QuoteNode(name)))[$i] = getfield(input_tglf, $(QuoteNode(Symbol(name, :_, i)))))
+        end
+        push!(stmts, :(if ns >= $i
+            $(block...)
+        end))
+    end
+    quote
+        ns = input_tglf.NS
+        $(stmts...)
+        return input_tjlf
+    end
+end
+
 function update_input_tjlf!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) where {T<:Real}
     input_tjlf.NWIDTH = 21
 
-    for fieldname in intersect(fieldnames(typeof(input_tglf)), fieldnames(typeof(input_tjlf)))
-        v = getfield(input_tglf, fieldname)
-        # InputTJLF fields are now concrete (no Missing); skip unset source fields so
-        # the concrete sentinel default stands (checkInput still guards true "unset").
-        ismissing(v) || setfield!(input_tjlf, fieldname, v)
-    end
+    _copy_shared_fields!(input_tjlf, input_tglf)
+    _copy_species_fields!(input_tjlf, input_tglf)
 
-    for i in 1:input_tglf.NS
-        input_tjlf.ZS[i] = getfield(input_tglf, Symbol("ZS_", i))
-        input_tjlf.AS[i] = getfield(input_tglf, Symbol("AS_", i))
-        input_tjlf.MASS[i] = getfield(input_tglf, Symbol("MASS_", i))
-        input_tjlf.RLNS[i] = getfield(input_tglf, Symbol("RLNS_", i))
-        input_tjlf.RLTS[i] = getfield(input_tglf, Symbol("RLTS_", i))
-        input_tjlf.TAUS[i] = getfield(input_tglf, Symbol("TAUS_", i))
-        input_tjlf.VPAR[i] = getfield(input_tglf, Symbol("VPAR_", i))
-        input_tjlf.VPAR_SHEAR[i] = getfield(input_tglf, Symbol("VPAR_SHEAR_", i))
-    end
     input_tjlf.WIDTH_SPECTRUM .= input_tjlf.WIDTH
 
     # Set defaults ONLY for parameters that exist in InputTJLF but NOT in InputTGLF
@@ -497,27 +544,24 @@ function update_input_tjlf!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) 
     input_tjlf.FIND_EIGEN = true    # TGLF parameter but missing from InputTGLF structure
     input_tjlf.NXGRID = 16         # TJLF-specific parameter
 
-    # MXH SHAPE_* fields not set by lower MXH_modes default to 0.0
-    for fname in fieldnames(typeof(input_tjlf))
-        if startswith(string(fname), "SHAPE_") && ismissing(getfield(input_tjlf, fname))
-            setfield!(input_tjlf, fname, T(0.0))
-        end
-    end
-
     # check converison
     checkInput(input_tjlf)
 
     return input_tjlf
 end
 
-function minimal_scalar_copy(inputs::InputTJLF{T}) where {T<:Real}
-    # Create a new instance using the constructor that sets up NS and the number of ky points.
-    local_inputs = InputTJLF{T}(inputs.NS, length(inputs.KY_SPECTRUM))
-    # Loop over all fields and assign the value from the original.
-    for f in fieldnames(typeof(inputs))
-        setfield!(local_inputs, f, getfield(inputs, f))
+# Per-ky working copy taken inside the threaded ky loop on every solve (and every AD
+# evaluation). Unrolled to typed field copies for the same reason as above. NOTE: this
+# deliberately aliases the parent's Vector fields into the copy (`setfield!` shares the
+# reference) — the ky loop relies on writing per-ky results into the shared spectra.
+@generated function minimal_scalar_copy(inputs::InputTJLF{T}) where {T<:Real}
+    assigns = [:(setfield!(local_inputs, $(QuoteNode(f)), getfield(inputs, $(QuoteNode(f)))))
+               for f in fieldnames(InputTJLF)]
+    quote
+        local_inputs = InputTJLF{T}(inputs.NS, length(inputs.KY_SPECTRUM))
+        $(assigns...)
+        return local_inputs
     end
-    return local_inputs
 end
 
 ##########################################################

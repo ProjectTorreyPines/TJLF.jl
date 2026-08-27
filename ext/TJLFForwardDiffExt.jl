@@ -317,14 +317,15 @@ end
 
 # Bake the ForwardDiff/Dual `run_tjlf` path (AD through the entire spectral solve) so AD
 # consumers — e.g. flux-matching with TJLF and `use_ad=true` — don't re-JIT it on first use.
-# This is by far the largest compile in that workflow. Mirrors the AD regression test: perturb
-# a gradient with a Dual and differentiate Qe through `run_tjlf`. PrecompileTools catches any
-# workload error, so it cannot break (extension) precompilation.
+# This is by far the largest compile in that workflow. Each chunk size N in
+# `TJLF.AD_CHUNK_SIZES` (a compile-time preference, default [1, 2]) is a separate full
+# specialization of the solve; both the scalar and the Vector entry points are exercised
+# because they are distinct specializations and FUSE calls the Vector one.
+# PrecompileTools catches any workload error, so it cannot break (extension) precompilation.
 function _convert_input_tjlf(::Type{T}, base::TJLF.InputTJLF{Float64}) where {T<:Real}
     inp = TJLF.InputTJLF{T}(base.NS, length(base.KY_SPECTRUM))
     for fn in fieldnames(TJLF.InputTJLF)
         v = getfield(base, fn)
-        ismissing(v) && continue
         if v isa Float64
             setfield!(inp, fn, T(v))
         elseif v isa Vector{Float64}
@@ -339,11 +340,28 @@ function _convert_input_tjlf(::Type{T}, base::TJLF.InputTJLF{Float64}) where {T<
 end
 
 PrecompileTools.@compile_workload begin
-    base = TJLF.readInput(joinpath(pkgdir(TJLF), "precompile", "sample_input.tglf"))
-    ForwardDiff.derivative(base.RLTS[2]) do x
-        inp = _convert_input_tjlf(typeof(x), base)
-        inp.RLTS[2] = x
-        TJLF.Qe(TJLF.run_tjlf(inp))
+    let base = TJLF.readInput(joinpath(pkgdir(TJLF), "precompile", "sample_input.tglf"))
+        # Scalar entry point: run_tjlf(::InputTJLF{Dual{Tag,Float64,N}})
+        scalar_workload = function (x::AbstractVector{T}) where {T<:Real}
+            inp = _convert_input_tjlf(T, base)
+            inp.RLTS[2] = x[end]
+            return TJLF.Qe(TJLF.run_tjlf(inp))
+        end
+        # Vector entry point: run_tjlf(::Vector{InputTJLF{Dual{Tag,Float64,N}}}) — what
+        # integrated drivers (FUSE ActorTGLF) actually call; a separate specialization.
+        vector_workload = function (x::AbstractVector{T}) where {T<:Real}
+            inps = [_convert_input_tjlf(T, base) for _ in 1:2]
+            inps[1].RLTS[2] = x[end]
+            return sum(out -> TJLF.Qe(out), TJLF.run_tjlf(inps))
+        end
+        for N in TJLF.AD_CHUNK_SIZES
+            x0 = fill(base.RLTS[2], N)
+            chunk = ForwardDiff.Chunk{N}()
+            ForwardDiff.gradient(scalar_workload, x0,
+                                 ForwardDiff.GradientConfig(scalar_workload, x0, chunk))
+            ForwardDiff.gradient(vector_workload, x0,
+                                 ForwardDiff.GradientConfig(vector_workload, x0, chunk))
+        end
     end
 end
 

@@ -182,9 +182,6 @@ function checkInput(inputTJLF::InputTJLF)
     field_names = fieldnames(InputTJLF)
     for field_name in field_names
         field_value = getfield(inputTJLF, field_name)
-        if typeof(field_value) <: Missing
-            @assert !ismissing(field_value) "Did not properly populate inputTJLF for $field_name = $field_value"
-        end
         if typeof(field_value) <: Real
             @assert !isnan(field_value) "Did not properly populate inputTJLF for $field_name = $field_value"
         end
@@ -218,7 +215,7 @@ function save(input::InputTJLF, filename::AbstractString)
                 end
                 try
                     value = getfield(input, key)
-                    if ismissing(value)
+                    if is_unset(value)   # NaN sentinel = never populated; don't write it
                         continue
                     elseif isa(value, Int)
                         println(io, "$(key)=$(convert(Int, value))")

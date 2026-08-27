@@ -116,7 +116,6 @@ function as_eltype(::Type{T}, base::TJLF.InputTJLF{Float64}) where {T<:Real}
     inp = TJLF.InputTJLF{T}(base.NS, length(base.KY_SPECTRUM))
     for fn in fieldnames(TJLF.InputTJLF)
         v = getfield(base, fn)
-        ismissing(v) && continue
         v isa Float64         ? setfield!(inp, fn, T(v))          :
         v isa Vector{Float64} ? setfield!(inp, fn, T.(v))         :
         v isa Vector{ComplexF64} ? setfield!(inp, fn, Complex{T}.(v)) :

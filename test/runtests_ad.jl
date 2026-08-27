@@ -13,7 +13,6 @@ using ForwardDiff  # provided by test/Project.toml; triggers TJLFForwardDiffExt
         inp = TJLF.InputTJLF{T}(ns, nky)
         for fn in fieldnames(TJLF.InputTJLF)
             v = getfield(base, fn)
-            ismissing(v) && continue
             if v isa Float64
                 setfield!(inp, fn, T(v))
             elseif v isa Vector{Float64}
