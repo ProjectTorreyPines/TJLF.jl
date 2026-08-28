@@ -471,7 +471,9 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
             plot_angle_out[i] = xp[i]
         end
     else
-        dx = 2.0*pi/(satParams.y[ms]*inputs.WIDTH) # y comes from s_grid. width_in is not a tjlf struct thing; they mean width.
+        # satParams.y is the 1-based port of Fortran y(0:ms): y[m] = y(m-1), so
+        # Fortran y(ms) is y[ms+1] here (y[ms+1] = Ly, the full field-line length).
+        dx = 2.0*pi/(satParams.y[ms+1]*inputs.WIDTH) # y comes from s_grid. width_in is not a tjlf struct thing; they mean width.
         j0 = npi*np+1
         xp[j0] = 0.0 
         plot_angle_out[j0] = 0.0
@@ -484,10 +486,15 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
                 j -= 2*np
                 k += 1
             end # I needed to change the ms to ms+1 as the max dimension of y is ms+1 (see tjlf_geometry.jl)
-            xp[j0+i] = dx*(k*satParams.y[ms+1] + satParams.y[4*j])
-            #println(j0-i, ", ", ms-4*j, ", ", i, ", ",  j, ", ", length(satParams.theta))
+            # Fortran y(4*j) / t_s(4*j) are the 1-based y[4*j+1] / theta[4*j+1]
+            # (y[m] = y(m-1)). Using y[4*j] here shifted every positive-theta plot
+            # point by one grid cell while the negative side (y[ms+1-4*j], the
+            # correct port of y(ms-4*j)) was exact, making the sampled wavefunction
+            # spuriously asymmetric and inflating the tearing-parity metric
+            # |phi(theta)-phi(-theta)| for marginal modes.
+            xp[j0+i] = dx*(k*satParams.y[ms+1] + satParams.y[4*j+1])
             xp[j0-i] = -dx*((k+1)*satParams.y[ms+1] - satParams.y[ms+1-4*j])
-            plot_angle_out[j0+i] = -(k*satParams.theta[ms+1] + satParams.theta[4*j]) #t_s comes from sgrid module. t_s is theta in satParams
+            plot_angle_out[j0+i] = -(k*satParams.theta[ms+1] + satParams.theta[4*j+1]) #t_s comes from sgrid module. t_s is theta in satParams
             plot_angle_out[j0-i] = (k+1)*satParams.theta[ms+1] - satParams.theta[ms+1-4*j]
         end
     end
