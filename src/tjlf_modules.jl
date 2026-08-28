@@ -211,6 +211,68 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     SHAPE_S_SIN4::T = T(NaN)
     SHAPE_S_SIN5::T = T(NaN)
     SHAPE_S_SIN6::T = T(NaN)
+
+    # Bitmask (by field index) of names assigned through `input_tglf.FIELD = value`
+    # since construction. Ints/bools have no detectable unset sentinel, so consumers
+    # that need to know "did the user actually set this?" (e.g. FUSE's
+    # custom_input_files mask) cannot infer it from the value alone. Two inline
+    # UInt128s instead of a Set{Symbol}: NN/database pipelines construct these structs
+    # by the millions, so tracking must add ZERO heap allocations — isbits masks cost
+    # 32 bytes inline and one OR per assignment. Leading underscores keep the fields
+    # out of every save/serialize loop, and they are absent from InputTJLF so the
+    # shared-field copy ignores them. Writes through `setfield!` are deliberately NOT
+    # recorded: those are internal plumbing (field copies, transforms), not user intent.
+    _setmask_lo::UInt128 = UInt128(0)
+    _setmask_hi::UInt128 = UInt128(0)
+end
+
+# the two UInt128 set-tracking masks cover field indices 1..256
+@assert fieldcount(InputTGLF) <= 256 "InputTGLF outgrew the 256-bit _setmask; widen the mask fields"
+
+@inline function Base.setproperty!(input_tglf::InputTGLF, field::Symbol, value)
+    if field !== :_setmask_lo && field !== :_setmask_hi
+        # fieldindex const-folds when `field` is a literal (input_tglf.NKY = 12);
+        # for runtime symbols it is the same C lookup setfield! performs anyway.
+        idx = Base.fieldindex(typeof(input_tglf), field)
+        if idx <= 128
+            setfield!(input_tglf, :_setmask_lo,
+                getfield(input_tglf, :_setmask_lo) | (UInt128(1) << (idx - 1)))
+        else
+            setfield!(input_tglf, :_setmask_hi,
+                getfield(input_tglf, :_setmask_hi) | (UInt128(1) << (idx - 129)))
+        end
+    end
+    return setfield!(input_tglf, field, convert(fieldtype(typeof(input_tglf), field), value))
+end
+
+"""
+    was_set(input_tglf::InputTGLF, field::Symbol) -> Bool
+
+`true` when `field` was assigned via `input_tglf.field = value` after construction.
+Use this instead of comparing against a default when you need to distinguish "the user
+asked for this value" from "this is just the struct default" — the two are
+indistinguishable by value for ints, bools and strings. Zero-allocation.
+"""
+@inline function was_set(input_tglf::InputTGLF, field::Symbol)
+    idx = Base.fieldindex(typeof(input_tglf), field, false)
+    idx == 0 && return false
+    if idx <= 128
+        return getfield(input_tglf, :_setmask_lo) & (UInt128(1) << (idx - 1)) != 0
+    else
+        return getfield(input_tglf, :_setmask_hi) & (UInt128(1) << (idx - 129)) != 0
+    end
+end
+
+"""
+    set_fields(input_tglf::InputTGLF) -> Set{Symbol}
+
+The set of fields assigned since construction (see [`was_set`](@ref)). Empty for a
+struct populated exclusively through `setfield!`. Materializes a fresh Set on each
+call — use [`was_set`](@ref) in loops that must not allocate.
+"""
+function set_fields(input_tglf::InputTGLF)
+    T = typeof(input_tglf)
+    return Set{Symbol}(f for f in fieldnames(T) if was_set(input_tglf, f))
 end
 
 """
