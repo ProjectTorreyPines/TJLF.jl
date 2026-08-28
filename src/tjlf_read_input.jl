@@ -20,6 +20,7 @@ function readInput(filename::String)::InputTJLF
     ns = -1
     nky = -1
     kygrid_model = -1
+    sat_rule_found = false
     for line in lines
         if contains(line, '#') || !contains(line, '=')
             continue
@@ -31,6 +32,8 @@ function readInput(filename::String)::InputTJLF
             nky = parse(Int, strip(value))
         elseif field == "KYGRID_MODEL"
             kygrid_model = parse(Int, strip(value))
+        elseif field == "SAT_RULE"
+            sat_rule_found = true
         end
     end
     # make sure ns is defined
@@ -38,6 +41,9 @@ function readInput(filename::String)::InputTJLF
     @assert nky != -1 "did not find NKY"
     @assert kygrid_model != -1 "did not find KYGRID_MODEL"
     @assert kygrid_model >= 0 && kygrid_model <= 5 "KYGRID_MODEL must be Int between 0 and 5"
+    # SAT_RULE must be explicit: the Fortran fallback (unset -> SAT0) has silently
+    # produced wrong-saturation-rule runs too many times to honor it here.
+    @assert sat_rule_found "did not find SAT_RULE in $filename — TJLF requires it explicitly (Fortran silently defaults to SAT_RULE=0)"
     nky = get_ky_spectrum_size(nky, kygrid_model)
 
     # create InputTJLF struct
@@ -194,6 +200,10 @@ function checkInput(inputTJLF::InputTJLF)
     if !inputTJLF.FIND_EIGEN
         @assert !inputTJLF.FIND_WIDTH "If FIND_EIGEN false, FIND_WIDTH should also be false"
     end
+    # value-domain checks: ints/bools/strings have no NaN sentinel, so catch the
+    # common "unset or typo'd switch" cases here instead of silently misbehaving
+    @assert inputTJLF.SAT_RULE in (0, 1, 2, 3) "SAT_RULE must be 0, 1, 2, or 3 (got $(inputTJLF.SAT_RULE))"
+    @assert inputTJLF.UNITS in ("GYRO", "CGYRO") "UNITS must be \"GYRO\" or \"CGYRO\" (got \"$(inputTJLF.UNITS)\" — unset?)"
 end
 
 function checkInput(inputTJLFVector::Vector{InputTJLF{T}}) where {T<:Real}

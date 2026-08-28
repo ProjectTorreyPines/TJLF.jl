@@ -4,13 +4,15 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     # NOTE: fields are concretely typed (no Union{...,Missing}) for type stability —
     # the same recipe as InputTJLF below. FUSE constructs InputTGLF{Dual} and reads it
     # field-by-field in the AD path; a Union{Missing,...} here poisons inference and
-    # boxes every access. Defaults are sentinels (T(NaN) for floats, 0 for ints, false
-    # for bools, "" for strings) that construction is expected to overwrite. "Unset" is
-    # detected with `is_unset` (NaN / empty string); it is NOT detectable for ints and
-    # bools, whose sentinels are valid values.
-    SIGN_BT::Int = 0
-    SIGN_IT::Int = 0
-    NS::Int = 0
+    # boxes every access. Float defaults are T(NaN) sentinels that construction is
+    # expected to overwrite ("unset" is detected with `is_unset`: NaN / empty string).
+    # Ints and bools have NO detectable unset state, so instead of 0/false sentinels
+    # they carry the Fortran TGLF defaults (gacode tglf/src/tglf_interface.f90) —
+    # an omitted switch then means "TGLF default", never a silent zero (e.g. an
+    # unset SIGN_IT=0 used to silently kill VEXB_SHEAR).
+    SIGN_BT::Int = 1
+    SIGN_IT::Int = 1
+    NS::Int = 2
     ZMAJ_LOC::T = T(NaN)
     DRMINDX_LOC::T = T(NaN)
     DZMAJDX_LOC::T = T(NaN)
@@ -125,17 +127,17 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     XNUE::T = T(NaN)
     ZEFF::T = T(NaN)
 
-    # switches
+    # switches (bool/int defaults = Fortran tglf_interface.f90 defaults, see NOTE above)
     UNITS::String = ""
     ALPHA_ZF::T = T(NaN)
-    USE_MHD_RULE::Bool = false
-    NKY::Int = 0
+    USE_MHD_RULE::Bool = true
+    NKY::Int = 12
     SAT_RULE::Int = 0
-    KYGRID_MODEL::Int = 0
-    NMODES::Int = 0
-    NBASIS_MIN::Int = 0
-    NBASIS_MAX::Int = 0
-    XNU_MODEL::Int = 0
+    KYGRID_MODEL::Int = 1
+    NMODES::Int = 2
+    NBASIS_MIN::Int = 2
+    NBASIS_MAX::Int = 4
+    XNU_MODEL::Int = 2
     USE_AVE_ION_GRID::Bool = false
     ALPHA_QUENCH::Int = 0
     ALPHA_MACH::T = T(NaN)
@@ -216,8 +218,9 @@ end
 
 `true` when a sentinel-typed input field holds its "never populated" sentinel:
 `missing` (legacy), a NaN float (including `ForwardDiff.Dual`), or an empty
-string. Ints and bools have no detectable unset state (their sentinels `0` and
-`false` are valid values). This is the replacement for `ismissing` checks on
+string. Ints and bools have no detectable unset state — they carry the Fortran
+TGLF interface defaults instead of sentinels, so an "unset" int/bool is simply
+the TGLF default value. This is the replacement for `ismissing` checks on
 `InputTGLF`/`InputTJLF` fields now that both structs are concretely typed.
 """
 is_unset(::Missing) = true
@@ -237,11 +240,12 @@ convert from a `TurbulentTransport.InputTGLF`, or construct directly via
 `InputTJLF{T}(ns, nky)` and populate the fields.
 
 Fields are **concretely typed** (no `Union{Missing,...}`) for type stability in
-the hot eigensolver path; defaults are sentinels (`NaN` for floats, `0` for
-ints, `false` for bools, empty vectors) that construction is expected to
-overwrite. `checkInput` verifies a struct is fully populated (it errors on a
-leftover `NaN` sentinel), so there are deliberately no meaningful physics
-defaults.
+the hot eigensolver path. Float defaults are `NaN` sentinels that construction
+is expected to overwrite — `checkInput` errors on any leftover `NaN`, so floats
+deliberately have no silent physics defaults. Bools and ints have no detectable
+unset state, so they carry the Fortran TGLF defaults
+(gacode `tglf/src/tglf_interface.f90`) instead of `0`/`false` sentinels: an
+omitted switch means "TGLF default", never a silent zero.
 
 A few fields are TJLF-specific (repurposed or added relative to TGLF):
 - `FIND_WIDTH::Bool` — solve for the Gaussian mode width (`true`) or reuse an
@@ -259,34 +263,36 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     # NOTE: fields are concretely typed (no Union{...,Missing}) for type stability.
     # Every inputs.FIELD read in the hot eigensolver path must infer to a concrete
     # type; a Union{Missing,...} here poisons inference across all of TJLF and forces
-    # heap-boxing of millions of scalars. Defaults are sentinels (NaN for floats,
-    # 0 for ints, false for bools, empty vectors) that construction always overwrites;
-    # checkInput() still guards "fully populated" via the NaN sentinel for floats.
+    # heap-boxing of millions of scalars. Float defaults are NaN sentinels that
+    # construction always overwrites — checkInput() guards "fully populated" via the
+    # NaN sentinel. Bools/ints have no detectable unset state, so they carry the
+    # Fortran TGLF defaults (gacode tglf/src/tglf_interface.f90) instead of 0/false
+    # sentinels: an omitted switch means "TGLF default", never a silent zero.
     UNITS::String = ""
 
     USE_BPER::Bool = false
     USE_BPAR::Bool = false
-    USE_MHD_RULE::Bool = false
-    USE_BISECTION::Bool = false
+    USE_MHD_RULE::Bool = true
+    USE_BISECTION::Bool = true
     USE_INBOARD_DETRAPPED::Bool = false
     USE_AVE_ION_GRID::Bool = false
-    NEW_EIKONAL::Bool = false
-    FIND_WIDTH::Bool = false
-    IFLUX::Bool = false
+    NEW_EIKONAL::Bool = true
+    FIND_WIDTH::Bool = true
+    IFLUX::Bool = true
     ADIABATIC_ELEC::Bool = false
 
     SAT_RULE::Int = 0
-    NS::Int = 0
-    NMODES::Int = 0
-    NWIDTH::Int = 0
-    NBASIS_MAX::Int = 0
-    NBASIS_MIN::Int = 0
-    NXGRID::Int = 0
-    NKY::Int = 0
-    KYGRID_MODEL::Int = 0
-    XNU_MODEL::Int = 0
+    NS::Int = 2
+    NMODES::Int = 2
+    NWIDTH::Int = 21
+    NBASIS_MAX::Int = 4
+    NBASIS_MIN::Int = 2
+    NXGRID::Int = 16
+    NKY::Int = 12
+    KYGRID_MODEL::Int = 1
+    XNU_MODEL::Int = 2
     VPAR_MODEL::Int = 0
-    IBRANCH::Int = 0
+    IBRANCH::Int = -1
 
     ZS::Vector{T} = T[]
     MASS::Vector{T} = T[]
@@ -304,8 +310,8 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     FIND_EIGEN::Bool = true             # TGLF parameter but missing from InputTGLF
     # NOT IN TGLF (or missing from InputTGLF structure)
 
-    SIGN_BT::Int = 0
-    SIGN_IT::Int = 0
+    SIGN_BT::Int = 1
+    SIGN_IT::Int = 1
     KY::T = T(NaN)
 
     VEXB_SHEAR::T = T(NaN)
@@ -403,8 +409,8 @@ function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
         WIDTH_SPECTRUM = fill(T(NaN), nky),
         KY_SPECTRUM = fill(T(NaN), nky),
         EIGEN_SPECTRUM = fill(Complex{T}(NaN*im), nky),
-        SIGN_BT = 0,
-        SIGN_IT = 0,
+        SIGN_BT = 1,
+        SIGN_IT = 1,
         KY = T(NaN),
         VEXB_SHEAR = T(NaN),
         BETAE = T(NaN),
