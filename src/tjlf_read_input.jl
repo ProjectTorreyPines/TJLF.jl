@@ -12,6 +12,13 @@ return:
 
   - inputTJLF::InputTJLF - return InputTJLF struct based off the input.tglf file
 """
+# Unknown keys are a hard error, never a fallback: Fortran TGLF silently ignores
+# unrecognized input.tglf content and runs its default (SAT0) template — a typo'd
+# key then produces a plausible-looking wrong answer. TJLF refuses instead.
+_reject_unknown_key(field, filename) = throw(ArgumentError(
+    "unknown key in $filename: '$field' — TJLF rejects unrecognized inputs " *
+    "(Fortran TGLF would silently ignore it and run with defaults)"))
+
 function readInput(filename::String)::InputTJLF
     # gets the input.tglf file
     lines = readlines(filename)
@@ -92,6 +99,7 @@ function readInput(filename::String)::InputTJLF
             speciesField, speciesIndex = rsplit(field, "_"; limit=2)
             speciesField = Symbol(speciesField)
             speciesIndex = parse(Int, speciesIndex)
+            hasfield(InputTJLF{Float64}, speciesField) || _reject_unknown_key(field, filename)
             # skip values beyond the species number
             if speciesIndex > ns
                 continue
@@ -101,12 +109,14 @@ function readInput(filename::String)::InputTJLF
 
             # species vector as a vector
         elseif startswith(value, '[') 
+            hasfield(InputTJLF{Float64}, Symbol(field)) || _reject_unknown_key(field, filename)
             try
               getfield(inputTJLF, Symbol(field)) .= [parse(Float64, strip(item)) for item in split(value[2:end-1], ",")]
             catch e
               continue   # to skip NaN vectors KY_SPECTRUM
             end
         elseif startswith(value, "ComplexF64[")
+            hasfield(InputTJLF{Float64}, Symbol(field)) || _reject_unknown_key(field, filename)
             try 
              getfield(inputTJLF, Symbol(field)) .= [parse(ComplexF64, strip(item)) for item in split(value[12:end-1], ",")]
             catch e
@@ -135,12 +145,12 @@ function readInput(filename::String)::InputTJLF
             end
 
             # set the inputTJLF field value
+            hasfield(InputTJLF{Float64}, Symbol(field)) || _reject_unknown_key(field, filename)
             try
                 setfield!(inputTJLF, Symbol(field), val)
             catch
-                println(field)
-                println(val)
-                throw(error(field))
+                throw(ArgumentError("bad value for $field in $filename: '$value' parsed as " *
+                                    "$(typeof(val)), field expects $(fieldtype(InputTJLF{Float64}, Symbol(field)))"))
             end
 
         end

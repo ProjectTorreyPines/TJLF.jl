@@ -1,6 +1,8 @@
 using Test
 using TJLF
 
+include("runtests_input.jl")
+
 include("runtests_regressions.jl")
 
 include("runtests_sat.jl")
