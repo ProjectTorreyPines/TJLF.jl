@@ -486,12 +486,10 @@ function get_wavefunction(inputs::InputTJLF{T}, satParams::SaturationParameters{
                 j -= 2*np
                 k += 1
             end # I needed to change the ms to ms+1 as the max dimension of y is ms+1 (see tjlf_geometry.jl)
-            # Fortran y(4*j) / t_s(4*j) are the 1-based y[4*j+1] / theta[4*j+1]
-            # (y[m] = y(m-1)). Using y[4*j] here shifted every positive-theta plot
-            # point by one grid cell while the negative side (y[ms+1-4*j], the
-            # correct port of y(ms-4*j)) was exact, making the sampled wavefunction
-            # spuriously asymmetric and inflating the tearing-parity metric
-            # |phi(theta)-phi(-theta)| for marginal modes.
+            # Fortran y(4*j)/t_s(4*j) port to 1-based y[4*j+1]/theta[4*j+1]. Using
+            # y[4*j] shifted the positive-theta samples by one cell (the negative side
+            # was exact), making the wavefunction spuriously asymmetric and inflating
+            # the tearing-parity metric |phi(theta)-phi(-theta)| for marginal modes.
             xp[j0+i] = dx*(k*satParams.y[ms+1] + satParams.y[4*j+1])
             xp[j0-i] = -dx*((k+1)*satParams.y[ms+1] - satParams.y[ms+1-4*j])
             plot_angle_out[j0+i] = -(k*satParams.theta[ms+1] + satParams.theta[4*j+1]) #t_s comes from sgrid module. t_s is theta in satParams

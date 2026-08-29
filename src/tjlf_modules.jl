@@ -1,15 +1,11 @@
 abstract type AbstractAve{T<:Number} end
 
 Base.@kwdef mutable struct InputTGLF{T<:Real}
-    # NOTE: fields are concretely typed (no Union{...,Missing}) for type stability —
-    # the same recipe as InputTJLF below. FUSE constructs InputTGLF{Dual} and reads it
-    # field-by-field in the AD path; a Union{Missing,...} here poisons inference and
-    # boxes every access. Float defaults are T(NaN) sentinels that construction is
-    # expected to overwrite ("unset" is detected with `is_unset`: NaN / empty string).
-    # Ints and bools have NO detectable unset state, so instead of 0/false sentinels
-    # they carry the Fortran TGLF defaults (gacode tglf/src/tglf_interface.f90) —
-    # an omitted switch then means "TGLF default", never a silent zero (e.g. an
-    # unset SIGN_IT=0 used to silently kill VEXB_SHEAR).
+    # Concretely typed (no Union{...,Missing}) for type stability — same recipe and
+    # rationale as InputTJLF below. Float defaults are T(NaN) "unset" sentinels
+    # (detected with `is_unset`); ints/bools/strings carry the Fortran TGLF defaults,
+    # so an omitted switch means "TGLF default", never a silent zero (an unset
+    # SIGN_IT=0 used to silently kill VEXB_SHEAR).
     SIGN_BT::Int = 1
     SIGN_IT::Int = 1
     NS::Int = 2
@@ -213,21 +209,16 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     SHAPE_S_SIN5::T = T(NaN)
     SHAPE_S_SIN6::T = T(NaN)
 
-    # Bitmask (by field index) of names assigned through `input_tglf.FIELD = value`
-    # since construction. Ints/bools have no detectable unset sentinel, so consumers
-    # that need to know "did the user actually set this?" (e.g. FUSE's
-    # custom_input_files mask) cannot infer it from the value alone. Two inline
-    # UInt128s instead of a Set{Symbol}: NN/database pipelines construct these structs
-    # by the millions, so tracking must add ZERO heap allocations — isbits masks cost
-    # 32 bytes inline and one OR per assignment. Leading underscores keep the fields
-    # out of every save/serialize loop, and they are absent from InputTJLF so the
-    # shared-field copy ignores them. Writes through `setfield!` are deliberately NOT
-    # recorded: those are internal plumbing (field copies, transforms), not user intent.
+    # Bitmask (by field index) of fields assigned via setproperty! since construction:
+    # ints/bools have no unset sentinel, so "did the user set this?" (FUSE's
+    # custom_input_files mask) cannot be inferred from the value. Inline UInt128s
+    # rather than a Set{Symbol} so tracking adds zero heap allocations. The underscore
+    # prefix keeps them out of save/serialize loops; `setfield!` writes (internal
+    # copies/transforms, not user intent) are deliberately not recorded.
     _setmask_lo::UInt128 = UInt128(0)
     _setmask_hi::UInt128 = UInt128(0)
 end
 
-# the two UInt128 set-tracking masks cover field indices 1..256
 @assert fieldcount(InputTGLF) <= 256 "InputTGLF outgrew the 256-bit _setmask; widen the mask fields"
 
 @inline function Base.setproperty!(input_tglf::InputTGLF, field::Symbol, value)
@@ -323,17 +314,12 @@ A few fields are TJLF-specific (repurposed or added relative to TGLF):
 See also [`readInput`](@ref), [`run`](@ref), and `run_tjlf`.
 """
 Base.@kwdef mutable struct InputTJLF{T<:Real}
-    # NOTE: fields are concretely typed (no Union{...,Missing}) for type stability.
-    # Every inputs.FIELD read in the hot eigensolver path must infer to a concrete
-    # type; a Union{Missing,...} here poisons inference across all of TJLF and forces
-    # heap-boxing of millions of scalars. Float defaults are NaN sentinels that
-    # construction always overwrites — checkInput() guards "fully populated" via the
-    # NaN sentinel. Bools/ints have no detectable unset state, so they carry the
-    # Fortran TGLF defaults (gacode tglf/src/tglf_interface.f90) instead of 0/false
-    # sentinels: an omitted switch means "TGLF default", never a silent zero.
-    # UNITS defaults to the Fortran default GYRO; apply_presets! (run before every
-    # solve when USE_PRESETS=true) force-sets CGYRO for SAT_RULE 2/3, and checkInput
-    # rejects the SAT2/3+GYRO combination for USE_PRESETS=false runs.
+    # NOTE: fields are concretely typed (no Union{...,Missing}): every inputs.FIELD
+    # read in the hot eigensolver path must infer concretely, or inference poisons
+    # all of TJLF and heap-boxes millions of scalars. Float defaults are NaN "unset"
+    # sentinels enforced by checkInput; bools/ints/strings carry the Fortran TGLF
+    # defaults (tglf_interface.f90), so an omitted switch means "TGLF default",
+    # never a silent zero. UNITS: GYRO default; apply_presets! forces CGYRO for SAT2/3.
     UNITS::String = "GYRO"
 
     USE_BPER::Bool = false
@@ -561,15 +547,9 @@ function InputTJLF{T}(input_tglf::InputTGLF{T}) where {T<:Real}
     return update_input_tjlf!(input_tjlf, input_tglf)
 end
 
-"""
-    update_input_tjlf!(input_tglf::InputTGLF)
-
-Modifies an InputTJLF from a InputTGLF
-"""
 # Copy every field shared by InputTGLF and InputTJLF, skipping unset (NaN/empty)
-# source fields so the target's concrete sentinel/default stands. Unrolled at compile
-# time to typed getfield/setfield! — a runtime-Symbol loop here infers every access as
-# `Any` and boxes each scalar, which is fatal on the Dual path.
+# source fields so the target's default stands. Unrolled at compile time to typed
+# getfield/setfield! — a runtime-Symbol loop infers `Any` and boxes each scalar.
 @generated function _copy_shared_fields!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) where {T<:Real}
     shared = intersect(fieldnames(InputTGLF), fieldnames(InputTJLF))
     assigns = map(collect(shared)) do f
@@ -604,6 +584,11 @@ end
     end
 end
 
+"""
+    update_input_tjlf!(input_tjlf::InputTJLF, input_tglf::InputTGLF)
+
+Modifies an InputTJLF from a InputTGLF
+"""
 function update_input_tjlf!(input_tjlf::InputTJLF{T}, input_tglf::InputTGLF{T}) where {T<:Real}
     input_tjlf.NWIDTH = 21
 

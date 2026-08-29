@@ -318,23 +318,17 @@ end
 # ─────────────────────────────────────────────────────────────────────────────
 # Tag erasure at the solve boundary.
 #
-# ForwardDiff native code is keyed by the *tag* type inside Dual{Tag,V,N}, and the
-# tag names the consumer's own closure — so code precompiled below for the workload's
-# internal closures is unreachable from FUSE or any other caller (measured: a baked
-# chunk size still paid ~90–150 s of first-call JIT at a foreign tag). The fix:
-# re-tag incoming Duals to one canonical TJLF-owned tag at the `TJLF.run` boundary,
-# solve, and re-tag outputs (and input-struct mutations, e.g. the width/eigenvalue
-# spectra saved for FIND_WIDTH=false reuse) back to the caller's tag. Tags exist only
-# to catch perturbation confusion in *nested* differentiation; TJLF never initiates
-# its own ForwardDiff call, it just propagates one opaque AD level from entry to
-# exit, so the tag it wears internally is unobservable as long as the original tag
-# is restored on the way out. Re-tagging copies value+partials verbatim (the tag has
-# no runtime payload) — O(fields + array elements), noise against a multi-second
-# solve. Result: ONE heavy solve specialization per chunk size N, shared by every
-# consumer, and the precompile workload below actually pays off downstream.
-#
-# Both `run_tjlf` entry points (scalar and Vector) route through scalar `TJLF.run`,
-# so this single wrapper covers them all.
+# Compiled Dual code is keyed by the tag inside Dual{Tag,V,N}, which names the
+# caller's closure — so the specializations baked below would be unreachable from
+# FUSE or any other consumer (measured: ~90–150 s of first-call JIT at a foreign
+# tag despite a baked chunk size). Fix: at `TJLF.run`, re-tag incoming Duals to one
+# canonical TJLF-owned tag, solve, then re-tag outputs and input-struct mutations
+# back to the caller's tag. This is sound because tags only guard against
+# perturbation confusion in *nested* differentiation, and TJLF never initiates its
+# own ForwardDiff call. Re-tagging copies value+partials verbatim (tags carry no
+# payload) — negligible against a multi-second solve. Result: one heavy solve
+# specialization per chunk size N, shared by every consumer. Both `run_tjlf` entry
+# points route through scalar `TJLF.run`, so this single wrapper covers them all.
 # ─────────────────────────────────────────────────────────────────────────────
 
 struct TJLFADTag end   # the one tag the heavy Dual solve is ever compiled for
@@ -376,9 +370,8 @@ end
 
 function TJLF.run(inputTJLF::TJLF.InputTJLF{D}; use_gpu::Bool=false) where {D<:ForwardDiff.Dual}
     if _is_canonical(D)
-        # already canonical (the retagged recursive call below lands here).
-        # Call the generic solve body directly — `invoke` on the UnionAll
-        # `InputTJLF` signature is brittle with keyword args.
+        # the retagged recursive call lands here; call the solve body directly
+        # (`invoke` on the UnionAll signature is brittle with keyword args)
         return TJLF.with_blas_threads(1) do
             TJLF._run_impl(inputTJLF; use_gpu=use_gpu)
         end
@@ -386,20 +379,18 @@ function TJLF.run(inputTJLF::TJLF.InputTJLF{D}; use_gpu::Bool=false) where {D<:F
     C = _canonical_dual(D)
     canon = _retag_input(C, inputTJLF)
     out = TJLF.run(canon; use_gpu=use_gpu)
-    # mirror the solve's input mutations (KY/width/eigenvalue spectra saved for
-    # FIND_WIDTH/FIND_EIGEN=false reuse) back onto the caller's struct, with the
-    # caller's tag restored
+    # mirror the solve's input mutations (spectra saved for FIND_WIDTH/FIND_EIGEN=false
+    # reuse) back onto the caller's struct, with the caller's tag restored
     _retag_copy!(D, inputTJLF, canon)
     return map(x -> _retag(D, x), out)
 end
 
-# Bake the ForwardDiff/Dual `run_tjlf` path (AD through the entire spectral solve) so AD
-# consumers — e.g. flux-matching with TJLF and `use_ad=true` — don't re-JIT it on first use.
-# This is by far the largest compile in that workflow. Each chunk size N in
-# `TJLF.AD_CHUNK_SIZES` (a compile-time preference, default [1, 2]) is a separate full
-# specialization of the solve; both the scalar and the Vector entry points are exercised
-# because they are distinct specializations and FUSE calls the Vector one.
-# PrecompileTools catches any workload error, so it cannot break (extension) precompilation.
+# Bake the Dual `run_tjlf` path (AD through the entire spectral solve) — by far the
+# largest compile in AD flux-matching workflows. Each chunk size N in
+# `TJLF.AD_CHUNK_SIZES` (compile-time preference, default [1, 2]) is a separate full
+# specialization; scalar and Vector entry points are both exercised because they are
+# distinct specializations and FUSE calls the Vector one. PrecompileTools catches
+# workload errors, so this cannot break extension precompilation.
 function _convert_input_tjlf(::Type{T}, base::TJLF.InputTJLF{Float64}) where {T<:Real}
     inp = TJLF.InputTJLF{T}(base.NS, length(base.KY_SPECTRUM))
     for fn in fieldnames(TJLF.InputTJLF)

@@ -14,13 +14,11 @@ import Preferences
 import Serialization
 import Random
 
-# ForwardDiff chunk sizes N (of Dual{Tag,Float64,N}) baked by the TJLFForwardDiffExt
-# precompile workload. Each additional N re-specializes the whole spectral solve
-# (~90 MB of cache and real minutes), so the default only covers `derivative` plus
-# small gradients; campaigns bake their own list via a compile-time preference, e.g.
+# ForwardDiff chunk sizes N baked by the TJLFForwardDiffExt precompile workload. Each
+# N re-specializes the whole spectral solve (~90 MB of cache, minutes of build), so the
+# default covers only `derivative` plus small gradients; campaigns bake their own list:
 #   Preferences.set_preferences!(TJLF, "ad_chunk_sizes" => [1, 2, 11])
-# A preference (unlike an env var) participates in the precompile cache slug, so
-# changing the list correctly invalidates and rebuilds the caches.
+# A preference (unlike an env var) participates in the cache slug, so changes rebuild.
 const AD_CHUNK_SIZES = Int[n for n in Preferences.@load_preference("ad_chunk_sizes", [1, 2])]
 
 #  populated by TJLFCUDAExt.__init__() when CUDA is loaded
