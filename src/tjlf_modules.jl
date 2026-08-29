@@ -221,6 +221,11 @@ end
 
 @assert fieldcount(InputTGLF) <= 256 "InputTGLF outgrew the 256-bit _setmask; widen the mask fields"
 
+# Fortran namelist parsers often hand string values back with their quotes intact
+# (UNITS='CGYRO'). Normalize on assignment so programmatic sets behave like readInput,
+# which strips quotes while parsing input.tglf.
+@inline _strip_quotes(v::AbstractString) = String(strip(v, ('\'', '"', ' ')))
+
 @inline function Base.setproperty!(input_tglf::InputTGLF, field::Symbol, value)
     if field !== :_setmask_lo && field !== :_setmask_hi
         # fieldindex const-folds when `field` is a literal (input_tglf.NKY = 12);
@@ -233,6 +238,9 @@ end
             setfield!(input_tglf, :_setmask_hi,
                 getfield(input_tglf, :_setmask_hi) | (UInt128(1) << (idx - 129)))
         end
+    end
+    if value isa AbstractString
+        value = _strip_quotes(value)
     end
     return setfield!(input_tglf, field, convert(fieldtype(typeof(input_tglf), field), value))
 end
@@ -446,6 +454,11 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
 
     USE_TRANSPORT_MODEL::Bool = true
 end
+
+# String-valued assignments only (UNITS); numeric hot-path assignments keep the
+# default setproperty!. See _strip_quotes above for the namelist-quote rationale.
+@inline Base.setproperty!(input_tjlf::InputTJLF, field::Symbol, value::AbstractString) =
+    setfield!(input_tjlf, field, convert(fieldtype(typeof(input_tjlf), field), _strip_quotes(value)))
 
 function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
     InputTJLF{T}(;

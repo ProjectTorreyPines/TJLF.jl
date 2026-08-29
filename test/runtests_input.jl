@@ -59,6 +59,20 @@ using TJLF
         @test inp2.XNU_MODEL == 2  # presets off: user's XNU_MODEL survives
     end
 
+    @testset "quoted namelist strings normalize on assignment" begin
+        # Fortran namelist parsers often keep the quotes on string values; a raw
+        # "'CGYRO'" used to silently fail every UNITS == "CGYRO" comparison
+        inp = TJLF.readInput(basefile)
+        inp.UNITS = "'CGYRO'"
+        @test inp.UNITS == "CGYRO"
+        inp.UNITS = " \"GYRO\" "
+        @test inp.UNITS == "GYRO"
+        itg = TJLF.InputTGLF{Float64}()
+        itg.UNITS = "'CGYRO'"
+        @test itg.UNITS == "CGYRO"
+        @test TJLF.was_set(itg, :UNITS)
+    end
+
     @testset "save/readInput round trip" begin
         inp = TJLF.readInput(basefile)
         f = joinpath(tmp, "roundtrip.tglf")
