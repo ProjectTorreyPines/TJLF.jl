@@ -35,4 +35,4 @@ asd.jl
 
 # Ignore compiled object files
 *.o
-*.obj
+*.objdocs/plans/
