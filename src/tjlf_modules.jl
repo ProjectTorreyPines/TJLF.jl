@@ -127,8 +127,8 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     XNUE::T = T(NaN)
     ZEFF::T = T(NaN)
 
-    # switches (bool/int defaults = Fortran tglf_interface.f90 defaults, see NOTE above)
-    UNITS::String = ""
+    # switches (bool/int/string defaults = Fortran tglf_interface.f90 defaults, see NOTE above)
+    UNITS::String = "GYRO"
     ALPHA_ZF::T = T(NaN)
     USE_MHD_RULE::Bool = true
     NKY::Int = 12
@@ -330,7 +330,9 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     # NaN sentinel. Bools/ints have no detectable unset state, so they carry the
     # Fortran TGLF defaults (gacode tglf/src/tglf_interface.f90) instead of 0/false
     # sentinels: an omitted switch means "TGLF default", never a silent zero.
-    UNITS::String = ""
+    # UNITS defaults to the Fortran default GYRO; readInput force-sets CGYRO for
+    # SAT_RULE 2/3 and checkInput rejects the SAT2/3+GYRO combination.
+    UNITS::String = "GYRO"
 
     USE_BPER::Bool = false
     USE_BPAR::Bool = false
@@ -458,7 +460,7 @@ end
 
 function InputTJLF{T}(ns::Int, nky::Int) where {T<:Real}
     InputTJLF{T}(;
-        UNITS = "",
+        UNITS = "GYRO",
         NS = ns,
         ZS = fill(T(NaN), ns),
         MASS = fill(T(NaN), ns),

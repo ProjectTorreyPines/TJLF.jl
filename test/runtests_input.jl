@@ -35,6 +35,16 @@ using TJLF
         @test_throws AssertionError read_mutated(""; drop=r"^\s*SAT_RULE\s*=")  # no SAT_RULE
         @test_throws AssertionError read_mutated("SAT_RULE=7")                  # bad domain
         @test_throws ArgumentError read_mutated("NKY=twelve")                   # unparseable value
+        @test_throws AssertionError read_mutated("UNITS='GYR0'")                # UNITS typo
+    end
+
+    @testset "UNITS defaults to GYRO (Fortran default); SAT2/3 force CGYRO" begin
+        @test read_mutated(""; drop=r"^\s*UNITS\s*=").UNITS == "GYRO"                # SAT0, no UNITS line
+        @test read_mutated("SAT_RULE=2"; drop=r"^\s*UNITS\s*=").UNITS == "CGYRO"     # SAT2 auto-CGYRO
+        # programmatic SAT2 with (default) GYRO units must be rejected, not run wrong
+        inp = TJLF.readInput(basefile)
+        inp.SAT_RULE = 2
+        @test_throws AssertionError TJLF.checkInput(inp)
     end
 
     @testset "save/readInput round trip" begin
