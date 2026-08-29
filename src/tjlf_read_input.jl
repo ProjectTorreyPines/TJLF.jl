@@ -156,18 +156,13 @@ function readInput(filename::String)::InputTJLF
         end
     end
 
-    # just hard coded for some reason lol
-    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
-        inputTJLF.UNITS = "CGYRO"
-        ### WTF
-        inputTJLF.XNU_MODEL = 3
-        inputTJLF.WDIA_TRAPPED = 1.0
-    end
+    # validate the parsed UNITS before apply_presets! can overwrite it: SAT0 presets
+    # force GYRO, which would otherwise silently paper over a typo'd UNITS line
+    @assert inputTJLF.UNITS in ("GYRO", "CGYRO") "UNITS must be \"GYRO\" or \"CGYRO\" (got \"$(inputTJLF.UNITS)\" in $filename)"
 
-    # Handle USE_BPER setting (consistent with TurbulentTransport.apply_presets!)
-    if inputTJLF.USE_BPER
-        inputTJLF.ALPHA_MACH = 0.0
-    end
+    # SAT_RULE-calibrated switch coupling, gated by USE_PRESETS (see apply_presets!);
+    # also applied before every solve so programmatic constructions get it too
+    apply_presets!(inputTJLF)
 
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
     # KY_SPECTRUM/EIGEN_SPECTRUM are NaN-filled by the (ns,nky) constructor; if a caller
@@ -214,11 +209,49 @@ function checkInput(inputTJLF::InputTJLF)
     # common "unset or typo'd switch" cases here instead of silently misbehaving
     @assert inputTJLF.SAT_RULE in (0, 1, 2, 3) "SAT_RULE must be 0, 1, 2, or 3 (got $(inputTJLF.SAT_RULE))"
     @assert inputTJLF.UNITS in ("GYRO", "CGYRO") "UNITS must be \"GYRO\" or \"CGYRO\" (got \"$(inputTJLF.UNITS)\")"
-    # UNITS defaults to GYRO (the Fortran default, fine for SAT0/SAT1), but SAT2/3 are
-    # defined in CGYRO units — readInput force-sets this; catch programmatic constructions
+    # apply_presets! (run before every solve when USE_PRESETS=true) force-switches
+    # GYRO -> CGYRO for SAT2/3; reaching here with GYRO means the user opted out of
+    # presets but kept an invalid pairing — SAT2/3 are defined in CGYRO units only
     if inputTJLF.SAT_RULE in (2, 3)
-        @assert inputTJLF.UNITS == "CGYRO" "SAT_RULE=$(inputTJLF.SAT_RULE) requires UNITS=\"CGYRO\" (got \"$(inputTJLF.UNITS)\")"
+        @assert inputTJLF.UNITS == "CGYRO" "SAT_RULE=$(inputTJLF.SAT_RULE) requires UNITS=\"CGYRO\" (got \"$(inputTJLF.UNITS)\" with USE_PRESETS=false)"
     end
+end
+
+"""
+    apply_presets!(inputTJLF::InputTJLF) -> InputTJLF
+
+SAT_RULE-calibrated switch coupling, mirroring Fortran `tglf_startup.f90` (where the
+gating `USE_PRESETS` is hard-coded `.TRUE.`; TJLF exposes it as an input field so the
+coupling can be disabled deliberately). Runs on `readInput` and before every solve:
+
+- SAT_RULE 2/3: `XNU_MODEL=3`, `WDIA_TRAPPED=1.0`, `UNITS` GYRO -> CGYRO
+- SAT_RULE 1:   `XNU_MODEL=2`, `WDIA_TRAPPED=0.0`
+- SAT_RULE 0:   `XNU_MODEL=2`, `WDIA_TRAPPED=0.0`, `UNITS="GYRO"`
+- `USE_BPER=true`: `ALPHA_MACH=0.0`
+
+These are part of each saturation rule's original calibration, so overriding them
+requires `USE_PRESETS=false` (in which case checkInput still rejects SAT2/3+GYRO).
+"""
+function apply_presets!(inputTJLF::InputTJLF)
+    inputTJLF.USE_PRESETS || return inputTJLF
+    # Fortran resets wdia_trapped unconditionally under presets, then SAT2/3 raises it
+    inputTJLF.WDIA_TRAPPED = 0.0
+    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+        inputTJLF.XNU_MODEL = 3
+        inputTJLF.WDIA_TRAPPED = 1.0
+        if inputTJLF.UNITS == "GYRO"
+            inputTJLF.UNITS = "CGYRO"
+        end
+    elseif inputTJLF.SAT_RULE == 1
+        inputTJLF.XNU_MODEL = 2
+    elseif inputTJLF.SAT_RULE == 0
+        inputTJLF.UNITS = "GYRO"
+        inputTJLF.XNU_MODEL = 2
+    end
+    if inputTJLF.USE_BPER
+        inputTJLF.ALPHA_MACH = 0.0
+    end
+    return inputTJLF
 end
 
 function checkInput(inputTJLFVector::Vector{InputTJLF{T}}) where {T<:Real}

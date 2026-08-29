@@ -41,10 +41,23 @@ using TJLF
     @testset "UNITS defaults to GYRO (Fortran default); SAT2/3 force CGYRO" begin
         @test read_mutated(""; drop=r"^\s*UNITS\s*=").UNITS == "GYRO"                # SAT0, no UNITS line
         @test read_mutated("SAT_RULE=2"; drop=r"^\s*UNITS\s*=").UNITS == "CGYRO"     # SAT2 auto-CGYRO
-        # programmatic SAT2 with (default) GYRO units must be rejected, not run wrong
+        # programmatic SAT2 with (default) GYRO units: apply_presets! (run before every
+        # solve) applies the SAT2 calibration triple, mirroring Fortran tglf_startup.f90
         inp = TJLF.readInput(basefile)
         inp.SAT_RULE = 2
-        @test_throws AssertionError TJLF.checkInput(inp)
+        TJLF.apply_presets!(inp)
+        @test inp.UNITS == "CGYRO"
+        @test inp.XNU_MODEL == 3
+        @test inp.WDIA_TRAPPED == 1.0
+        # opting out of presets keeps user switches but SAT2/3+GYRO stays rejected
+        inp2 = TJLF.readInput(basefile)
+        inp2.SAT_RULE = 2
+        inp2.USE_PRESETS = false
+        inp2.XNU_MODEL = 2
+        @test_throws AssertionError TJLF.checkInput(inp2)
+        inp2.UNITS = "CGYRO"
+        TJLF.checkInput(inp2)
+        @test inp2.XNU_MODEL == 2  # presets off: user's XNU_MODEL survives
     end
 
     @testset "save/readInput round trip" begin

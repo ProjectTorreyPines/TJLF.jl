@@ -144,6 +144,7 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     WDIA_TRAPPED::T = T(NaN)
     USE_BPAR::Bool = false
     USE_BPER::Bool = false
+    USE_PRESETS::Bool = true
 
     _Qgb::T = T(NaN)
 
@@ -330,8 +331,9 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     # NaN sentinel. Bools/ints have no detectable unset state, so they carry the
     # Fortran TGLF defaults (gacode tglf/src/tglf_interface.f90) instead of 0/false
     # sentinels: an omitted switch means "TGLF default", never a silent zero.
-    # UNITS defaults to the Fortran default GYRO; readInput force-sets CGYRO for
-    # SAT_RULE 2/3 and checkInput rejects the SAT2/3+GYRO combination.
+    # UNITS defaults to the Fortran default GYRO; apply_presets! (run before every
+    # solve when USE_PRESETS=true) force-sets CGYRO for SAT_RULE 2/3, and checkInput
+    # rejects the SAT2/3+GYRO combination for USE_PRESETS=false runs.
     UNITS::String = "GYRO"
 
     USE_BPER::Bool = false
@@ -340,6 +342,9 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     USE_BISECTION::Bool = true
     USE_INBOARD_DETRAPPED::Bool = false
     USE_AVE_ION_GRID::Bool = false
+    # gates apply_presets! (SAT_RULE-calibrated XNU_MODEL/WDIA_TRAPPED/UNITS coupling);
+    # Fortran tglf_startup.f90 hard-codes this to .TRUE. — TJLF exposes it as an input
+    USE_PRESETS::Bool = true
     NEW_EIKONAL::Bool = true
     FIND_WIDTH::Bool = true
     IFLUX::Bool = true

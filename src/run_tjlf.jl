@@ -36,6 +36,7 @@ end
 function _run_impl(inputTJLF::InputTJLF; use_gpu::Bool=false)
     use_tm = inputTJLF.USE_TRANSPORT_MODEL
     if use_tm
+        apply_presets!(inputTJLF)
         checkInput(inputTJLF)
         outputHermite = gauss_hermite(inputTJLF)
         satParams = get_sat_params(inputTJLF)
