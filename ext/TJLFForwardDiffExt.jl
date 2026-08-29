@@ -315,6 +315,84 @@ function TJLF._standard_eigenvalues_via_solve(A::Matrix{Complex{D}}, B::Matrix{C
     end
 end
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Tag erasure at the solve boundary.
+#
+# ForwardDiff native code is keyed by the *tag* type inside Dual{Tag,V,N}, and the
+# tag names the consumer's own closure — so code precompiled below for the workload's
+# internal closures is unreachable from FUSE or any other caller (measured: a baked
+# chunk size still paid ~90–150 s of first-call JIT at a foreign tag). The fix:
+# re-tag incoming Duals to one canonical TJLF-owned tag at the `TJLF.run` boundary,
+# solve, and re-tag outputs (and input-struct mutations, e.g. the width/eigenvalue
+# spectra saved for FIND_WIDTH=false reuse) back to the caller's tag. Tags exist only
+# to catch perturbation confusion in *nested* differentiation; TJLF never initiates
+# its own ForwardDiff call, it just propagates one opaque AD level from entry to
+# exit, so the tag it wears internally is unobservable as long as the original tag
+# is restored on the way out. Re-tagging copies value+partials verbatim (the tag has
+# no runtime payload) — O(fields + array elements), noise against a multi-second
+# solve. Result: ONE heavy solve specialization per chunk size N, shared by every
+# consumer, and the precompile workload below actually pays off downstream.
+#
+# Both `run_tjlf` entry points (scalar and Vector) route through scalar `TJLF.run`,
+# so this single wrapper covers them all.
+# ─────────────────────────────────────────────────────────────────────────────
+
+struct TJLFADTag end   # the one tag the heavy Dual solve is ever compiled for
+
+_canonical_dual(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N} =
+    ForwardDiff.Dual{ForwardDiff.Tag{TJLFADTag,V},V,N}
+_is_canonical(::Type{ForwardDiff.Dual{ForwardDiff.Tag{TJLFADTag,V},V,N}}) where {V,N} = true
+_is_canonical(::Type{<:ForwardDiff.Dual}) = false
+
+# value+partials copied bit-identically; only the (payload-free) tag changes
+@inline _retag(::Type{D2}, x::ForwardDiff.Dual) where {D2<:ForwardDiff.Dual} =
+    D2(ForwardDiff.value(x), ForwardDiff.partials(x))
+@inline _retag(::Type{D2}, z::Complex{<:ForwardDiff.Dual}) where {D2<:ForwardDiff.Dual} =
+    Complex(_retag(D2, real(z)), _retag(D2, imag(z)))
+_retag(::Type{D2}, A::AbstractArray{<:ForwardDiff.Dual}) where {D2<:ForwardDiff.Dual} =
+    map(x -> _retag(D2, x), A)
+_retag(::Type{D2}, A::AbstractArray{<:Complex{<:ForwardDiff.Dual}}) where {D2<:ForwardDiff.Dual} =
+    map(x -> _retag(D2, x), A)
+_retag(::Type{D2}, x) where {D2<:ForwardDiff.Dual} = x   # Int/Bool/String pass through
+
+@generated function _retag_input(::Type{D2}, inp::TJLF.InputTJLF) where {D2<:ForwardDiff.Dual}
+    assigns = Expr[:(setfield!(out, $(QuoteNode(fn)), _retag(D2, getfield(inp, $(QuoteNode(fn))))))
+                   for fn in fieldnames(inp)]
+    quote
+        out = TJLF.InputTJLF{D2}(inp.NS, length(inp.KY_SPECTRUM))
+        $(assigns...)
+        return out
+    end
+end
+
+@generated function _retag_copy!(::Type{D2}, dst::TJLF.InputTJLF, src::TJLF.InputTJLF) where {D2<:ForwardDiff.Dual}
+    assigns = Expr[:(setfield!(dst, $(QuoteNode(fn)), _retag(D2, getfield(src, $(QuoteNode(fn))))))
+                   for fn in fieldnames(dst)]
+    quote
+        $(assigns...)
+        return dst
+    end
+end
+
+function TJLF.run(inputTJLF::TJLF.InputTJLF{D}; use_gpu::Bool=false) where {D<:ForwardDiff.Dual}
+    if _is_canonical(D)
+        # already canonical (the retagged recursive call below lands here).
+        # Call the generic solve body directly — `invoke` on the UnionAll
+        # `InputTJLF` signature is brittle with keyword args.
+        return TJLF.with_blas_threads(1) do
+            TJLF._run_impl(inputTJLF; use_gpu=use_gpu)
+        end
+    end
+    C = _canonical_dual(D)
+    canon = _retag_input(C, inputTJLF)
+    out = TJLF.run(canon; use_gpu=use_gpu)
+    # mirror the solve's input mutations (KY/width/eigenvalue spectra saved for
+    # FIND_WIDTH/FIND_EIGEN=false reuse) back onto the caller's struct, with the
+    # caller's tag restored
+    _retag_copy!(D, inputTJLF, canon)
+    return map(x -> _retag(D, x), out)
+end
+
 # Bake the ForwardDiff/Dual `run_tjlf` path (AD through the entire spectral solve) so AD
 # consumers — e.g. flux-matching with TJLF and `use_ad=true` — don't re-JIT it on first use.
 # This is by far the largest compile in that workflow. Each chunk size N in

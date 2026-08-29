@@ -153,4 +153,22 @@ using ForwardDiff  # provided by test/Project.toml; triggers TJLFForwardDiffExt
             @test relerr < 1e-4
         end
     end
+
+    # Tag erasure: a Dual tagged with a caller-owned (foreign) tag must come back
+    # with that same tag on fluxes AND on the spectra the solve writes into the
+    # input — otherwise FIND_WIDTH=false reuse and the caller's extract_gradient!
+    # both break. Values must also match the Float64 solve.
+    @testset "tag erasure restores caller tag" begin
+        QL64 = TJLF.run_tjlf(input_tjlf)
+        qe64 = TJLF.Qe(QL64)
+
+        D = ForwardDiff.Dual{ForwardDiff.Tag{Val{:foreign},Float64},Float64,1}
+        inp = convert_input_tjlf(D, input_tjlf)
+        QL = TJLF.run_tjlf(inp)
+        @test eltype(QL) === D
+        @test eltype(inp.WIDTH_SPECTRUM) === D
+        @test eltype(inp.KY_SPECTRUM) === D
+        @test all(x -> isfinite(ForwardDiff.value(x)), inp.WIDTH_SPECTRUM)
+        @test ForwardDiff.value(TJLF.Qe(QL)) ≈ qe64 rtol = 1e-10
+    end
 end
