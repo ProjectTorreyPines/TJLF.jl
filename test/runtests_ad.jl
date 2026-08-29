@@ -134,8 +134,6 @@ using ForwardDiff  # provided by test/Project.toml; triggers TJLFForwardDiffExt
         @testset "∂Qe/∂RLTS_2 (SAT_RULE=$sat)" begin
             input_tjlf_sat = deepcopy(input_tjlf)
             input_tjlf_sat.SAT_RULE = sat
-            # apply_presets! (run before every solve) sets the SAT2/3 calibration
-            # triple XNU_MODEL/WDIA_TRAPPED/UNITS, mirroring Fortran tglf_startup.f90
 
             function tjlf_Qe_sat(x::T) where {T<:Real}
                 inp = convert_input_tjlf(T, input_tjlf_sat)

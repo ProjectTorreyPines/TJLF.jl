@@ -342,9 +342,7 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     USE_BISECTION::Bool = true
     USE_INBOARD_DETRAPPED::Bool = false
     USE_AVE_ION_GRID::Bool = false
-    # gates apply_presets! (SAT_RULE-calibrated XNU_MODEL/WDIA_TRAPPED/UNITS coupling);
-    # Fortran tglf_startup.f90 hard-codes this to .TRUE. — TJLF exposes it as an input
-    USE_PRESETS::Bool = true
+    USE_PRESETS::Bool = true  # gates apply_presets! (hard-coded .TRUE. in Fortran tglf_startup.f90)
     NEW_EIKONAL::Bool = true
     FIND_WIDTH::Bool = true
     IFLUX::Bool = true

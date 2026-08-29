@@ -160,8 +160,6 @@ function readInput(filename::String)::InputTJLF
     # force GYRO, which would otherwise silently paper over a typo'd UNITS line
     @assert inputTJLF.UNITS in ("GYRO", "CGYRO") "UNITS must be \"GYRO\" or \"CGYRO\" (got \"$(inputTJLF.UNITS)\" in $filename)"
 
-    # SAT_RULE-calibrated switch coupling, gated by USE_PRESETS (see apply_presets!);
-    # also applied before every solve so programmatic constructions get it too
     apply_presets!(inputTJLF)
 
     inputTJLF.WIDTH_SPECTRUM .= inputTJLF.WIDTH
@@ -209,9 +207,7 @@ function checkInput(inputTJLF::InputTJLF)
     # common "unset or typo'd switch" cases here instead of silently misbehaving
     @assert inputTJLF.SAT_RULE in (0, 1, 2, 3) "SAT_RULE must be 0, 1, 2, or 3 (got $(inputTJLF.SAT_RULE))"
     @assert inputTJLF.UNITS in ("GYRO", "CGYRO") "UNITS must be \"GYRO\" or \"CGYRO\" (got \"$(inputTJLF.UNITS)\")"
-    # apply_presets! (run before every solve when USE_PRESETS=true) force-switches
-    # GYRO -> CGYRO for SAT2/3; reaching here with GYRO means the user opted out of
-    # presets but kept an invalid pairing — SAT2/3 are defined in CGYRO units only
+    # only reachable with USE_PRESETS=false — SAT2/3 are defined in CGYRO units only
     if inputTJLF.SAT_RULE in (2, 3)
         @assert inputTJLF.UNITS == "CGYRO" "SAT_RULE=$(inputTJLF.SAT_RULE) requires UNITS=\"CGYRO\" (got \"$(inputTJLF.UNITS)\" with USE_PRESETS=false)"
     end

@@ -41,8 +41,7 @@ using TJLF
     @testset "UNITS defaults to GYRO (Fortran default); SAT2/3 force CGYRO" begin
         @test read_mutated(""; drop=r"^\s*UNITS\s*=").UNITS == "GYRO"                # SAT0, no UNITS line
         @test read_mutated("SAT_RULE=2"; drop=r"^\s*UNITS\s*=").UNITS == "CGYRO"     # SAT2 auto-CGYRO
-        # programmatic SAT2 with (default) GYRO units: apply_presets! (run before every
-        # solve) applies the SAT2 calibration triple, mirroring Fortran tglf_startup.f90
+        # programmatic SAT2: apply_presets! applies the calibration triple
         inp = TJLF.readInput(basefile)
         inp.SAT_RULE = 2
         TJLF.apply_presets!(inp)
