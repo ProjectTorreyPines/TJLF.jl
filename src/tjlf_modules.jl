@@ -2,130 +2,133 @@ abstract type AbstractAve{T<:Number} end
 
 Base.@kwdef mutable struct InputTGLF{T<:Real}
     # Concretely typed (no Union{...,Missing}) for type stability — same recipe and
-    # rationale as InputTJLF below. Float defaults are T(NaN) "unset" sentinels
-    # (detected with `is_unset`); ints/bools/strings carry the Fortran TGLF defaults,
+    # rationale as InputTJLF below. Float defaults are NaN "unset" sentinels
+    # (detected with `is_unset`), written as plain literals rather than T(NaN) so the
+    # @kwdef constructor can infer T from them: `InputTGLF()` and `InputTGLF(NS=3)`
+    # give an InputTGLF{Float64}, `InputTGLF{Float32}()` converts. Ints/bools/strings
+    # carry the Fortran TGLF defaults,
     # so an omitted switch means "TGLF default", never a silent zero (an unset
     # SIGN_IT=0 used to silently kill VEXB_SHEAR).
     SIGN_BT::Int = 1
     SIGN_IT::Int = 1
     NS::Int = 2
-    ZMAJ_LOC::T = T(NaN)
-    DRMINDX_LOC::T = T(NaN)
-    DZMAJDX_LOC::T = T(NaN)
-    S_DELTA_LOC::T = T(NaN)
-    ZETA_LOC::T = T(NaN)
-    S_ZETA_LOC::T = T(NaN)
+    ZMAJ_LOC::T = NaN
+    DRMINDX_LOC::T = NaN
+    DZMAJDX_LOC::T = NaN
+    S_DELTA_LOC::T = NaN
+    ZETA_LOC::T = NaN
+    S_ZETA_LOC::T = NaN
 
-    MASS_1::T = T(NaN)
-    ZS_1::T = T(NaN)
-    AS_1::T = T(NaN)
-    TAUS_1::T = T(NaN)
+    MASS_1::T = NaN
+    ZS_1::T = NaN
+    AS_1::T = NaN
+    TAUS_1::T = NaN
 
-    MASS_2::T = T(NaN)
-    ZS_2::T = T(NaN)
-    VPAR_2::T = T(NaN)
-    VPAR_SHEAR_2::T = T(NaN)
+    MASS_2::T = NaN
+    ZS_2::T = NaN
+    VPAR_2::T = NaN
+    VPAR_SHEAR_2::T = NaN
 
-    MASS_3::T = T(NaN)
-    ZS_3::T = T(NaN)
-    RLTS_3::T = T(NaN)
-    TAUS_3::T = T(NaN)
-    VPAR_3::T = T(NaN)
-    VPAR_SHEAR_3::T = T(NaN)
+    MASS_3::T = NaN
+    ZS_3::T = NaN
+    RLTS_3::T = NaN
+    TAUS_3::T = NaN
+    VPAR_3::T = NaN
+    VPAR_SHEAR_3::T = NaN
 
     # TGLF-NN uses 3 species
     # This is why parameters for species 1:3 are sorted differently than 4:10
-    MASS_4::T = T(NaN)
-    AS_4::T = T(NaN)
-    ZS_4::T = T(NaN)
-    RLNS_4::T = T(NaN)
-    RLTS_4::T = T(NaN)
-    TAUS_4::T = T(NaN)
-    VPAR_4::T = T(NaN)
-    VPAR_SHEAR_4::T = T(NaN)
+    MASS_4::T = NaN
+    AS_4::T = NaN
+    ZS_4::T = NaN
+    RLNS_4::T = NaN
+    RLTS_4::T = NaN
+    TAUS_4::T = NaN
+    VPAR_4::T = NaN
+    VPAR_SHEAR_4::T = NaN
 
-    MASS_5::T = T(NaN)
-    AS_5::T = T(NaN)
-    ZS_5::T = T(NaN)
-    RLNS_5::T = T(NaN)
-    RLTS_5::T = T(NaN)
-    TAUS_5::T = T(NaN)
-    VPAR_5::T = T(NaN)
-    VPAR_SHEAR_5::T = T(NaN)
+    MASS_5::T = NaN
+    AS_5::T = NaN
+    ZS_5::T = NaN
+    RLNS_5::T = NaN
+    RLTS_5::T = NaN
+    TAUS_5::T = NaN
+    VPAR_5::T = NaN
+    VPAR_SHEAR_5::T = NaN
 
-    MASS_6::T = T(NaN)
-    AS_6::T = T(NaN)
-    ZS_6::T = T(NaN)
-    RLNS_6::T = T(NaN)
-    RLTS_6::T = T(NaN)
-    TAUS_6::T = T(NaN)
-    VPAR_6::T = T(NaN)
-    VPAR_SHEAR_6::T = T(NaN)
+    MASS_6::T = NaN
+    AS_6::T = NaN
+    ZS_6::T = NaN
+    RLNS_6::T = NaN
+    RLTS_6::T = NaN
+    TAUS_6::T = NaN
+    VPAR_6::T = NaN
+    VPAR_SHEAR_6::T = NaN
 
-    MASS_7::T = T(NaN)
-    AS_7::T = T(NaN)
-    ZS_7::T = T(NaN)
-    RLNS_7::T = T(NaN)
-    RLTS_7::T = T(NaN)
-    TAUS_7::T = T(NaN)
-    VPAR_7::T = T(NaN)
-    VPAR_SHEAR_7::T = T(NaN)
+    MASS_7::T = NaN
+    AS_7::T = NaN
+    ZS_7::T = NaN
+    RLNS_7::T = NaN
+    RLTS_7::T = NaN
+    TAUS_7::T = NaN
+    VPAR_7::T = NaN
+    VPAR_SHEAR_7::T = NaN
 
-    MASS_8::T = T(NaN)
-    AS_8::T = T(NaN)
-    ZS_8::T = T(NaN)
-    RLNS_8::T = T(NaN)
-    RLTS_8::T = T(NaN)
-    TAUS_8::T = T(NaN)
-    VPAR_8::T = T(NaN)
-    VPAR_SHEAR_8::T = T(NaN)
+    MASS_8::T = NaN
+    AS_8::T = NaN
+    ZS_8::T = NaN
+    RLNS_8::T = NaN
+    RLTS_8::T = NaN
+    TAUS_8::T = NaN
+    VPAR_8::T = NaN
+    VPAR_SHEAR_8::T = NaN
 
-    MASS_9::T = T(NaN)
-    AS_9::T = T(NaN)
-    ZS_9::T = T(NaN)
-    RLNS_9::T = T(NaN)
-    RLTS_9::T = T(NaN)
-    TAUS_9::T = T(NaN)
-    VPAR_9::T = T(NaN)
-    VPAR_SHEAR_9::T = T(NaN)
+    MASS_9::T = NaN
+    AS_9::T = NaN
+    ZS_9::T = NaN
+    RLNS_9::T = NaN
+    RLTS_9::T = NaN
+    TAUS_9::T = NaN
+    VPAR_9::T = NaN
+    VPAR_SHEAR_9::T = NaN
 
-    MASS_10::T = T(NaN)
-    AS_10::T = T(NaN)
-    ZS_10::T = T(NaN)
-    RLNS_10::T = T(NaN)
-    RLTS_10::T = T(NaN)
-    TAUS_10::T = T(NaN)
-    VPAR_10::T = T(NaN)
-    VPAR_SHEAR_10::T = T(NaN)
+    MASS_10::T = NaN
+    AS_10::T = NaN
+    ZS_10::T = NaN
+    RLNS_10::T = NaN
+    RLTS_10::T = NaN
+    TAUS_10::T = NaN
+    VPAR_10::T = NaN
+    VPAR_SHEAR_10::T = NaN
 
-    AS_2::T = T(NaN)
-    AS_3::T = T(NaN)
-    BETAE::T = T(NaN)
-    DEBYE::T = T(NaN)
-    DELTA_LOC::T = T(NaN)
-    DRMAJDX_LOC::T = T(NaN)
-    KAPPA_LOC::T = T(NaN)
-    P_PRIME_LOC::T = T(NaN)
-    Q_LOC::T = T(NaN)
-    Q_PRIME_LOC::T = T(NaN)
-    RLNS_1::T = T(NaN)
-    RLNS_2::T = T(NaN)
-    RLNS_3::T = T(NaN)
-    RLTS_1::T = T(NaN)
-    RLTS_2::T = T(NaN)
-    RMAJ_LOC::T = T(NaN)
-    RMIN_LOC::T = T(NaN)
-    S_KAPPA_LOC::T = T(NaN)
-    TAUS_2::T = T(NaN)
-    VEXB_SHEAR::T = T(NaN)
-    VPAR_1::T = T(NaN)
-    VPAR_SHEAR_1::T = T(NaN)
-    XNUE::T = T(NaN)
-    ZEFF::T = T(NaN)
+    AS_2::T = NaN
+    AS_3::T = NaN
+    BETAE::T = NaN
+    DEBYE::T = NaN
+    DELTA_LOC::T = NaN
+    DRMAJDX_LOC::T = NaN
+    KAPPA_LOC::T = NaN
+    P_PRIME_LOC::T = NaN
+    Q_LOC::T = NaN
+    Q_PRIME_LOC::T = NaN
+    RLNS_1::T = NaN
+    RLNS_2::T = NaN
+    RLNS_3::T = NaN
+    RLTS_1::T = NaN
+    RLTS_2::T = NaN
+    RMAJ_LOC::T = NaN
+    RMIN_LOC::T = NaN
+    S_KAPPA_LOC::T = NaN
+    TAUS_2::T = NaN
+    VEXB_SHEAR::T = NaN
+    VPAR_1::T = NaN
+    VPAR_SHEAR_1::T = NaN
+    XNUE::T = NaN
+    ZEFF::T = NaN
 
     # switches (bool/int/string defaults = Fortran tglf_interface.f90 defaults, see NOTE above)
     UNITS::String = "GYRO"
-    ALPHA_ZF::T = T(NaN)
+    ALPHA_ZF::T = NaN
     USE_MHD_RULE::Bool = true
     NKY::Int = 12
     SAT_RULE::Int = 0
@@ -136,13 +139,13 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     XNU_MODEL::Int = 2
     USE_AVE_ION_GRID::Bool = false
     ALPHA_QUENCH::Int = 0
-    ALPHA_MACH::T = T(NaN)
-    WDIA_TRAPPED::T = T(NaN)
+    ALPHA_MACH::T = NaN
+    WDIA_TRAPPED::T = NaN
     USE_BPAR::Bool = false
     USE_BPER::Bool = false
     USE_PRESETS::Bool = true
 
-    _Qgb::T = T(NaN)
+    _Qgb::T = NaN
 
     # missing
     USE_BISECTION::Bool = true
@@ -183,31 +186,31 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     # MXH params. NaN sentinel (not zero) so "unset by geometry" stays detectable:
     # conversions (update_input_tjlf!, tglf_to_cgyro) skip unset fields and let the
     # target's own 0.0 defaults stand.
-    SHAPE_COS0::T = T(NaN)
-    SHAPE_COS1::T = T(NaN)
-    SHAPE_COS2::T = T(NaN)
-    SHAPE_COS3::T = T(NaN)
-    SHAPE_COS4::T = T(NaN)
-    SHAPE_COS5::T = T(NaN)
-    SHAPE_COS6::T = T(NaN)
+    SHAPE_COS0::T = NaN
+    SHAPE_COS1::T = NaN
+    SHAPE_COS2::T = NaN
+    SHAPE_COS3::T = NaN
+    SHAPE_COS4::T = NaN
+    SHAPE_COS5::T = NaN
+    SHAPE_COS6::T = NaN
 
-    SHAPE_SIN3::T = T(NaN)
-    SHAPE_SIN4::T = T(NaN)
-    SHAPE_SIN5::T = T(NaN)
-    SHAPE_SIN6::T = T(NaN)
+    SHAPE_SIN3::T = NaN
+    SHAPE_SIN4::T = NaN
+    SHAPE_SIN5::T = NaN
+    SHAPE_SIN6::T = NaN
 
-    SHAPE_S_COS0::T = T(NaN)
-    SHAPE_S_COS1::T = T(NaN)
-    SHAPE_S_COS2::T = T(NaN)
-    SHAPE_S_COS3::T = T(NaN)
-    SHAPE_S_COS4::T = T(NaN)
-    SHAPE_S_COS5::T = T(NaN)
-    SHAPE_S_COS6::T = T(NaN)
+    SHAPE_S_COS0::T = NaN
+    SHAPE_S_COS1::T = NaN
+    SHAPE_S_COS2::T = NaN
+    SHAPE_S_COS3::T = NaN
+    SHAPE_S_COS4::T = NaN
+    SHAPE_S_COS5::T = NaN
+    SHAPE_S_COS6::T = NaN
 
-    SHAPE_S_SIN3::T = T(NaN)
-    SHAPE_S_SIN4::T = T(NaN)
-    SHAPE_S_SIN5::T = T(NaN)
-    SHAPE_S_SIN6::T = T(NaN)
+    SHAPE_S_SIN3::T = NaN
+    SHAPE_S_SIN4::T = NaN
+    SHAPE_S_SIN5::T = NaN
+    SHAPE_S_SIN6::T = NaN
 
     # Bitmask (by field index) of fields assigned via setproperty! since construction:
     # ints/bools have no unset sentinel, so "did the user set this?" (FUSE's

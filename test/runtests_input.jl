@@ -73,6 +73,23 @@ using TJLF
         @test TJLF.was_set(itg, :UNITS)
     end
 
+    @testset "InputTGLF constructors infer T=Float64" begin
+        # Float defaults are plain NaN literals (not T(NaN)) so @kwdef's
+        # non-parametric constructor can infer T — `InputTGLF()` is the spelling
+        # every downstream `TurbulentTransport.load(InputTGLF(), path)` uses.
+        a = TJLF.InputTGLF()
+        @test a isa TJLF.InputTGLF{Float64}
+        @test TJLF.is_unset(a.RMIN_LOC)
+        @test !TJLF.was_set(a, :RMIN_LOC)
+        @test a.NS == 2 && a.UNITS == "GYRO" && a.USE_PRESETS
+        b = TJLF.InputTGLF(NS=3, RMIN_LOC=0.5)
+        @test b isa TJLF.InputTGLF{Float64}
+        @test b.NS == 3 && b.RMIN_LOC == 0.5
+        c = TJLF.InputTGLF{Float32}()
+        @test c.RMIN_LOC isa Float32 && TJLF.is_unset(c.RMIN_LOC)
+        @test TJLF.InputTGLF{Float32}(RMIN_LOC=0.5).RMIN_LOC === 0.5f0
+    end
+
     @testset "save/readInput round trip" begin
         inp = TJLF.readInput(basefile)
         f = joinpath(tmp, "roundtrip.tglf")
