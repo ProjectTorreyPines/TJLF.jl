@@ -12,12 +12,14 @@ return:
 
   - inputTJLF::InputTJLF - return InputTJLF struct based off the input.tglf file
 """
-# Unknown keys are a hard error, never a fallback: Fortran TGLF silently ignores
-# unrecognized input.tglf content and runs its default (SAT0) template — a typo'd
-# key then produces a plausible-looking wrong answer. TJLF refuses instead.
+# Unknown keys are a hard error, never a fallback, matching the GACODE driver:
+# tglf/bin/gacodeinput.py aborts with "ERROR: (gacodeinput) Bogus parameter <KEY>"
+# on any key missing from tglf_defaults.py, so a typo'd key never runs there either.
+# Note that TJLF-only fields (e.g. USE_PRESETS) therefore must not be written into
+# an input.tglf destined for Fortran TGLF; TurbulentTransport.save filters them.
 _reject_unknown_key(field, filename) = throw(ArgumentError(
     "unknown key in $filename: '$field' — TJLF rejects unrecognized inputs " *
-    "(Fortran TGLF would silently ignore it and run with defaults)"))
+    "(the Fortran TGLF driver rejects them too: \"Bogus parameter\")"))
 
 function readInput(filename::String)::InputTJLF
     # gets the input.tglf file
