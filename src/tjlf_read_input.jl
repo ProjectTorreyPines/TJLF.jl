@@ -192,6 +192,7 @@ check that the InputTJLF struct is properly populated
 function checkInput(inputTJLF::InputTJLF)
     field_names = fieldnames(InputTJLF)
     for field_name in field_names
+        field_name === :C_B && continue  # NaN is the documented "use Fortran constant" sentinel
         field_value = getfield(inputTJLF, field_name)
         if typeof(field_value) <: Real
             @assert !isnan(field_value) "Did not properly populate inputTJLF for $field_name = $field_value"
@@ -207,10 +208,10 @@ function checkInput(inputTJLF::InputTJLF)
     end
     # value-domain checks: ints/bools/strings have no NaN sentinel, so catch the
     # common "unset or typo'd switch" cases here instead of silently misbehaving
-    @assert inputTJLF.SAT_RULE in (0, 1, 2, 3) "SAT_RULE must be 0, 1, 2, or 3 (got $(inputTJLF.SAT_RULE))"
+    @assert inputTJLF.SAT_RULE in (0, 1, 2, 3, 4) "SAT_RULE must be 0, 1, 2, 3, or 4 (got $(inputTJLF.SAT_RULE))"
     @assert inputTJLF.UNITS in ("GYRO", "CGYRO") "UNITS must be \"GYRO\" or \"CGYRO\" (got \"$(inputTJLF.UNITS)\")"
-    # only reachable with USE_PRESETS=false — SAT2/3 are defined in CGYRO units only
-    if inputTJLF.SAT_RULE in (2, 3)
+    # only reachable with USE_PRESETS=false — SAT2/3/4 are defined in CGYRO units only
+    if inputTJLF.SAT_RULE in (2, 3, 4)
         @assert inputTJLF.UNITS == "CGYRO" "SAT_RULE=$(inputTJLF.SAT_RULE) requires UNITS=\"CGYRO\" (got \"$(inputTJLF.UNITS)\" with USE_PRESETS=false)"
     end
 end
@@ -222,7 +223,8 @@ SAT_RULE-calibrated switch coupling, mirroring Fortran `tglf_startup.f90` (where
 gating `USE_PRESETS` is hard-coded `.TRUE.`; TJLF exposes it as an input field so the
 coupling can be disabled deliberately). Runs on `readInput` and before every solve:
 
-- SAT_RULE 2/3: `XNU_MODEL=3`, `WDIA_TRAPPED=1.0`, `UNITS` GYRO -> CGYRO
+- SAT_RULE 2/3/4: `XNU_MODEL=3`, `WDIA_TRAPPED=1.0`, `UNITS` GYRO -> CGYRO
+  (SAT4 = SAT0's intensity formula on the SAT2/3 linear physics, so it shares their presets)
 - SAT_RULE 1:   `XNU_MODEL=2`, `WDIA_TRAPPED=0.0`
 - SAT_RULE 0:   `XNU_MODEL=2`, `WDIA_TRAPPED=0.0`, `UNITS="GYRO"`
 - `USE_BPER=true`: `ALPHA_MACH=0.0`
@@ -234,7 +236,7 @@ function apply_presets!(inputTJLF::InputTJLF)
     inputTJLF.USE_PRESETS || return inputTJLF
     # Fortran resets wdia_trapped unconditionally under presets, then SAT2/3 raises it
     inputTJLF.WDIA_TRAPPED = 0.0
-    if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+    if inputTJLF.SAT_RULE in (2, 3, 4)
         inputTJLF.XNU_MODEL = 3
         inputTJLF.WDIA_TRAPPED = 1.0
         if inputTJLF.UNITS == "GYRO"

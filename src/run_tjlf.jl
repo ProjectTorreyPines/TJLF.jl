@@ -55,7 +55,7 @@ function _run_impl(inputTJLF::InputTJLF; use_gpu::Bool=false)
             eigenvalue_for_flux = firstPass_eigenvalue
         end
 
-        if inputTJLF.SAT_RULE == 2 || inputTJLF.SAT_RULE == 3
+        if inputTJLF.SAT_RULE in (2, 3, 4)
             most_unstable_gamma_first_pass = firstPass_eigenvalue[1, :, 1]
             vzf_out_first_pass, kymax_out_first_pass, jmax_out_first_pass = get_zonal_mixing(inputTJLF, satParams, most_unstable_gamma_first_pass)
             QL_flux_out, flux_spectrum = sum_ky_spectrum(inputTJLF, satParams, eigenvalue_for_flux[:, :, 1], QL_weights;

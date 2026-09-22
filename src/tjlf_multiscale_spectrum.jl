@@ -61,7 +61,7 @@ function get_zonal_mixing(inputs::InputTJLF{T}, satParams::SaturationParameters{
         kymin = 0.173 * √(2.0) / rho_ion 
     end
     # saturation rules
-    if sat_rule_in==2 || sat_rule_in==3
+    if sat_rule_in in (2, 3, 4)
         grad_r0 = satParams.grad_r0
         kycut = grad_r0 * kycut
         kymin = grad_r0 * kymin
@@ -227,6 +227,77 @@ function linear_interpolation(x::AbstractVector, y::AbstractVector, x0)
 end
 
 """
+    _intensity_sat4(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, gamma_matrix::Matrix{T}, kx0_e::Vector{T}) where T<:Real
+
+description:
+    SAT4 intensity model: the SAT0 saturation formula (tglf_LS.f90 get_intensity, igeo=1 branch,
+    see `get_intensity` in tjlf_LINEAR_SOLUTION.jl) evaluated on the SAT2/3 linear physics
+    (XNU_MODEL=3, WDIA_TRAPPED=1, CGYRO units, SAT2 spectral shift kx0_e), with the fit constants
+    exposed as calibration inputs:
+
+        cnorm     = C_NORM * pols            (/ ks^C_ETG for ks > 1)
+        wd0       = ks * sqrt(TAUS_1/MASS_2) / R_unit
+        intensity = cnorm * wd0^2 * ((gamma/wd0)^C_EXP + C_COEFF * gamma/wd0) / ky^4
+                    / (1 + 0.56 kx0_e^2)^2 / (1 + (1.15 kx0_e)^4)^2   [ALPHA_QUENCH == 0]
+                    * SAT_geo0 * sqrt(TAUS_1 * MASS_2)
+
+    Differences from SAT0 (documented, intentional):
+    - one coefficient set independent of NMODES (SAT0 switches at NMODES > 2);
+    - `pols` uses the ky-independent part of the polarization ave_p0(1,1) = sum_s ZS_s^2 AS_s/TAUS_s
+      (tjlf_matrix.jl p0x) and drops the Debye term, so it is a plain function of the inputs
+      (the original sat-4 prototype hard-coded ave_p0 = 1 and let C_NORM absorb it);
+    - no zonal-mixing damping of gamma (SAT2 `gamma_mix1` is not applied);
+    - SAT_geo0 = 1 in CGYRO units (get_sat_params), kept as a factor so the formula stays literally SAT0.
+    Modes with gamma <= 0 get zero intensity (also keeps `gamma^C_EXP` finite for AD).
+
+returns:
+    field_spectrum::Matrix{T} of size (nky, nmodes)
+"""
+function _intensity_sat4(inputs::InputTJLF{T}, satParams::SaturationParameters{T},
+                         gamma_matrix::AbstractMatrix{T}, kx0_e::AbstractVector{T}) where T<:Real
+    ky_spect = inputs.KY_SPECTRUM
+    nky = length(ky_spect)
+    nmodes = inputs.NMODES
+    taus_1 = inputs.TAUS[1]
+    mass_2 = inputs.MASS[2]
+    zs_1 = abs(inputs.ZS[1])
+    alpha_quench = inputs.ALPHA_QUENCH
+    R_unit = satParams.R_unit
+    SAT_geo0 = satParams.SAT_geo0
+
+    pol = zero(T)
+    for is in 1:inputs.NS
+        pol += inputs.ZS[is]^2 * inputs.AS[is] / inputs.TAUS[is]
+    end
+    pols = (pol / abs(inputs.AS[1] * inputs.ZS[1]^2))^2
+    measure = √(taus_1 * mass_2)
+    cnorm0 = inputs.C_NORM * pols
+    c_exp = inputs.C_EXP
+    c1 = inputs.C_COEFF
+    etg_factor = inputs.C_ETG
+
+    field_spectrum = zeros(T, nky, nmodes)
+    for j in 1:nky
+        ky0 = ky_spect[j]
+        ks = ky0 * measure / zs_1
+        cnorm = ks > 1.0 ? cnorm0 / ks^etg_factor : cnorm0
+        wd0 = ks * √(taus_1 / mass_2) / R_unit
+        for i in 1:nmodes
+            gp = gamma_matrix[i, j]
+            gp > 0 || continue
+            gnet = gp / wd0
+            intensity = cnorm * wd0^2 * (gnet^c_exp + c1 * gnet) / ky0^4
+            if alpha_quench == 0 && abs(kx0_e[j]) > 0.0
+                intensity = intensity / (1.0 + 0.56 * kx0_e[j]^2)^2
+                intensity = intensity / (1.0 + (1.15 * kx0_e[j])^4)^2
+            end
+            field_spectrum[j, i] = intensity * SAT_geo0 * measure
+        end
+    end
+    return field_spectrum
+end
+
+"""
     intensity_sat(inputs::InputTJLF{T},satParams::SaturationParameters{T},gamma_matrix::Array{T},QL_weights::Array{T,5},expsub::T=2.0,return_phi_params::Bool=false) where T<:Real
     
 parameters:
@@ -273,7 +344,7 @@ function intensity_sat(
 
     ############ figure out how to make this prettier
     units_in = inputs.UNITS
-    if inputs.SAT_RULE == 2 || inputs.SAT_RULE == 3
+    if inputs.SAT_RULE in (2, 3, 4)
         inputs.UNITS = "CGYRO"
         units_in = "CGYRO"
     end
@@ -324,6 +395,26 @@ function intensity_sat(
 
     # Now calculate spectral shift with the correct parameters
     kx0_e = xgrid_functions_geo(inputs, satParams, gamma_matrix; vzf_out_param=vzf_out, kymax_out_param=kymax_out)
+
+    # SAT4: SAT0's intensity formula on the SAT2/3 linear physics. It needs only kx0_e from
+    # the SAT2 spectral shift, so return here before the SAT1/2/3 model-fit block (whose
+    # `gamma`, kx_width and sat_geo_factor arrays are never defined for SAT4).
+    if sat_rule_in == 4
+        phinorm = _intensity_sat4(inputs, satParams, gamma_matrix, kx0_e)
+        QLA = fill(one(T), nmodes)
+        if return_phi_params
+            return (;
+                phinorm  = phinorm,                         # [nky, nmodes] SAT4 intensity
+                kx_width = copy(ky_spect),                  # [nky] SAT0/SAT1 convention kx_width = ky
+                gammaeff = permutedims(gamma_matrix)[:, 1:nmodes], # [nky, nmodes] raw growth rates (no mixing)
+                kx0_e    = kx0_e,                           # [nky] spectral shift in kx
+                ax       = T(1.15),                         # SAT0 spectral-shift damping constants
+                ay       = T(0.56),
+                exp_ax   = 4,
+            )
+        end
+        return phinorm, QLA, QLA, QLA
+    end
 
     # model fit parameters
     # Miller geometry values igeo=1
@@ -876,7 +967,7 @@ function sum_ky_spectrum(
     flux_spectrum = similar(QL_weights)
 
     # Multiply QL weights with desired intensity
-    if sat_rule_in >= 1 && sat_rule_in <= 3
+    if sat_rule_in >= 1 && sat_rule_in <= 4
         intensity_factor, QLA_P, QLA_E, QLA_O = intensity_sat(inputs, satParams, gamma_matrix, QL_weights; vzf_out_param=vzf_out_param, kymax_out_param=kymax_out_param, jmax_out_param=jmax_out_param)
         # Ql size (nf,ns,nm,nky,ntype)
         # QLA_P and QLA_E are vectors of size (nm)
@@ -891,7 +982,7 @@ function sum_ky_spectrum(
         phi = reshape(phi_bar_matrix, 1, 1, nm, nky, 1)
         flux_spectrum .= QL_weights .* phi
     else
-        throw(error("sat_rule_in must be 0,1,2,or 3, not $sat_rule_in"))
+        throw(error("sat_rule_in must be 0,1,2,3, or 4, not $sat_rule_in"))
     end
     
 

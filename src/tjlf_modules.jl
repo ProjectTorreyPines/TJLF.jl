@@ -147,6 +147,17 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
 
     _Qgb::T = NaN
 
+    # SAT4 saturation coefficients and collisionality/trapping free parameters
+    # (TJLF-only keys, not Fortran TGLF inputs). NaN here = "not set": `_copy_shared_fields!`
+    # then leaves the InputTJLF defaults in place.
+    C_NORM::T = NaN
+    C_EXP::T = NaN
+    C_COEFF::T = NaN
+    C_ETG::T = NaN
+    C_B::T = NaN
+    SIG_B::T = NaN
+    BOUNCE_COEFF::T = NaN
+
     # missing
     USE_BISECTION::Bool = true
     USE_INBOARD_DETRAPPED::Bool = false
@@ -317,6 +328,13 @@ A few fields are TJLF-specific (repurposed or added relative to TGLF):
   externally supplied `WIDTH_SPECTRUM` (`false`).
 - `WIDTH_SPECTRUM::Vector` — per-`ky` widths; filled when `FIND_WIDTH=true`,
   consumed when `false`.
+- `C_NORM`, `C_EXP`, `C_COEFF`, `C_ETG` — SAT4 (`SAT_RULE=4`) saturation
+  coefficients (SAT0 formula on the SAT2/3 linear physics, see `_intensity_sat4`);
+  concrete defaults, meant to be calibrated against nonlinear gyrokinetics.
+- `C_B`, `SIG_B`, `BOUNCE_COEFF` — free parameters of the `XNU_MODEL=3`
+  collision model and of the trapped-particle `cdt` term; the defaults
+  (`C_B=NaN` → Fortran 0.50/0.315, `SIG_B=0.34`, `BOUNCE_COEFF=3.0`) reproduce
+  Fortran TGLF exactly. None of these seven keys exist in Fortran TGLF.
 - `FIND_EIGEN::Bool` — select the eigenvalue solver (robust LAPACK when `true`).
 - `EIGEN_SPECTRUM::Vector` — initial eigenvalue guess used when `FIND_EIGEN=false`.
 - `SMALL::Float` — small value used to rewrite the eigenproblem as a linear
@@ -427,6 +445,21 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     FILTER::T = T(NaN)
     THETA_TRAPPED::T = T(NaN)
     SMALL::T = T(NaN)
+
+    # --- SAT4 saturation coefficients (TJLF-only; SAT0 functional form on the SAT2/3 linear
+    # physics, see `_intensity_sat4`). Concrete defaults = the Fortran SAT0 fit constants
+    # (tglf_LS.f90 get_intensity, igeo=1, nmodes<=2 form after removing the `pols` factor).
+    C_NORM::T = T(1.82770384)
+    C_EXP::T = T(1.39786897)
+    C_COEFF::T = T(0.36017009)
+    C_ETG::T = T(1.25)
+    # --- collisionality (XNU_MODEL=3) and trapping free parameters (enter the linear solve).
+    # C_B: NaN = use the Fortran constant (0.50 if WDIA_TRAPPED==0, else 0.315).
+    # SIG_B: exponent split in cb1 = C_B*kparvthe^SIG_B*(nuei*(1+0.82*zeff))^(1-SIG_B).
+    # BOUNCE_COEFF: the `3` in cdt = 3*wdia_trapped*(1-ft0^2) (tjlf_geometry.jl).
+    C_B::T = T(NaN)
+    SIG_B::T = T(0.34)
+    BOUNCE_COEFF::T = T(3.0)
 
     #MXH params (optional; default to 0 so checkInput passes when unset by geometry)
     SHAPE_COS0::T = zero(T)

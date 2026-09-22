@@ -407,11 +407,14 @@ function tjlf_eigensolver(inputs::InputTJLF{T},outputGeo::OutputGeometry{T},satP
     cb1 = _cb1_arg > 0 ? 0.163*√(_cb1_arg) : zero(_cb1_arg)
     if(xnu_model_in==3)
         _cb1_arg2 = cnuei*(1.0 + 0.82*zeff_in)
-        if(wdia_trapped_in==0.0)
-            cb1 = _cb1_arg2 > 0 ? 0.50*(kparvthe^0.34)*(_cb1_arg2)^0.66 : zero(_cb1_arg2)
-        else
-            cb1 = _cb1_arg2 > 0 ? 0.315*(kparvthe^0.34)*(_cb1_arg2)^0.66 : zero(_cb1_arg2)
-        end
+        # Fortran (tglf_LS.f90, xnu_model=3): cb1 = {0.50 | 0.315}*kparvthe^0.34*(nuei*(1+0.82*zeff))^0.66,
+        # the prefactor chosen by wdia_trapped. TJLF exposes the prefactor (C_B, NaN = Fortran value)
+        # and the exponent split (SIG_B) as calibration parameters; at the defaults the expression
+        # is bit-identical to the Fortran literals (0.66 is kept as a literal, not 1-0.34).
+        c_b = is_unset(inputs.C_B) ? (wdia_trapped_in==0.0 ? 0.50 : 0.315) : inputs.C_B
+        sig_b = inputs.SIG_B
+        exp_b = sig_b == 0.34 ? 0.66 : 1.0 - sig_b
+        cb1 = _cb1_arg2 > 0 ? c_b*(kparvthe^sig_b)*(_cb1_arg2)^exp_b : zero(_cb1_arg2)
     end
     cb1 = cb1*xnu_factor_in
     cb2 = cb1

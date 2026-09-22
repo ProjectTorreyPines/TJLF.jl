@@ -22,7 +22,7 @@ For the full API reference, see the
 1. **Quasi-linear turbulent fluxes** for electrons and an arbitrary number of ion
    species — particle flux, energy flux, toroidal and parallel momentum stress,
    and exchange, returned per `[field, species, type]`.
-2. **All TGLF saturation rules** — `SAT_RULE` 0, 1, 2, and 3.
+2. **All TGLF saturation rules** — `SAT_RULE` 0, 1, 2, and 3, plus the TJLF-only `SAT_RULE=4` (SAT0 intensity formula on the SAT2/3 linear physics with calibratable coefficients `C_NORM`, `C_EXP`, `C_COEFF`, `C_ETG`).
 3. **Electrostatic and electromagnetic** runs (`USE_BPER`, `USE_BPAR`).
 4. **Verified against Fortran TGLF** — a regression suite checks TJLF's fluxes
    against archived TGLF `out.tglf.gbflux` golden outputs across several cases.
