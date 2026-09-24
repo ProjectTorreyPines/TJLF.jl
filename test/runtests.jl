@@ -9,6 +9,8 @@ include("runtests_sat.jl")
 
 include("runtests_sat4.jl")
 
+include("runtests_sat_coeffs.jl")
+
 include("runtests_core.jl")
 
 include("runtests_EM.jl")

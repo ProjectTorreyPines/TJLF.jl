@@ -157,6 +157,39 @@ Base.@kwdef mutable struct InputTGLF{T<:Real}
     C_B::T = NaN
     SIG_B::T = NaN
     BOUNCE_COEFF::T = NaN
+    # SAT1/SAT2/SAT3 saturation-rule constants (TJLF-only; NaN = keep the InputTJLF defaults)
+    SAT1_CNORM::T = NaN
+    SAT1_CZ1::T = NaN
+    SAT1_CZ2::T = NaN
+    SAT1_ETG_STREAMER::T = NaN
+    SAT1_CKY::T = NaN
+    SAT1_AX::T = NaN
+    SAT1_AY::T = NaN
+    SAT2_B0::T = NaN
+    SAT2_B1::T = NaN
+    SAT2_B2::T = NaN
+    SAT2_B2_SINGLE::T = NaN
+    SAT2_B3::T = NaN
+    SAT2_CZ2::T = NaN
+    SAT2_CKY::T = NaN
+    SAT2_AX::T = NaN
+    SAT2_AY::T = NaN
+    SAT2_KYETG::T = NaN
+    SAT3_Y_ITG::T = NaN
+    SAT3_Y_TEM::T = NaN
+    SAT3_SCAL::T = NaN
+    SAT3_KMIN::T = NaN
+    SAT3_COVERB::T = NaN
+    SAT3_C1::T = NaN
+    SAT3_K0::T = NaN
+    SAT3_KP::T = NaN
+    SAT3_X_ITG::T = NaN
+    SAT3_X_TEM::T = NaN
+    SAT3_QLA_P_ITG::T = NaN
+    SAT3_QLA_P_TEM::T = NaN
+    SAT3_QLA_E_ITG::T = NaN
+    SAT3_QLA_E_TEM::T = NaN
+    SAT3_QLA_O::T = NaN
 
     # missing
     USE_BISECTION::Bool = true
@@ -335,6 +368,9 @@ A few fields are TJLF-specific (repurposed or added relative to TGLF):
   collision model and of the trapped-particle `cdt` term; the defaults
   (`C_B=NaN` → Fortran 0.50/0.315, `SIG_B=0.34`, `BOUNCE_COEFF=3.0`) reproduce
   Fortran TGLF exactly. None of these seven keys exist in Fortran TGLF.
+- `SAT1_*`, `SAT2_*`, `SAT3_*` — the fit constants of the SAT1/SAT2/SAT3 saturation
+  rules (`intensity_sat`), exposed with their Fortran values as defaults so they can be
+  recalibrated; TJLF-only. The full list is `TJLF_ONLY_KEYS`.
 - `FIND_EIGEN::Bool` — select the eigenvalue solver (robust LAPACK when `true`).
 - `EIGEN_SPECTRUM::Vector` — initial eigenvalue guess used when `FIND_EIGEN=false`.
 - `SMALL::Float` — small value used to rewrite the eigenproblem as a linear
@@ -460,6 +496,43 @@ Base.@kwdef mutable struct InputTJLF{T<:Real}
     C_B::T = T(NaN)
     SIG_B::T = T(0.34)
     BOUNCE_COEFF::T = T(3.0)
+    # --- SAT1/SAT2/SAT3 saturation-rule constants (TJLF-only), exposed for calibration. Defaults are the
+    # Fortran literals of tglf_multiscale_spectrum.f90 / `intensity_sat`, so unset = Fortran TGLF bit-exactly.
+    # SAT1 (Staebler PoP 2016, retuned 2017):
+    SAT1_CNORM::T = T(14.29)          # cnorm
+    SAT1_CZ1::T = T(0.48)             # cz1 = SAT1_CZ1*|ALPHA_ZF|  (low-k zonal damping slope)
+    SAT1_CZ2::T = T(1.0)              # cz2 = SAT1_CZ2*|ALPHA_ZF|  (high-k floor cz2*gammamax + damping cz2*vzf*ky)
+    SAT1_ETG_STREAMER::T = T(1.05)    # kyetg = etg_streamer/rho_ion; the quench rule uses 2*SAT1_ETG_STREAMER (Fortran 2.1)
+    SAT1_CKY::T = T(3.0)              # cky, ky-mixing kernel width
+    SAT1_AX::T = T(1.15)              # spectral-shift damping ax (SAT0/SAT1 form), exp_ax = 4 stays literal
+    SAT1_AY::T = T(0.56)              # spectral-shift damping ay
+    # SAT2 (Staebler PPCF/NF 2020-21); SAT3 reads this block too:
+    SAT2_B0::T = T(0.76)              # kycut = b0*kymax
+    SAT2_B1::T = T(1.22)              # kx_width slope above kycut
+    SAT2_B2::T = T(3.55)              # cnorm = b2*(12/dlnpdr) when NMODES > 1
+    SAT2_B2_SINGLE::T = T(3.74)        # same for NMODES == 1
+    SAT2_B3::T = T(1.0)               # d2 = b3/Gq^2 (weight of the high-k geometry branch)
+    SAT2_CZ2::T = T(1.05)             # cz2 = SAT2_CZ2*|ALPHA_ZF| (electron-scale damping above kymax)
+    SAT2_CKY::T = T(3.0)              # cky
+    SAT2_AX::T = T(1.21)              # spectral-shift damping ax (SAT2/SAT3 form), exp_ax = 2 stays literal
+    SAT2_AY::T = T(1.0)               # spectral-shift damping ay
+    SAT2_KYETG::T = T(1000.0)         # kyetg (ETG boost effectively disabled)
+    # SAT3 (Dudding NF 2022), on top of the SAT2 block:
+    SAT3_Y_ITG::T = T(3.3)            # Y_ITG = SAT3_Y_ITG*gmax^2/kmax^5
+    SAT3_Y_TEM::T = T(12.7)           # Y_TEM = SAT3_Y_TEM*gmax^2/kmax^4
+    SAT3_SCAL::T = T(0.82)            # scal, electron-scale (ky > kT) level relative to SAT2
+    SAT3_KMIN::T = T(0.685)           # kmin = SAT3_KMIN*kmax
+    SAT3_COVERB::T = T(-0.751)        # coverb = SAT3_COVERB*kmax
+    SAT3_C1::T = T(-2.42)             # c_1, exponent of the sigma ratio
+    SAT3_K0::T = T(0.6)               # k0 = SAT3_K0*kmin
+    SAT3_KP::T = T(2.0)               # kP = SAT3_KP*kmin
+    SAT3_X_ITG::T = T(0.8)            # ITG/TEM transition, lower bound of x
+    SAT3_X_TEM::T = T(1.0)            # ITG/TEM transition, upper bound of x
+    SAT3_QLA_P_ITG::T = T(1.1)        # QLA_P = 2*interp(ITG value, TEM value)
+    SAT3_QLA_P_TEM::T = T(0.6)
+    SAT3_QLA_E_ITG::T = T(0.75)       # QLA_E = 2*interp(ITG value, TEM value)
+    SAT3_QLA_E_TEM::T = T(0.6)
+    SAT3_QLA_O::T = T(0.8)            # QLA_O = 2*SAT3_QLA_O
 
     #MXH params (optional; default to 0 so checkInput passes when unset by geometry)
     SHAPE_COS0::T = zero(T)
@@ -1387,3 +1460,16 @@ function reset_ave!(ave::AbstractAve{T}) where {T<:Number}
         fill!(getproperty(ave, fieldname), zero(T))
     end
 end
+"""
+    TJLF_ONLY_KEYS
+
+Input keys that exist in TJLF but not in Fortran TGLF (SAT4 coefficients, collision/trapping free
+parameters and the SAT1/2/3 saturation-rule constants). Writers of Fortran `input.tglf` decks must
+drop them.
+"""
+const TJLF_ONLY_KEYS = (
+    :C_NORM, :C_EXP, :C_COEFF, :C_ETG, :C_B, :SIG_B, :BOUNCE_COEFF,
+    :SAT1_CNORM, :SAT1_CZ1, :SAT1_CZ2, :SAT1_ETG_STREAMER, :SAT1_CKY, :SAT1_AX, :SAT1_AY,
+    :SAT2_B0, :SAT2_B1, :SAT2_B2, :SAT2_B2_SINGLE, :SAT2_B3, :SAT2_CZ2, :SAT2_CKY, :SAT2_AX, :SAT2_AY, :SAT2_KYETG,
+    :SAT3_Y_ITG, :SAT3_Y_TEM, :SAT3_SCAL, :SAT3_KMIN, :SAT3_COVERB, :SAT3_C1, :SAT3_K0, :SAT3_KP,
+    :SAT3_X_ITG, :SAT3_X_TEM, :SAT3_QLA_P_ITG, :SAT3_QLA_P_TEM, :SAT3_QLA_E_ITG, :SAT3_QLA_E_TEM, :SAT3_QLA_O)

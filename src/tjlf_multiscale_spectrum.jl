@@ -457,18 +457,17 @@ function intensity_sat(
 
 
 
-    cnorm = 14.29
-    cz1=0.48*czf
-    cz2=1.0*czf
-    cky=3.0
+    cnorm = inputs.SAT1_CNORM
+    cz1=inputs.SAT1_CZ1*czf
+    cz2=inputs.SAT1_CZ2*czf
+    cky=inputs.SAT1_CKY
     sqcky=√(cky)
-    cnorm = 14.29
-    etg_streamer=1.05
+    etg_streamer=inputs.SAT1_ETG_STREAMER
     # if(USE_SUB1)
     #     cnorm=12.12
     #     expsub=1
     # end
-    if(alpha_quench != 0.0) etg_streamer=2.1 end
+    if(alpha_quench != 0.0) etg_streamer=2.0*inputs.SAT1_ETG_STREAMER end   # Fortran 2.1 = 2*1.05 exactly
     kyetg = etg_streamer / rho_ion   # fixed to ion gyroradius (Fortran: etg_streamer/rho_ion)
 
     measure = √(taus_1 * mass_2)
@@ -480,42 +479,41 @@ function intensity_sat(
 
     ### coefficents for SAT_RULE = 2
     if(sat_rule_in == 2 || sat_rule_in == 3)
-        b0 = 0.76
-        b1 = 1.22
-        b2 = 3.74
-        if(nmodes > 1) b2 = 3.55 end
-        b3 = 1.0
+        b0 = inputs.SAT2_B0
+        b1 = inputs.SAT2_B1
+        b2 = nmodes > 1 ? inputs.SAT2_B2 : inputs.SAT2_B2_SINGLE
+        b3 = inputs.SAT2_B3
 
         d1 = (Bt0_out/b_geo0_out)^4
         d1 = d1/grad_r0_out
         Gq = b_geo0_out/grad_r0_out
         d2 = b3/(Gq^2)
         cnorm = b2*(12.0/dlnpdr)
-        kyetg = 1000.0
-        cky = 3.0
+        kyetg = inputs.SAT2_KYETG
+        cky = inputs.SAT2_CKY
         sqcky = √(cky)
         kycut = b0*kymax_out
         cz1 = 0.0
-        cz2 = 1.05*czf
+        cz2 = inputs.SAT2_CZ2*czf
         measure = 1.0/kymax_out
     end
     ### coefficents for SAT_RULE = 3
     if(sat_rule_in==3)
         kmax = kymax_out
         gmax = vzf_out * kymax_out
-        kmin = 0.685 * kmax
+        kmin = inputs.SAT3_KMIN * kmax
         aoverb = - 1.0 / (2 * kmin)
-        coverb = - 0.751 * kmax
+        coverb = inputs.SAT3_COVERB * kmax
         kT = 1.0/rho_ion
-        k0 = 0.6 * kmin
-        kP = 2.0 * kmin
-        c_1 = - 2.42
-        x_ITG = 0.8
-        x_TEM = 1.0
-        Y_ITG = 3.3 * (gmax^2) / (kmax^5)
-        Y_TEM = 12.7 * (gmax^2) / (kmax^4)
-       
-        scal = 0.82 # Q(SAT3 GA D) / (2 * QLA(ITG,Q) * Q(SAT2 GA D))
+        k0 = inputs.SAT3_K0 * kmin
+        kP = inputs.SAT3_KP * kmin
+        c_1 = inputs.SAT3_C1
+        x_ITG = inputs.SAT3_X_ITG
+        x_TEM = inputs.SAT3_X_TEM
+        Y_ITG = inputs.SAT3_Y_ITG * (gmax^2) / (kmax^5)
+        Y_TEM = inputs.SAT3_Y_TEM * (gmax^2) / (kmax^4)
+
+        scal = inputs.SAT3_SCAL # Q(SAT3 GA D) / (2 * QLA(ITG,Q) * Q(SAT2 GA D))
 
         Ys = Vector{T}(undef, nmodes)
         xs = Vector{T}(undef, nmodes)
@@ -563,13 +561,13 @@ function intensity_sat(
     exp_ax = 1
     if(alpha_quench == 0.0)
         #spectral shift model parameters
-        ax = 1.15
-        ay = 0.56
+        ax = inputs.SAT1_AX
+        ay = inputs.SAT1_AY
         exp_ax = 4
 
         if(sat_rule_in==2 || sat_rule_in==3)
-            ax = 1.21
-            ay = 1.0
+            ax = inputs.SAT2_AX
+            ay = inputs.SAT2_AY
             exp_ax = 2
         end
     end
@@ -850,10 +848,10 @@ function intensity_sat(
 	    QLA_E = zeros(T, nmodes)
 	    for k in 1:nmodes
 	        # factor of 2 included for real symmetry
-            QLA_P[k] = 2 * mode_transition_function(xs[k], 1.1, 0.6, x_ITG, x_TEM)
-            QLA_E[k] = 2 * mode_transition_function(xs[k], .75, 0.6, x_ITG, x_TEM)
+            QLA_P[k] = 2 * mode_transition_function(xs[k], inputs.SAT3_QLA_P_ITG, inputs.SAT3_QLA_P_TEM, x_ITG, x_TEM)
+            QLA_E[k] = 2 * mode_transition_function(xs[k], inputs.SAT3_QLA_E_ITG, inputs.SAT3_QLA_E_TEM, x_ITG, x_TEM)
         end
-	    QLA_O = fill(2.0 * 0.8, nmodes)
+	    QLA_O = fill(2.0 * inputs.SAT3_QLA_O, nmodes)
     else
 	   QLA_P = fill(1.0,nmodes)
 	   QLA_E = fill(1.0,nmodes)
