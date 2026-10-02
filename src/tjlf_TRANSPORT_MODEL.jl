@@ -318,7 +318,7 @@ function widthPass!(inputs::InputTJLF{T}, satParams::SaturationParameters{T}, ou
     # calculate the eigenvalues with no shear
     nbasis = inputs.NBASIS_MAX
     nmodes_out, gamma_out, freq_out,
-    _,_,_,_,_,ft_test,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, 0.0,ky_index; use_gpu=use_gpu)
+    _,_,_,_,_,ft_test,_,_ = tjlf_LS(inputs, satParams, outputHermite, ky, nbasis, zero(T), ky_index; use_gpu=use_gpu)
 
     if(inputs.IBRANCH==-1) # check for inward ballooning modes
         if(inputs.USE_INBOARD_DETRAPPED) ####### find ft_test and modB_test
